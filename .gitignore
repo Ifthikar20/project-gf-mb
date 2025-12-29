@@ -1,0 +1,99 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ============================================
+# SECURITY - NEVER COMMIT THESE FILES
+# ============================================
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+
+# API keys, tokens, and secrets
+**/secrets/
+*.secret
+*.secrets
+*.pem
+*.p12
+*.pfx
+*.cer
+
+# Keystores and signing
+*.keystore
+*.jks
+key.properties
+upload-keystore.jks
+
+# Firebase / Google Services
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+firebase_app_id_file.json
+**/firebase_app_id_file.json
+
+# AWS credentials
+.aws/
+aws-credentials.json
+
+# Service account keys
+*-sa-key.json
+service-account*.json
+*-firebase-adminsdk-*.json
+
+# Local configuration overrides
+local.properties
+local_config.dart
+
+# Obfuscation debug info (keep for crash symbolication but don't commit)
+/debug-info/
+*.symbols
+*.map.json
+
+# Certificate files (for pinning)
+*.crt
+**/certs/
