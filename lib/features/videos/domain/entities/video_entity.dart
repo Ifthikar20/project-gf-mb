@@ -9,6 +9,14 @@ class VideoEntity extends Equatable {
   final int durationInSeconds;
   final String category;
   final String instructor;
+  final String accessTier; // 'free', 'basic', or 'premium'
+  final int viewCount; // View count from backend analytics
+  
+  // Series fields
+  final bool isSeries;
+  final String? seriesId;
+  final int? episodeNumber;
+  final int? episodeCount;
 
   const VideoEntity({
     required this.id,
@@ -19,6 +27,12 @@ class VideoEntity extends Equatable {
     required this.durationInSeconds,
     required this.category,
     required this.instructor,
+    this.accessTier = 'free',
+    this.viewCount = 0,
+    this.isSeries = false,
+    this.seriesId,
+    this.episodeNumber,
+    this.episodeCount,
   });
 
   String get formattedDuration {
@@ -26,6 +40,22 @@ class VideoEntity extends Equatable {
     final seconds = durationInSeconds % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
+  
+  /// Format view count for display (e.g., 1234 → "1.2k", 5678901 → "5.7M")
+  String get formattedViews {
+    if (viewCount >= 1000000) {
+      return '${(viewCount / 1000000).toStringAsFixed(1)}M';
+    } else if (viewCount >= 1000) {
+      return '${(viewCount / 1000).toStringAsFixed(1)}k';
+    }
+    return viewCount.toString();
+  }
+  
+  bool get isPremium => accessTier == 'premium';
+  bool get isFree => accessTier == 'free';
+  
+  /// Check if this video belongs to a series
+  bool get belongsToSeries => seriesId != null && seriesId!.isNotEmpty;
 
   @override
   List<Object?> get props => [
@@ -37,5 +67,13 @@ class VideoEntity extends Equatable {
         durationInSeconds,
         category,
         instructor,
+        accessTier,
+        viewCount,
+        isSeries,
+        seriesId,
+        episodeNumber,
+        episodeCount,
       ];
 }
+
+

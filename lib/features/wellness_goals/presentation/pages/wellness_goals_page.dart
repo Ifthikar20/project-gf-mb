@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/services/recently_viewed_service.dart';
 import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_state.dart';
 import '../../../videos/presentation/bloc/videos_bloc.dart';
 import '../../../videos/presentation/bloc/videos_state.dart';
+import '../../../meditation/presentation/bloc/meditation_bloc.dart';
+import '../../../meditation/presentation/bloc/meditation_state.dart';
 import '../widgets/mood_selector_widget.dart';
 
 class WellnessGoalsPage extends StatefulWidget {
@@ -19,6 +23,33 @@ class WellnessGoalsPage extends StatefulWidget {
 class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
   String _selectedFilter = 'Video';
   String? _selectedMoodId;
+  VideoPlayerController? _bannerVideoController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _initBannerVideo();
+  }
+  
+  Future<void> _initBannerVideo() async {
+    _bannerVideoController = VideoPlayerController.asset(
+      'assets/videos/banner-video-1.mp4',
+    );
+    
+    await _bannerVideoController!.initialize();
+    _bannerVideoController!.setLooping(true);
+    _bannerVideoController!.setVolume(0); // Muted
+    _bannerVideoController!.setPlaybackSpeed(0.5); // Slow motion
+    _bannerVideoController!.play();
+    
+    if (mounted) setState(() {});
+  }
+  
+  @override
+  void dispose() {
+    _bannerVideoController?.dispose();
+    super.dispose();
+  }
   
   // Content data for each filter
   final Map<String, List<Map<String, dynamic>>> _filterContent = {
@@ -116,24 +147,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
     ],
   };
 
-  // Recommendations data
-  final List<Map<String, dynamic>> _recommendations = [
-    {
-      'title': 'Evening Calm',
-      'subtitle': 'Based on your views',
-      'imageUrl': 'https://picsum.photos/seed/rec1/200/200',
-    },
-    {
-      'title': 'Sleep Better',
-      'subtitle': 'Recommended',
-      'imageUrl': 'https://picsum.photos/seed/rec2/200/200',
-    },
-    {
-      'title': 'Daily Peace',
-      'subtitle': 'For you',
-      'imageUrl': 'https://picsum.photos/seed/rec3/200/200',
-    },
-  ];
+  // Recommendations will be built dynamically based on filter and mood
+  List<Map<String, dynamic>> get _recommendations => _filterContent[_selectedFilter] ?? [];
 
   List<Map<String, dynamic>> get _recentlyViewed => _filterContent[_selectedFilter] ?? [];
 
@@ -144,37 +159,53 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Large Header Banner with wallpaper image
+          // Large Header Banner with video background
           SliverToBoxAdapter(
             child: Stack(
               children: [
-                // Background wallpaper image
-                Container(
-                  height: 240,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage('https://picsum.photos/seed/wellness-banner/800/400'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Dark gradient overlay
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.3),
-                              Colors.black.withOpacity(0.5),
-                              const Color(0xFF0A0A0A),
+                // Background video
+                ClipRect(
+                  child: Container(
+                    height: 240,
+                    color: const Color(0xFF0A0A0A),
+                    child: _bannerVideoController != null &&
+                            _bannerVideoController!.value.isInitialized
+                        ? Stack(
+                            children: [
+                              // Video player - fills container
+                              Positioned.fill(
+                                child: FittedBox(
+                                  fit: BoxFit.cover,
+                                  child: SizedBox(
+                                    width: _bannerVideoController!.value.size.width,
+                                    height: _bannerVideoController!.value.size.height,
+                                    child: VideoPlayer(_bannerVideoController!),
+                                  ),
+                                ),
+                              ),
+                              // Dark gradient overlay - strong fade at bottom
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.2),
+                                      Colors.black.withOpacity(0.4),
+                                      Colors.black.withOpacity(0.8),
+                                      const Color(0xFF0A0A0A),
+                                    ],
+                                    stops: const [0.0, 0.4, 0.75, 1.0],
+                                  ),
+                                ),
+                              ),
                             ],
-                            stops: const [0.0, 0.5, 1.0],
+                          )
+                        : const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white24,
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
                 // Content on banner
@@ -258,46 +289,10 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
             ),
           ),
 
-          // Recently Viewed Section (content changes based on filter)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Recently Viewed',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'See all',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Column(
-                key: ValueKey(_selectedFilter),
-                children: _recentlyViewed.map((item) => _buildTrendingItem(item)).toList(),
-              ),
-            ),
-          ),
-
           // Recommendations based on recent views (Horizontal scroll)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -323,13 +318,117 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
           SliverToBoxAdapter(
             child: SizedBox(
               height: 180,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _recommendations.length,
-                itemBuilder: (context, index) => _buildRecommendationCard(_recommendations[index]),
+              child: _buildRecommendationsSection(),
+            ),
+          ),
+
+          // Recently Viewed Section (content changes based on filter)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Recently Viewed',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'See all',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: ListenableBuilder(
+              listenable: RecentlyViewedService.instance,
+              builder: (context, child) {
+                // Map filter names to content types
+                String contentTypeFilter;
+                switch (_selectedFilter) {
+                  case 'Video':
+                    contentTypeFilter = 'video';
+                    break;
+                  case 'Audio':
+                    contentTypeFilter = 'audio';
+                    break;
+                  case 'Podcast':
+                    contentTypeFilter = 'podcast';
+                    break;
+                  case 'Sounds':
+                    contentTypeFilter = 'sounds';
+                    break;
+                  default:
+                    contentTypeFilter = 'video';
+                }
+                
+                // Filter by content type and limit to 3
+                final recentItems = RecentlyViewedService.instance.items
+                    .where((item) => item.contentType.toLowerCase() == contentTypeFilter)
+                    .take(3)
+                    .toList();
+                
+                if (recentItems.isEmpty) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.history, color: Colors.white54, size: 24),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'No recent ${_selectedFilter.toLowerCase()}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Watch ${_selectedFilter.toLowerCase()} content to see it here',
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return Column(
+                  children: recentItems.map((item) => _buildRecentlyViewedItem(item)).toList(),
+                );
+              },
             ),
           ),
 
@@ -505,6 +604,320 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildRecentlyViewedItem(RecentlyViewedItem item) {
+    final isVideo = item.contentType == 'video';
+    final duration = item.durationSeconds != null
+        ? '${(item.durationSeconds! ~/ 60)}:${(item.durationSeconds! % 60).toString().padLeft(2, '0')}'
+        : '';
+    
+    return GestureDetector(
+      onTap: () {
+        if (isVideo) {
+          context.push('${AppRouter.videoPlayer}?id=${item.contentId}');
+        } else {
+          context.push('${AppRouter.audioPlayer}?id=${item.contentId}');
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Row(
+          children: [
+            // Thumbnail
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: item.thumbnailUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: item.thumbnailUrl!,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) => Container(
+                        width: 56,
+                        height: 56,
+                        color: const Color(0xFF282828),
+                        child: Icon(
+                          isVideo ? Icons.play_circle_outline : Icons.music_note,
+                          color: Colors.white24,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      width: 56,
+                      height: 56,
+                      color: const Color(0xFF282828),
+                      child: Icon(
+                        isVideo ? Icons.play_circle_outline : Icons.music_note,
+                        color: Colors.white24,
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.contentType.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (duration.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          isVideo ? Icons.videocam : Icons.headphones, 
+                          color: Colors.white38, 
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          duration,
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // Play icon
+            const Icon(Icons.play_arrow, color: Colors.white54),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds recommendations section from real API data based on selected filter
+  Widget _buildRecommendationsSection() {
+    switch (_selectedFilter) {
+      case 'Video':
+        return BlocBuilder<VideosBloc, VideosState>(
+          builder: (context, state) {
+            if (state is VideosLoaded) {
+              final videos = state.videos.take(5).toList();
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: videos.length,
+                itemBuilder: (context, index) {
+                  final video = videos[index];
+                  // Determine badge: SERIES for collections, VIDEO for single
+                  final badge = video.isSeries ? 'SERIES' : 'VIDEO';
+                  final subtitle = video.isSeries 
+                      ? '${video.episodeCount} episodes' 
+                      : video.instructor;
+                  return _buildApiRecommendationCard(
+                    title: video.title,
+                    subtitle: subtitle,
+                    imageUrl: video.thumbnailUrl,
+                    badge: badge,
+                    onTap: () => context.push('${AppRouter.videoPlayer}?id=${video.id}'),
+                  );
+                },
+              );
+            }
+            return const Center(child: CircularProgressIndicator(color: Colors.white24));
+          },
+        );
+      case 'Audio':
+        return BlocBuilder<MeditationBloc, MeditationState>(
+          builder: (context, state) {
+            if (state is MeditationLoaded) {
+              // Show individual audios with AUDIO badge
+              final audios = state.audios.take(5).toList();
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: audios.length,
+                itemBuilder: (context, index) {
+                  final audio = audios[index];
+                  // Check if it's guided meditation or regular audio
+                  final isGuided = audio.meditationType == 'guided' || 
+                                   audio.meditationType == 'body-scan' ||
+                                   audio.meditationType == 'breathing';
+                  final badge = isGuided ? 'GUIDED' : 'AUDIO';
+                  return _buildApiRecommendationCard(
+                    title: audio.title,
+                    subtitle: audio.category,
+                    imageUrl: audio.imageUrl,
+                    badge: badge,
+                    onTap: () => context.push('${AppRouter.audioPlayer}?id=${audio.id}'),
+                  );
+                },
+              );
+            }
+            return const Center(child: CircularProgressIndicator(color: Colors.white24));
+          },
+        );
+      case 'Podcast':
+        // Show static podcast content with PODCAST badge
+        return ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: _filterContent['Podcast']?.length ?? 0,
+          itemBuilder: (context, index) {
+            final item = _filterContent['Podcast']![index];
+            return _buildApiRecommendationCard(
+              title: item['title'],
+              subtitle: item['subtitle'],
+              imageUrl: item['imageUrl'],
+              badge: 'PODCAST',
+              onTap: () {},
+            );
+          },
+        );
+      case 'Sounds':
+      default:
+        // Show sounds content with SOUNDS badge
+        return ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: _filterContent['Sounds']?.length ?? 0,
+          itemBuilder: (context, index) {
+            final item = _filterContent['Sounds']![index];
+            return _buildApiRecommendationCard(
+              title: item['title'],
+              subtitle: item['subtitle'],
+              imageUrl: item['imageUrl'],
+              badge: 'SOUNDS',
+              onTap: () {},
+            );
+          },
+        );
+    }
+  }
+
+  Widget _buildApiRecommendationCard({
+    required String title,
+    required String subtitle,
+    required String imageUrl,
+    String? badge,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 130,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image with optional badge
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    width: 130,
+                    height: 130,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      width: 130,
+                      height: 130,
+                      color: const Color(0xFF282828),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 130,
+                      height: 130,
+                      color: const Color(0xFF282828),
+                      child: const Icon(Icons.play_circle_outline, color: Colors.white24, size: 40),
+                    ),
+                  ),
+                ),
+                if (badge != null)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getBadgeColor(badge),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 11,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Get badge color based on content type
+  Color _getBadgeColor(String badge) {
+    switch (badge) {
+      case 'SERIES':
+        return const Color(0xFF7C3AED); // Purple - video collection
+      case 'VIDEO':
+        return const Color(0xFF3B82F6); // Blue - single video
+      case 'AUDIO':
+        return const Color(0xFF6366F1); // Indigo - single audio
+      case 'GUIDED':
+        return const Color(0xFF14B8A6); // Teal - guided meditation
+      case 'PODCAST':
+        return const Color(0xFFF97316); // Orange - podcast
+      case 'SOUNDS':
+        return const Color(0xFF22C55E); // Green - sounds/ambience
+      case 'COLLECTION':
+        return const Color(0xFFEC4899); // Pink - audio collection
+      default:
+        return Colors.black.withOpacity(0.7);
+    }
   }
 
   Widget _buildRecommendationCard(Map<String, dynamic> item) {

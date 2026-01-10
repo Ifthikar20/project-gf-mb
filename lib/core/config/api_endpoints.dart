@@ -44,11 +44,17 @@ class ApiEndpoints {
   // Meditations / Audio
   static String get meditations => '$contentBase/meditations';
   static String meditationById(String id) => '$meditations/$id';
-  static String audioStream(String id) => '$cdnUrl/audio/$id/stream.mp3';
   static String audioById(String id) => '$contentBase/audio/$id';
   
+  // Audio Content Browse
+  static String get audioBrowse => '$baseUrl/content/browse?content_type=audio';
+  
+  // Streaming Endpoints (secure URLs from backend)
+  static String get streamingBase => '$baseUrl/api/streaming';
+  static String contentStream(String id) => '$streamingBase/content/$id/stream';
+  
   // Categories
-  static String get categories => '$contentBase/categories';
+  static String get categories => '$baseUrl/categories';
   static String categoryById(String id) => '$categories/$id';
   
   // ============================================
@@ -60,6 +66,19 @@ class ApiEndpoints {
   static String get favorites => '$libraryBase/favorites';
   static String get history => '$libraryBase/history';
   static String get downloads => '$libraryBase/downloads';
+  
+  // ============================================
+  // Series (CMS API)
+  // ============================================
+  static String get cmsBase => '$baseUrl/v1/cms';
+  static String get seriesBase => '$cmsBase/series';
+  static String seriesById(String id) => '$seriesBase/$id';
+  
+  /// Get published series for browse pages
+  /// Supports: show_on_explore=true, show_on_meditate=true
+  static String get publishedSeries => '$seriesBase?status=published';
+  static String seriesForExplore() => '$seriesBase?status=published&show_on_explore=true';
+  static String seriesForMeditate() => '$seriesBase?status=published&show_on_meditate=true';
   
   // ============================================
   // Wellness Goals

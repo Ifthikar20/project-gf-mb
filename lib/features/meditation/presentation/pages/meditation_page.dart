@@ -55,7 +55,7 @@ class MeditationPage extends StatelessWidget {
           if (state is MeditationLoaded) {
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<MeditationBloc>().add(LoadMeditationAudios());
+                context.read<MeditationBloc>().add(RefreshMeditationAudios());
               },
               color: const Color(0xFF1DB954),
               backgroundColor: const Color(0xFF282828),
@@ -132,7 +132,7 @@ class MeditationPage extends StatelessWidget {
                                 ? 'Featured Meditations'
                                 : '${state.selectedCategory} Meditations',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF7C3AED),  // Purple
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
@@ -195,7 +195,7 @@ class MeditationPage extends StatelessWidget {
                   // Recommended Stations section
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 24),
+                      padding: const EdgeInsets.only(top: 12),
                       child: HorizontalSection<MeditationType>(
                         title: 'Recommended Stations',
                         items: state.meditationTypes,
@@ -215,7 +215,7 @@ class MeditationPage extends StatelessWidget {
                   // Based on your mood section
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 24),
+                      padding: const EdgeInsets.only(top: 12),
                       child: HorizontalSection<MeditationType>(
                         title: 'Based on your mood',
                         items: state.moodBasedTypes,
@@ -235,7 +235,7 @@ class MeditationPage extends StatelessWidget {
                   // Popular Artists / Best meditations section
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 24),
+                      padding: const EdgeInsets.only(top: 12),
                       child: HorizontalSection<MeditationType>(
                         title: 'Best of artists',
                         items: state.meditationTypes.reversed.toList(),
@@ -282,12 +282,12 @@ class MeditationPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected 
-                ? const Color(0xFF1DB954) 
+                ? const Color(0xFF7C3AED)  // Purple
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected 
-                  ? const Color(0xFF1DB954) 
+                  ? const Color(0xFF7C3AED)  // Purple
                   : Colors.white.withOpacity(0.5),
               width: 1,
             ),
@@ -295,7 +295,7 @@ class MeditationPage extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white,
+              color: isSelected ? Colors.white : Colors.white,
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),

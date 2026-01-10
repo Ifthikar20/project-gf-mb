@@ -52,7 +52,7 @@ app.*.map.json
 # Environment files with secrets
 .env
 .env.*
-!.env.example
+.env.example
 
 # API keys, tokens, and secrets
 **/secrets/
@@ -97,3 +97,29 @@ local_config.dart
 # Certificate files (for pinning)
 *.crt
 **/certs/
+
+# ============================================
+# DEV/INTERNAL FOLDERS - NOT PART OF THE APP
+# ============================================
+
+
+
+# Internal documentation
+docs/
+API_FLOW_DOCUMENTATION.md
+ARCHITECTURE.md
+FRONTEND_BACKEND_GAP_ANALYSIS.md
+FRONTEND_IMPLEMENTATION.md
+MEDITATION_API_SPEC.md
+QUICK_START.md
+SETUP_GUIDE.md
+TESTING_OPTIONS.md
+VIDEO_STREAMING_ARCHITECTURE.md
+
+# Dev scripts and stress tests
+scripts/
+stress_test/
+
+# PDF files
+*.pdf
+gf-backend-auth/

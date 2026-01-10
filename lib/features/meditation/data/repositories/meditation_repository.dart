@@ -1,100 +1,253 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import '../../../../core/services/api_client.dart';
 import '../../domain/entities/meditation_audio.dart';
 import '../../domain/entities/meditation_type.dart';
 
+/// Repository for meditation/audio content
+/// Fetches audio content from backend API
 class MeditationRepository {
-  // Meditation Types - main categories for the home screen
+  final ApiClient _api;
+  
+  // Cache for audio content
+  List<MeditationAudio>? _cachedAudios;
+  List<MeditationType>? _cachedCategories;
+  DateTime? _lastFetch;
+  
+  // Cache duration: 5 minutes
+  static const _cacheDuration = Duration(minutes: 5);
+  
+  MeditationRepository({ApiClient? api}) : _api = api ?? ApiClient.instance;
+
+  /// Check if cache is still valid
+  bool get _isCacheValid {
+    if (_lastFetch == null || _cachedAudios == null) return false;
+    return DateTime.now().difference(_lastFetch!) < _cacheDuration;
+  }
+  
+  /// Clear cache
+  void clearCache() {
+    _cachedAudios = null;
+    _cachedCategories = null;
+    _lastFetch = null;
+  }
+
+  // ============================================
+  // Audio Content Methods
+  // ============================================
+
+  /// Fetch all audio content from API
+  /// GET /content/browse?content_type=audio
+  Future<List<MeditationAudio>> fetchAllAudios({bool forceRefresh = false}) async {
+    // Return cached if valid and not forcing refresh
+    if (!forceRefresh && _isCacheValid && _cachedAudios != null) {
+      debugPrint('📦 Using cached audio content (${_cachedAudios!.length} items)');
+      return _cachedAudios!;
+    }
+    
+    try {
+      debugPrint('🎵 Fetching audio content from API...');
+      final response = await _api.get('/content/browse', queryParameters: {
+        'content_type': 'audio',
+        'limit': 100,
+      });
+      
+      // Debug: Log the full response to understand structure
+      debugPrint('📋 API Response status: ${response.statusCode}');
+      debugPrint('📋 API Response keys: ${response.data?.keys?.toList()}');
+      
+      final List<dynamic> items = response.data['content'] ?? [];
+      debugPrint('📋 Found ${items.length} audio items in response');
+      
+      if (items.isEmpty) {
+        debugPrint('⚠️ No audio content returned from API. Backend may not have audio content_type items.');
+        debugPrint('💡 To fix: Add content with content_type="audio" to the backend database.');
+        // Return fallback mock data
+        return _getFallbackAudios();
+      }
+      
+      final audios = items.map((json) => MeditationAudio.fromJson(json)).toList();
+      
+      // Cache the results
+      _cachedAudios = audios;
+      _lastFetch = DateTime.now();
+      
+      debugPrint('✅ Fetched ${audios.length} audio items from API');
+      return audios;
+    } catch (e) {
+      debugPrint('❌ Failed to fetch audio content: $e');
+      // Return cached if available, otherwise empty list
+      if (_cachedAudios != null) {
+        debugPrint('📦 Returning stale cache due to error');
+        return _cachedAudios!;
+      }
+      // Return mock data as absolute fallback
+      debugPrint('⚠️ Using fallback mock data');
+      return _getFallbackAudios();
+    }
+  }
+
+  /// Fetch audio by category
+  /// GET /content/browse?content_type=audio&category={slug}
+  Future<List<MeditationAudio>> fetchAudiosByCategory(String categorySlug) async {
+    try {
+      debugPrint('🎵 Fetching audio for category: $categorySlug');
+      final response = await _api.get('/content/browse', queryParameters: {
+        'content_type': 'audio',
+        'category': categorySlug.toLowerCase(),
+        'limit': 50,
+      });
+      
+      final List<dynamic> items = response.data['content'] ?? [];
+      return items.map((json) => MeditationAudio.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('❌ Failed to fetch audio by category: $e');
+      // Filter cached data if available
+      if (_cachedAudios != null) {
+        return _cachedAudios!
+            .where((a) => a.category.toLowerCase() == categorySlug.toLowerCase())
+            .toList();
+      }
+      return [];
+    }
+  }
+
+  /// Fetch featured audio
+  /// GET /content/browse?content_type=audio&featured=true
+  Future<List<MeditationAudio>> fetchFeaturedAudios({int limit = 5}) async {
+    try {
+      final response = await _api.get('/content/browse', queryParameters: {
+        'content_type': 'audio',
+        'featured': true,
+        'limit': limit,
+      });
+      
+      final List<dynamic> items = response.data['content'] ?? [];
+      return items.map((json) => MeditationAudio.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('❌ Failed to fetch featured audio: $e');
+      // Return first few from cache
+      if (_cachedAudios != null) {
+        return _cachedAudios!.where((a) => a.featured).take(limit).toList();
+      }
+      return [];
+    }
+  }
+
+  /// Get audio content detail
+  /// GET /content/detail/{id}
+  Future<MeditationAudio?> fetchAudioById(String id) async {
+    try {
+      final response = await _api.get('/content/detail/$id');
+      return MeditationAudio.fromJson(response.data);
+    } catch (e) {
+      debugPrint('❌ Failed to fetch audio detail: $e');
+      // Try cache
+      if (_cachedAudios != null) {
+        try {
+          return _cachedAudios!.firstWhere((a) => a.id == id);
+        } catch (_) {}
+      }
+      return null;
+    }
+  }
+
+  /// Get streaming URL for audio
+  /// GET /api/streaming/content/{id}/stream
+  Future<String?> getAudioStreamingUrl(String audioId) async {
+    try {
+      debugPrint('📡 Fetching streaming URL for audio: $audioId');
+      final response = await _api.get('/api/streaming/content/$audioId/stream');
+      
+      final audioUrl = response.data['audio_url'];
+      if (audioUrl != null && audioUrl.toString().isNotEmpty) {
+        debugPrint('✅ Got audio URL: $audioUrl');
+        return audioUrl.toString();
+      }
+      
+      debugPrint('⚠️ No audio_url in response');
+      return null;
+    } catch (e) {
+      debugPrint('❌ Failed to get streaming URL: $e');
+      return null;
+    }
+  }
+
+  // ============================================
+  // Category Methods
+  // ============================================
+
+  /// Fetch categories from API
+  /// GET /categories (or use default if not available)
+  Future<List<MeditationType>> fetchCategories() async {
+    if (_cachedCategories != null) {
+      return _cachedCategories!;
+    }
+    
+    try {
+      final response = await _api.get('/categories', queryParameters: {
+        'content_type': 'audio',
+      });
+      
+      final List<dynamic> items = response.data['categories'] ?? response.data ?? [];
+      final categories = items.map((json) => MeditationType.fromJson(json)).toList();
+      
+      _cachedCategories = categories;
+      return categories;
+    } catch (e) {
+      debugPrint('⚠️ Categories API not available, using defaults');
+      return MeditationType.defaultCategories;
+    }
+  }
+
+  /// Get main meditation types (categories) 
   List<MeditationType> getMeditationTypes() {
-    return const [
-      MeditationType(
-        id: 'calm',
-        name: 'Calm',
-        description: 'Find your inner peace',
-        subtitle: 'J. Cole, Ty Dolla \$ign, Bryson Tiller',
-        imageUrl: 'https://picsum.photos/seed/calm/400/400',
-        color: Color(0xFF6B9B8E),
-      ),
-      MeditationType(
-        id: 'focus',
-        name: 'Focus',
-        description: 'Enhance concentration',
-        subtitle: 'Kendrick Lamar, Future, SZA',
-        imageUrl: 'https://picsum.photos/seed/focus/400/400',
-        color: Color(0xFF8B7BA8),
-      ),
-      MeditationType(
-        id: 'sleep',
-        name: 'Sleep',
-        description: 'Drift off peacefully',
-        subtitle: 'The Weeknd, Ariana Grande',
-        imageUrl: 'https://picsum.photos/seed/sleep/400/400',
-        color: Color(0xFF5C6BC0),
-      ),
-      MeditationType(
-        id: 'breathe',
-        name: 'Breathe',
-        description: 'Guided breathing exercises',
-        subtitle: 'Relaxing breath patterns',
-        imageUrl: 'https://picsum.photos/seed/breathe/400/400',
-        color: Color(0xFF26A69A),
-      ),
-      MeditationType(
-        id: 'stress',
-        name: 'Stress Relief',
-        description: 'Release tension and anxiety',
-        subtitle: 'Calming soundscapes',
-        imageUrl: 'https://picsum.photos/seed/stress/400/400',
-        color: Color(0xFFEF5350),
-      ),
-      MeditationType(
-        id: 'morning',
-        name: 'Morning',
-        description: 'Start your day right',
-        subtitle: 'Energizing meditations',
-        imageUrl: 'https://picsum.photos/seed/morning/400/400',
-        color: Color(0xFFFFA726),
-      ),
-    ];
+    return _cachedCategories ?? MeditationType.defaultCategories;
   }
 
-  // Get meditation types for "Based on your mood" section
+  /// Get mood-based types
   List<MeditationType> getMoodBasedTypes() {
-    return const [
-      MeditationType(
-        id: 'happy',
-        name: 'Happy Vibes',
-        description: 'Uplift your spirits',
-        subtitle: 'A.R. Rahman, S. P. Balasubrahmanyam',
-        imageUrl: 'https://picsum.photos/seed/happy/400/400',
-        color: Color(0xFFFFEB3B),
-      ),
-      MeditationType(
-        id: 'relax',
-        name: 'Deep Relax',
-        description: 'Ultimate relaxation',
-        subtitle: 'Pritam, Sachin-Jigar, Amit Trivedi',
-        imageUrl: 'https://picsum.photos/seed/relax/400/400',
-        color: Color(0xFF9C27B0),
-      ),
-      MeditationType(
-        id: 'energy',
-        name: 'Energy Boost',
-        description: 'Revitalize your mind',
-        subtitle: 'Dynamic meditation tracks',
-        imageUrl: 'https://picsum.photos/seed/energy/400/400',
-        color: Color(0xFFE91E63),
-      ),
-    ];
+    return MeditationType.moodCategories;
   }
 
-  // Mock data - meditation audio content
+  // ============================================
+  // Synchronous Methods (for backward compatibility)
+  // ============================================
+
+  /// Get all audio (from cache or fallback)
+  /// @deprecated Use fetchAllAudios() instead
   List<MeditationAudio> getAllAudios() {
+    return _cachedAudios ?? _getFallbackAudios();
+  }
+
+  /// Get audio by category (from cache)
+  /// @deprecated Use fetchAudiosByCategory() instead
+  List<MeditationAudio> getAudiosByCategory(String category) {
+    return getAllAudios()
+        .where((audio) => audio.category.toLowerCase() == category.toLowerCase())
+        .toList();
+  }
+
+  /// Get audio by ID (from cache)
+  /// @deprecated Use fetchAudioById() instead
+  MeditationAudio? getAudioById(String id) {
+    try {
+      return getAllAudios().firstWhere((audio) => audio.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ============================================
+  // Fallback Mock Data
+  // ============================================
+
+  /// Fallback mock data when API is unavailable
+  List<MeditationAudio> _getFallbackAudios() {
     return const [
       MeditationAudio(
         id: '1',
         title: 'Ocean Waves',
         description: 'Gentle waves lapping on the shore',
-        audioPath: 'assets/audio/ocean_waves.mp3',
         durationInSeconds: 600,
         category: 'calm',
         imageUrl: 'https://picsum.photos/seed/ocean/400/400',
@@ -103,7 +256,6 @@ class MeditationRepository {
         id: '2',
         title: 'Rainforest',
         description: 'Tropical rain and wildlife sounds',
-        audioPath: 'assets/audio/rain.mp3',
         durationInSeconds: 720,
         category: 'calm',
         imageUrl: 'https://picsum.photos/seed/rainforest/400/400',
@@ -112,160 +264,34 @@ class MeditationRepository {
         id: '3',
         title: 'Forest Ambience',
         description: 'Birds chirping and gentle breeze',
-        audioPath: 'assets/audio/forest.mp3',
         durationInSeconds: 900,
         category: 'focus',
         imageUrl: 'https://picsum.photos/seed/forest/400/400',
       ),
       MeditationAudio(
         id: '4',
-        title: 'Birds Singing',
-        description: 'Morning birds and wildlife',
-        audioPath: 'assets/audio/birds.mp3',
-        durationInSeconds: 600,
-        category: 'morning',
-        imageUrl: 'https://picsum.photos/seed/birds/400/400',
-      ),
-      MeditationAudio(
-        id: '5',
-        title: 'Campfire Crackling',
-        description: 'Warm fire crackling sounds',
-        audioPath: 'assets/audio/campfire.mp3',
-        durationInSeconds: 840,
-        category: 'sleep',
-        imageUrl: 'https://picsum.photos/seed/campfire/400/400',
-      ),
-      MeditationAudio(
-        id: '6',
-        title: 'Wind Chimes',
-        description: 'Peaceful wind chimes melody',
-        audioPath: 'assets/audio/wind_chimes.mp3',
-        durationInSeconds: 600,
-        category: 'focus',
-        imageUrl: 'https://picsum.photos/seed/windchimes/400/400',
-      ),
-      MeditationAudio(
-        id: '7',
-        title: 'River Stream',
-        description: 'Flowing river and water sounds',
-        audioPath: 'assets/audio/river.mp3',
-        durationInSeconds: 720,
-        category: 'calm',
-        imageUrl: 'https://picsum.photos/seed/river/400/400',
-      ),
-      MeditationAudio(
-        id: '8',
-        title: 'Thunderstorm',
-        description: 'Distant thunder and rain',
-        audioPath: 'assets/audio/thunderstorm.mp3',
-        durationInSeconds: 900,
-        category: 'sleep',
-        imageUrl: 'https://picsum.photos/seed/thunder/400/400',
-      ),
-      MeditationAudio(
-        id: '9',
         title: 'Deep Breathing',
         description: '4-7-8 breathing technique',
-        audioPath: 'assets/audio/breathing.mp3',
         durationInSeconds: 300,
         category: 'breathe',
         imageUrl: 'https://picsum.photos/seed/breathing/400/400',
       ),
       MeditationAudio(
-        id: '10',
-        title: 'Box Breathing',
-        description: 'Square breathing for calm',
-        audioPath: 'assets/audio/box_breathing.mp3',
-        durationInSeconds: 480,
-        category: 'breathe',
-        imageUrl: 'https://picsum.photos/seed/boxbreathing/400/400',
+        id: '5',
+        title: 'Sleep Sounds',
+        description: 'Calming sounds for better sleep',
+        durationInSeconds: 1200,
+        category: 'sleep',
+        imageUrl: 'https://picsum.photos/seed/sleep/400/400',
       ),
       MeditationAudio(
-        id: '11',
-        title: 'Stress Melt',
-        description: 'Release tension from your body',
-        audioPath: 'assets/audio/stress_melt.mp3',
-        durationInSeconds: 900,
-        category: 'stress',
-        imageUrl: 'https://picsum.photos/seed/stressmelt/400/400',
-      ),
-      MeditationAudio(
-        id: '12',
+        id: '6',
         title: 'Morning Energy',
         description: 'Start your day with intention',
-        audioPath: 'assets/audio/morning_energy.mp3',
         durationInSeconds: 600,
         category: 'morning',
-        imageUrl: 'https://picsum.photos/seed/morningenergy/400/400',
-      ),
-      MeditationAudio(
-        id: '13',
-        title: 'Anxiety Relief',
-        description: 'Calm your anxious thoughts',
-        audioPath: 'assets/audio/anxiety_relief.mp3',
-        durationInSeconds: 720,
-        category: 'anxiety',
-        imageUrl: 'https://picsum.photos/seed/anxiety/400/400',
-      ),
-      MeditationAudio(
-        id: '14',
-        title: 'Work Stress Release',
-        description: 'Let go of work tension',
-        audioPath: 'assets/audio/work_stress.mp3',
-        durationInSeconds: 900,
-        category: 'work stress',
-        imageUrl: 'https://picsum.photos/seed/workstress/400/400',
-      ),
-      MeditationAudio(
-        id: '15',
-        title: 'Deep Relaxation',
-        description: 'Total body and mind relaxation',
-        audioPath: 'assets/audio/deep_relax.mp3',
-        durationInSeconds: 1200,
-        category: 'relax',
-        imageUrl: 'https://picsum.photos/seed/deeprelax/400/400',
-      ),
-      MeditationAudio(
-        id: '16',
-        title: 'Panic Attack Help',
-        description: 'Grounding exercises for anxiety',
-        audioPath: 'assets/audio/panic_help.mp3',
-        durationInSeconds: 300,
-        category: 'anxiety',
-        imageUrl: 'https://picsum.photos/seed/panichelp/400/400',
-      ),
-      MeditationAudio(
-        id: '17',
-        title: 'Office Break',
-        description: '5-minute desk meditation',
-        audioPath: 'assets/audio/office_break.mp3',
-        durationInSeconds: 300,
-        category: 'work stress',
-        imageUrl: 'https://picsum.photos/seed/officebreak/400/400',
-      ),
-      MeditationAudio(
-        id: '18',
-        title: 'Progressive Relaxation',
-        description: 'Muscle relaxation technique',
-        audioPath: 'assets/audio/progressive.mp3',
-        durationInSeconds: 900,
-        category: 'relax',
-        imageUrl: 'https://picsum.photos/seed/progressive/400/400',
+        imageUrl: 'https://picsum.photos/seed/morning/400/400',
       ),
     ];
-  }
-
-  List<MeditationAudio> getAudiosByCategory(String category) {
-    return getAllAudios()
-        .where((audio) => audio.category.toLowerCase() == category.toLowerCase())
-        .toList();
-  }
-
-  MeditationAudio? getAudioById(String id) {
-    try {
-      return getAllAudios().firstWhere((audio) => audio.id == id);
-    } catch (e) {
-      return null;
-    }
   }
 }

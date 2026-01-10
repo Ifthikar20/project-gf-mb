@@ -28,7 +28,7 @@ dependencies:
   shared_preferences: ^2.2.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^10.0.0
   
   # UI
   google_fonts: ^6.1.0
@@ -40,8 +40,17 @@ dependencies:
   uuid: ^4.2.2
   flutter_dotenv: ^5.1.0
   
+  # Network & API
+  dio: ^5.4.0
+  dio_cookie_manager: ^3.1.1
+  cookie_jar: ^4.0.8
+  
   # Icons
   cupertino_icons: ^1.0.6
+  
+  # Analytics (GA4 Measurement Protocol - no Firebase SDK needed)
+  http: ^1.2.0
+  logger: ^2.6.2
 
 dev_dependencies:
   flutter_test:

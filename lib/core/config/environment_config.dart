@@ -60,6 +60,54 @@ class EnvironmentConfig {
   /// Check if crash reporting is enabled
   bool get enableCrashReporting => _getBool('ENABLE_CRASH_REPORTING', false);
   
+  /// Check if API encryption is enabled
+  bool get enableApiEncryption => _getBool('ENABLE_API_ENCRYPTION', false);
+  
+  // ============================================
+  // AWS Cognito Configuration
+  // ============================================
+  
+  /// Cognito domain (e.g., https://your-app.auth.us-east-1.amazoncognito.com)
+  String get cognitoDomain => _get('COGNITO_DOMAIN', '');
+  
+  /// Cognito client ID
+  String get cognitoClientId => _get('COGNITO_CLIENT_ID', '');
+  
+  /// Cognito region
+  String get cognitoRegion => _get('COGNITO_REGION', 'us-east-1');
+  
+  /// Cognito redirect URI for OAuth
+  String get cognitoRedirectUri => _get('COGNITO_REDIRECT_URI', 'betterbliss://callback');
+  
+  /// Check if Cognito is configured
+  bool get hasCognitoConfig => cognitoDomain.isNotEmpty && cognitoClientId.isNotEmpty;
+  
+  // ============================================
+  // CloudFront CDN Configuration
+  // ============================================
+  
+  /// CloudFront CDN URL for streaming content (e.g., https://d1234567890.cloudfront.net)
+  String get cloudfrontUrl => _get('CLOUDFRONT_URL', '');
+  
+  /// Check if CloudFront is configured
+  bool get hasCloudFrontConfig => cloudfrontUrl.isNotEmpty;
+  
+  // ============================================
+  // Analytics (GA4 Measurement Protocol)
+  // ============================================
+  
+  /// Google Analytics 4 Measurement ID (e.g., G-5TF9JXPNJW)
+  String get gaMeasurementId => _get('GA_MEASUREMENT_ID', '');
+  
+  /// GA4 API Secret (from GA4 Admin > Data Streams > Measurement Protocol)
+  String get gaApiSecret => _getSecret('GA_API_SECRET');
+  
+  /// Check if GA4 is enabled
+  bool get gaEnabled => _getBool('GA_ENABLED', true);
+  
+  /// Check if GA4 is properly configured
+  bool get hasGAConfig => gaMeasurementId.isNotEmpty && gaApiSecret.isNotEmpty;
+  
   // ============================================
   // Certificate Pinning
   // ============================================

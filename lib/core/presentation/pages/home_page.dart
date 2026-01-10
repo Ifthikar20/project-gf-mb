@@ -4,7 +4,6 @@ import '../../../features/wellness_goals/presentation/pages/wellness_goals_page.
 import '../../../features/explore/presentation/pages/explore_page.dart';
 import '../../../features/meditation/presentation/pages/meditation_page.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
-import '../../../features/premium/presentation/pages/premium_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,7 +20,6 @@ class _HomePageState extends State<HomePage> {
     MeditationPage(),
     ExplorePage(),
     ProfilePage(),
-    PremiumPage(),
   ];
 
   @override
@@ -69,12 +67,6 @@ class _HomePageState extends State<HomePage> {
                       index: 1,
                     ),
                     _buildNavItem(
-                      icon: Icons.workspace_premium_rounded,
-                      label: 'Premium',
-                      index: 4,
-                      isPremium: true,
-                    ),
-                    _buildNavItem(
                       icon: Icons.person_rounded,
                       label: 'Profile',
                       index: 3,
@@ -93,7 +85,6 @@ class _HomePageState extends State<HomePage> {
     required IconData icon,
     required String label,
     required int index,
-    bool isPremium = false,
   }) {
     final isActive = _currentIndex == index;
     
@@ -107,22 +98,14 @@ class _HomePageState extends State<HomePage> {
           children: [
             Icon(
               icon,
-              color: isPremium && isActive
-                  ? const Color(0xFF1DB954)
-                  : isActive
-                      ? Colors.white
-                      : Colors.white54,
+              color: isActive ? Colors.white : Colors.white54,
               size: 26,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: isPremium && isActive
-                    ? const Color(0xFF1DB954)
-                    : isActive
-                        ? Colors.white
-                        : Colors.white54,
+                color: isActive ? Colors.white : Colors.white54,
                 fontSize: 10,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 letterSpacing: 0.2,

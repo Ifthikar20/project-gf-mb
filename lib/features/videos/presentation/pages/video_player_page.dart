@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/navigation/app_router.dart';
+import '../../../../core/services/streaming_service.dart';
+import '../../../../core/services/recently_viewed_service.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_event.dart';
 import '../../../library/presentation/bloc/library_state.dart';
 import '../../data/repositories/videos_repository.dart';
 import '../../domain/entities/video_entity.dart';
+import '../../domain/entities/episode_entity.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   final String videoId;
@@ -28,45 +34,12 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   bool _isLiked = false;
   int _currentEpisode = 1;
   double _videoProgress = 0.0;
+  String? _streamingUrl;
   
-  // Mock episodes data with descriptions
-  final List<Map<String, dynamic>> _episodes = [
-    {
-      'number': 1, 
-      'title': 'Introduction', 
-      'duration': '3:45', 
-      'isLocked': false,
-      'description': 'Get started with the basics of mindfulness and learn what to expect from this series.',
-    },
-    {
-      'number': 2, 
-      'title': 'Getting Started', 
-      'duration': '5:20', 
-      'isLocked': true,
-      'description': 'Learn the fundamental breathing techniques and how to prepare your mind for meditation.',
-    },
-    {
-      'number': 3, 
-      'title': 'Deep Dive', 
-      'duration': '8:15', 
-      'isLocked': true,
-      'description': 'Explore advanced meditation practices and discover your inner peace through guided sessions.',
-    },
-    {
-      'number': 4, 
-      'title': 'Advanced Techniques', 
-      'duration': '6:30', 
-      'isLocked': true,
-      'description': 'Master the art of focused attention and learn to maintain calm in any situation.',
-    },
-    {
-      'number': 5, 
-      'title': 'Final Steps', 
-      'duration': '4:50', 
-      'isLocked': true,
-      'description': 'Complete your journey with integration practices to carry mindfulness into daily life.',
-    },
-  ];
+  // Episodes from API (replaces mock data)
+  List<EpisodeEntity> _episodes = [];
+  bool _isLoadingEpisodes = false;
+  String? _currentEpisodeId;
 
   @override
   void initState() {
@@ -82,23 +55,119 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
       final video = await repository.getVideoById(widget.videoId);
       
       if (video != null) {
-        setState(() => _video = video);
+        setState(() {
+          _video = video;
+          _currentEpisodeId = video.id;
+          _currentEpisode = video.episodeNumber ?? 1;
+        });
+        
+        // Load series episodes if this video belongs to a series
+        if (video.belongsToSeries) {
+          _loadSeriesEpisodes(video.seriesId!);
+        }
+
+        // Try to get HLS streaming URL from backend
+        String videoUrl = video.videoUrl;
+        
+        // Get streaming URLs (uses s3_keys from content detail)
+        try {
+          final streamingUrls = await StreamingService.instance.getStreamingUrls(widget.videoId);
+          videoUrl = streamingUrls.hlsMaster;
+          _streamingUrl = videoUrl;
+          debugPrint('📼 Using HLS stream: $videoUrl');
+        } catch (e) {
+          debugPrint('⚠️ Streaming failed, using fallback: $e');
+          // Keep using video.videoUrl as fallback
+        }
 
         _controller = VideoPlayerController.networkUrl(
-          Uri.parse(video.videoUrl),
+          Uri.parse(videoUrl),
         )..initialize().then((_) {
             setState(() => _isLoading = false);
             _controller!.play();
             _controller!.addListener(_videoListener);
+            
+            // Track as recently viewed
+            RecentlyViewedService.instance.addItem(
+              contentId: video.id,
+              title: video.title,
+              thumbnailUrl: video.thumbnailUrl,
+              contentType: 'video',
+              durationSeconds: video.durationInSeconds,
+            );
+            
+            // Track video view (GA4 + Backend dual tracking)
+            AnalyticsService.instance.trackVideoView(
+              videoId: video.id,
+              videoTitle: video.title,
+              category: video.category,
+              expert: video.instructor,
+              durationSeconds: video.durationInSeconds,
+            );
           }).catchError((error) {
+            debugPrint('❌ Video initialization failed: $error');
             setState(() { _hasError = true; _isLoading = false; });
           });
       } else {
         setState(() { _hasError = true; _isLoading = false; });
       }
     } catch (e) {
+      debugPrint('❌ Video loading failed: $e');
       setState(() { _hasError = true; _isLoading = false; });
     }
+  }
+  
+  /// Load series episodes from API
+  Future<void> _loadSeriesEpisodes(String seriesId) async {
+    setState(() => _isLoadingEpisodes = true);
+    try {
+      final repository = VideosRepository();
+      final episodes = await repository.getSeriesEpisodes(seriesId);
+      setState(() {
+        _episodes = episodes;
+        _isLoadingEpisodes = false;
+      });
+      debugPrint('📺 Loaded ${episodes.length} episodes for series');
+    } catch (e) {
+      debugPrint('⚠️ Failed to load series episodes: $e');
+      setState(() => _isLoadingEpisodes = false);
+    }
+  }
+  
+  /// Switch to a different episode in the series
+  Future<void> _switchToEpisode(EpisodeEntity episode) async {
+    setState(() {
+      _showEpisodes = false;
+      _isLoading = true;
+      _currentEpisode = episode.episodeNumber;
+      _currentEpisodeId = episode.id;
+    });
+    
+    // Dispose current controller
+    _controller?.removeListener(_videoListener);
+    _controller?.pause();
+    await _controller?.dispose();
+    
+    // Initialize new video controller with episode URL
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(episode.hlsPlaylistUrl),
+    )..initialize().then((_) {
+        setState(() => _isLoading = false);
+        _controller!.play();
+        _controller!.addListener(_videoListener);
+        
+        // Track as recently viewed
+        RecentlyViewedService.instance.addItem(
+          contentId: episode.id,
+          title: episode.title,
+          thumbnailUrl: episode.thumbnailUrl,
+          contentType: 'video',
+          durationSeconds: episode.durationSeconds,
+        );
+      }).catchError((error) {
+        debugPrint('❌ Episode initialization failed: $error');
+        setState(() { _hasError = true; _isLoading = false; });
+      });
   }
 
   void _videoListener() {
@@ -132,7 +201,32 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   @override
   void dispose() {
+    // Track watch progress before disposing
+    if (_video != null && _controller != null && _controller!.value.isInitialized) {
+      final position = _controller!.value.position;
+      final duration = _controller!.value.duration;
+      final progressPercent = duration.inMilliseconds > 0 
+          ? ((position.inMilliseconds / duration.inMilliseconds) * 100).round()
+          : 0;
+      
+      // Track video progress/completion in GA4
+      if (progressPercent >= 90) {
+        AnalyticsService.instance.trackVideoComplete(
+          videoId: _video!.id,
+          videoTitle: _video!.title,
+          watchTimeSeconds: position.inSeconds,
+        );
+      } else {
+        AnalyticsService.instance.trackVideoProgress(
+          videoId: _video!.id,
+          progressPercent: progressPercent,
+          watchTimeSeconds: position.inSeconds,
+        );
+      }
+    }
+    
     _controller?.removeListener(_videoListener);
+    _controller?.pause();
     _controller?.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
@@ -156,85 +250,127 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   }
 
   Widget _buildErrorView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.white),
-          const SizedBox(height: 16),
-          const Text('Failed to load video', style: TextStyle(color: Colors.white, fontSize: 18)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              setState(() { _isLoading = true; _hasError = false; });
-              _loadVideo();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1DB954)),
-            child: const Text('Retry'),
+    return Stack(
+      children: [
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.white),
+              const SizedBox(height: 16),
+              const Text('Failed to load video', style: TextStyle(color: Colors.white, fontSize: 18)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    label: const Text('Go Back', style: TextStyle(color: Colors.white)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white54),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() { _isLoading = true; _hasError = false; });
+                      _loadVideo();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1DB954),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        // Top-left back button
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 8,
+          left: 8,
+          child: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildVideoPlayer() {
     return Stack(
       children: [
-        // Full screen video
+        // Full screen video - clipped to screen bounds
         if (_controller != null && _controller!.value.isInitialized)
           Positioned.fill(
-            child: GestureDetector(
-              onTap: () {
-                if (_controller!.value.isPlaying) {
-                  _controller!.pause();
-                } else {
-                  _controller!.play();
-                }
-              },
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _controller!.value.size.width,
-                  height: _controller!.value.size.height,
-                  child: VideoPlayer(_controller!),
+            child: ClipRect(
+              child: GestureDetector(
+                onTap: () {
+                  if (_controller!.value.isPlaying) {
+                    _controller!.pause();
+                  } else {
+                    _controller!.play();
+                  }
+                },
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _controller!.value.size.width,
+                    height: _controller!.value.size.height,
+                    child: VideoPlayer(_controller!),
+                  ),
                 ),
               ),
             ),
           ),
         
-        // Dark gradient overlay at bottom for readability
+        // Dark gradient overlay at bottom for readability (ignores touch)
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
           height: MediaQuery.of(context).size.height * 0.45,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.7),
-                  Colors.black.withOpacity(0.95),
-                ],
-                stops: const [0.0, 0.3, 0.6, 1.0],
+          child: IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.7),
+                    Colors.black.withOpacity(0.95),
+                  ],
+                  stops: const [0.0, 0.3, 0.6, 1.0],
+                ),
               ),
             ),
           ),
         ),
         
-        // Play/Pause indicator
+        // Play/Pause indicator - tappable
         if (!_isPlaying && _controller != null && _controller!.value.isInitialized)
           Center(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(50),
+            child: GestureDetector(
+              onTap: () {
+                _controller!.play();
+                setState(() => _isPlaying = true);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: const Icon(Icons.play_arrow, size: 60, color: Colors.white),
               ),
-              child: const Icon(Icons.play_arrow, size: 60, color: Colors.white),
             ),
           ),
         
@@ -264,10 +400,6 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                   ),
                   onPressed: _toggleLike,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.share_outlined, color: Colors.white, size: 24),
-                  onPressed: () {},
-                ),
               ],
             ),
           ),
@@ -289,70 +421,67 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Author row
-                      Row(
-                        children: [
-                          // Profile picture
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF1DB954), width: 2),
-                            ),
-                            child: ClipOval(
-                              child: CachedNetworkImage(
-                                imageUrl: 'https://picsum.photos/seed/${_video?.instructor ?? 'author'}/100/100',
-                                fit: BoxFit.cover,
-                                errorWidget: (context, url, error) => Container(
-                                  color: const Color(0xFF282828),
-                                  child: const Icon(Icons.person, color: Colors.white),
+                      // Author row - tappable to view speaker profile
+                      GestureDetector(
+                        onTap: () {
+                          if (_video != null) {
+                            final speakerName = _video!.instructor ?? 'Wellness Guide';
+                            final speakerImageUrl = 'https://picsum.photos/seed/${speakerName}/100/100';
+                            context.push(
+                              '${AppRouter.speakerProfile}?id=${_video!.id}&name=${Uri.encodeComponent(speakerName)}&imageUrl=${Uri.encodeComponent(speakerImageUrl)}',
+                            );
+                          }
+                        },
+                        child: Row(
+                          children: [
+                            // Profile picture
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFF1DB954), width: 2),
+                              ),
+                              child: ClipOval(
+                                child: CachedNetworkImage(
+                                  imageUrl: 'https://picsum.photos/seed/${_video?.instructor ?? 'author'}/100/100',
+                                  fit: BoxFit.cover,
+                                  errorWidget: (context, url, error) => Container(
+                                    color: const Color(0xFF282828),
+                                    child: const Icon(Icons.person, color: Colors.white),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Author name and category
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _video?.instructor ?? 'Wellness Guide',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
+                            const SizedBox(width: 12),
+                            // Author name and category
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _video?.instructor ?? 'Wellness Guide',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _video?.category ?? 'Wellness Coach',
-                                  style: const TextStyle(
-                                    color: Colors.white60,
-                                    fontSize: 13,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _video?.category ?? 'Wellness Coach',
+                                    style: const TextStyle(
+                                      color: Colors.white60,
+                                      fontSize: 13,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Follow button
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1DB954),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: const Text(
-                              'Follow',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                                ],
                               ),
                             ),
-                          ),
-                        ],
+                            // Arrow indicator for tap
+                            const Icon(Icons.chevron_right, color: Colors.white54, size: 22),
+                          ],
+                        ),
                       ),
                       
                       const SizedBox(height: 16),
@@ -391,7 +520,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                           const SizedBox(width: 12),
                           _buildTag(Icons.category_outlined, _video?.category ?? 'Wellness'),
                           const SizedBox(width: 12),
-                          _buildTag(Icons.visibility_outlined, '12.5K views'),
+                          _buildTag(Icons.visibility_outlined, '${_video?.formattedViews ?? '0'} views'),
                         ],
                       ),
                     ],
@@ -420,48 +549,77 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                 
                 const SizedBox(height: 8),
                 
-                // Episodes button - tap to expand
-                GestureDetector(
-                  onTap: () => setState(() => _showEpisodes = true),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1C1C1E),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.playlist_play, color: Color(0xFF1DB954), size: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'More Episodes',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                'Episode $_currentEpisode of ${_episodes.length} • Tap to view all',
-                                style: const TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
+                // Episodes button - only show when video belongs to a series
+                if (_video?.belongsToSeries == true || _episodes.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => setState(() => _showEpisodes = true),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.15),
+                          width: 1,
                         ),
-                        const Icon(Icons.keyboard_arrow_up, color: Colors.white54, size: 24),
-                      ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: _isLoadingEpisodes
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white70,
+                                    ),
+                                  )
+                                : const Icon(Icons.playlist_play, color: Colors.white70, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'More Episodes',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  _episodes.isNotEmpty
+                                      ? 'Episode $_currentEpisode of ${_episodes.length} • Tap to view all'
+                                      : 'Loading episodes...',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.6),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.keyboard_arrow_up, color: Colors.white70, size: 20),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 
                 const SizedBox(height: 16),
               ],
@@ -501,38 +659,42 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     return GestureDetector(
       onTap: () => setState(() => _showEpisodes = false),
       child: Container(
-        color: Colors.black54,
+        color: Colors.black.withOpacity(0.7),
         child: Align(
           alignment: Alignment.bottomCenter,
           child: GestureDetector(
             onTap: () {}, // Prevent closing when tapping content
             child: Container(
               height: MediaQuery.of(context).size.height * 0.7,
-              decoration: const BoxDecoration(
-                color: Color(0xFF121212),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1,
+                ),
               ),
               child: Column(
                 children: [
-                  // Handle bar
+                  // Handle bar with glow
                   GestureDetector(
                     onTap: () => setState(() => _showEpisodes = false),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Center(
                         child: Container(
-                          width: 40,
-                          height: 4,
+                          width: 44,
+                          height: 5,
                           decoration: BoxDecoration(
-                            color: Colors.white38,
-                            borderRadius: BorderRadius.circular(2),
+                            color: Colors.white.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(3),
                           ),
                         ),
                       ),
                     ),
                   ),
-                  // Header
+                  // Header with purple accent
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
@@ -545,38 +707,64 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                               'All Episodes',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 22,
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               '${_episodes.length} episodes available',
-                              style: const TextStyle(color: Colors.white54, fontSize: 13),
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white70),
-                          onPressed: () => setState(() => _showEpisodes = false),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white70, size: 22),
+                            onPressed: () => setState(() => _showEpisodes = false),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Divider(color: Colors.white12, height: 1),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 1,
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    color: Colors.white.withOpacity(0.1),
+                  ),
                   // Episodes list
                   Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _episodes.length,
-                      itemBuilder: (context, index) {
-                        final episode = _episodes[index];
-                        final isPlaying = _currentEpisode == episode['number'];
-                        final isLocked = episode['isLocked'] as bool;
-                        return _buildEpisodeCard(episode, isPlaying, isLocked);
-                      },
-                    ),
+                    child: _isLoadingEpisodes
+                        ? const Center(
+                            child: CircularProgressIndicator(color: Colors.white70),
+                          )
+                        : _episodes.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No episodes available',
+                                  style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _episodes.length,
+                                itemBuilder: (context, index) {
+                                  final episode = _episodes[index];
+                                  final isPlaying = _currentEpisodeId == episode.id;
+                                  final isLocked = episode.isPremium; // Based on access tier
+                                  return _buildEpisodeCard(episode, isPlaying, isLocked);
+                                },
+                              ),
                   ),
                 ],
               ),
@@ -587,14 +775,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     );
   }
 
-  Widget _buildEpisodeCard(Map<String, dynamic> episode, bool isPlaying, bool isLocked) {
+  Widget _buildEpisodeCard(EpisodeEntity episode, bool isPlaying, bool isLocked) {
     return GestureDetector(
-      onTap: isLocked ? _showPremiumDialog : () {
-        setState(() {
-          _currentEpisode = episode['number'];
-          _showEpisodes = false;
-        });
-      },
+      onTap: isLocked ? _showPremiumDialog : () => _switchToEpisode(episode),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -617,10 +800,20 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: CachedNetworkImage(
-                          imageUrl: 'https://picsum.photos/seed/ep${episode['number']}/120/80',
+                          imageUrl: episode.thumbnailUrl.isNotEmpty 
+                              ? episode.thumbnailUrl 
+                              : 'https://picsum.photos/seed/ep${episode.episodeNumber}/120/80',
                           width: 100,
                           height: 70,
                           fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: const Color(0xFF282828),
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: const Color(0xFF282828),
+                            child: const Icon(Icons.video_library, color: Colors.white54),
+                          ),
                         ),
                       ),
                       if (isLocked)
@@ -657,7 +850,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            episode['duration'],
+                            episode.formattedDuration,
                             style: const TextStyle(color: Colors.white, fontSize: 10),
                           ),
                         ),
@@ -672,7 +865,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                         Row(
                           children: [
                             Text(
-                              'Episode ${episode['number']}',
+                              'Episode ${episode.episodeNumber}',
                               style: TextStyle(
                                 color: isPlaying ? const Color(0xFF1DB954) : Colors.white70,
                                 fontSize: 12,
@@ -703,7 +896,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          episode['title'],
+                          episode.title,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 15,
@@ -716,19 +909,20 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Text(
-                episode['description'],
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 13,
-                  height: 1.4,
+            if (episode.description != null && episode.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Text(
+                  episode.description!,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
           ],
         ),
       ),

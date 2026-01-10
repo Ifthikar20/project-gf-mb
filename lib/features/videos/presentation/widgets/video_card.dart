@@ -105,18 +105,45 @@ class VideoCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppConstants.spacingXS),
                   Text(
-                    video.instructor,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-                  const SizedBox(height: AppConstants.spacingXS),
-                  Text(
                     video.description,
                     style: Theme.of(context).textTheme.bodyMedium,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppConstants.spacingS),
+                  // Bottom row: Instructor • Views (tiny)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          video.instructor,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Tiny view count
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.visibility_outlined,
+                            size: 12,
+                            color: Colors.grey[500],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            video.formattedViews,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[500],
+                                  fontSize: 11,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -127,3 +154,4 @@ class VideoCard extends StatelessWidget {
     );
   }
 }
+

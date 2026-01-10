@@ -17,7 +17,7 @@ class ExplorePage extends StatefulWidget {
 
 class _ExplorePageState extends State<ExplorePage> {
   String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'Video', 'Audio', 'Podcasts', 'Audiobooks'];
+  final List<String> _categories = ['All', 'Video', 'Audio', 'Podcasts'];
 
   @override
   Widget build(BuildContext context) {
@@ -26,33 +26,70 @@ class _ExplorePageState extends State<ExplorePage> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Header with category chips
+          // Header with title and category chips
           SliverToBoxAdapter(
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: _categories.map((category) {
-                      return _buildChip(
-                        category,
-                        _selectedCategory == category,
-                        () => setState(() => _selectedCategory = category),
-                      );
-                    }).toList(),
-                  ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Explore',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // Search icon button
+                        GestureDetector(
+                          onTap: () {
+                            context.push(AppRouter.search);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: const Icon(
+                              Icons.search,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: _categories.map((category) {
+                          return _buildChip(
+                            category,
+                            _selectedCategory == category,
+                            () => setState(() => _selectedCategory = category),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
 
           // Top Trending section
-          _buildSectionHeader('Top Trending'),
+          _buildSectionHeader('Top Trending', isPurple: true),
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 200,
+              height: 240,
               child: _buildVideosSection(),
             ),
           ),
@@ -97,12 +134,12 @@ class _ExplorePageState extends State<ExplorePage> {
 
   Widget _buildTopSpeakersSection() {
     final speakers = [
-      {'name': 'Dr. Sarah', 'imageUrl': 'https://picsum.photos/seed/speaker1/200/200'},
-      {'name': 'Mark', 'imageUrl': 'https://picsum.photos/seed/speaker2/200/200'},
-      {'name': 'Emma', 'imageUrl': 'https://picsum.photos/seed/speaker3/200/200'},
-      {'name': 'James', 'imageUrl': 'https://picsum.photos/seed/speaker4/200/200'},
-      {'name': 'Lisa', 'imageUrl': 'https://picsum.photos/seed/speaker5/200/200'},
-      {'name': 'David', 'imageUrl': 'https://picsum.photos/seed/speaker6/200/200'},
+      {'id': 'speaker1', 'name': 'Dr. Sarah', 'imageUrl': 'https://picsum.photos/seed/speaker1/200/200'},
+      {'id': 'speaker2', 'name': 'Mark', 'imageUrl': 'https://picsum.photos/seed/speaker2/200/200'},
+      {'id': 'speaker3', 'name': 'Emma', 'imageUrl': 'https://picsum.photos/seed/speaker3/200/200'},
+      {'id': 'speaker4', 'name': 'James', 'imageUrl': 'https://picsum.photos/seed/speaker4/200/200'},
+      {'id': 'speaker5', 'name': 'Lisa', 'imageUrl': 'https://picsum.photos/seed/speaker5/200/200'},
+      {'id': 'speaker6', 'name': 'David', 'imageUrl': 'https://picsum.photos/seed/speaker6/200/200'},
     ];
 
     return ListView.builder(
@@ -112,51 +149,58 @@ class _ExplorePageState extends State<ExplorePage> {
       itemCount: speakers.length,
       itemBuilder: (context, index) {
         final speaker = speakers[index];
-        return Container(
-          width: 80,
-          margin: const EdgeInsets.only(right: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: speaker['imageUrl']!,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: const Color(0xFF282828),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: const Color(0xFF282828),
-                      child: const Icon(Icons.person, color: Colors.white24),
+        return GestureDetector(
+          onTap: () {
+            context.push(
+              '${AppRouter.speakerProfile}?id=${speaker['id']}&name=${Uri.encodeComponent(speaker['name']!)}&imageUrl=${Uri.encodeComponent(speaker['imageUrl']!)}',
+            );
+          },
+          child: Container(
+            width: 80,
+            margin: const EdgeInsets.only(right: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: speaker['imageUrl']!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: const Color(0xFF282828),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: const Color(0xFF282828),
+                        child: const Icon(Icons.person, color: Colors.white24),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                speaker['name']!,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
+                const SizedBox(height: 8),
+                Text(
+                  speaker['name']!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -391,12 +435,12 @@ class _ExplorePageState extends State<ExplorePage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFF1DB954)
+                ? const Color(0xFF7C3AED) // Purple when selected (matching Meditate page)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF1DB954)
+                  ? const Color(0xFF7C3AED)
                   : Colors.white.withOpacity(0.5),
               width: 1,
             ),
@@ -404,7 +448,7 @@ class _ExplorePageState extends State<ExplorePage> {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.black : Colors.white,
+              color: isSelected ? Colors.white : Colors.white,
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
@@ -414,31 +458,17 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {bool isPurple = false}) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-              ),
-            ),
-            Text(
-              'Show all',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isPurple ? const Color(0xFF7C3AED) : Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -556,11 +586,13 @@ class _ExplorePageState extends State<ExplorePage> {
             itemCount: state.videos.length,
             itemBuilder: (context, index) {
               final video = state.videos[index];
-              return _buildContentCard(
+              return _buildTrendingCard(
+                category: video.category.toUpperCase(),
                 title: video.title,
-                subtitle: video.category,
+                authorName: video.instructor.isNotEmpty ? video.instructor : 'Playlist',
                 imageUrl: video.thumbnailUrl,
-                badge: 'VIDEO',
+                isSeries: video.isSeries,
+                episodeCount: video.episodeCount,
                 onTap: () {
                   context.push('${AppRouter.videoPlayer}?id=${video.id}');
                 },
@@ -572,6 +604,144 @@ class _ExplorePageState extends State<ExplorePage> {
           child: CircularProgressIndicator(color: Color(0xFF1DB954)),
         );
       },
+    );
+  }
+
+  /// Apple Music-style trending card - category and title on top, image card below
+  Widget _buildTrendingCard({
+    required String category,
+    required String title,
+    required String authorName,
+    required String imageUrl,
+    required VoidCallback onTap,
+    bool isSeries = false,
+    int? episodeCount,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category label
+            Text(
+              category,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            // Title
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            // Author name
+            Text(
+              authorName,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 13,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            // Large image card
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: const Color(0xFF282828),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: const Color(0xFF282828),
+                          child: const Icon(Icons.play_circle_outline, color: Colors.white24, size: 48),
+                        ),
+                      ),
+                      // Subtle gradient overlay at bottom
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.4),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Series episode count badge
+                      if (isSeries && episodeCount != null)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.playlist_play, color: Colors.white, size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$episodeCount episodes',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

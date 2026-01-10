@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/app_router.dart';
+import '../../../../core/auth/auth_bloc.dart';
+import '../../../../core/services/auth_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -58,105 +61,125 @@ class ProfilePage extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      // Profile section
-                      Row(
-                        children: [
-                          // Avatar
-                          Stack(
+                      // Profile section - Auth aware
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, authState) {
+                          final isLoggedIn = authState is AuthAuthenticated;
+                          final user = isLoggedIn ? authState.user : null;
+                          final initials = user?.name?.isNotEmpty == true
+                              ? user!.name![0].toUpperCase()
+                              : (user?.email.isNotEmpty == true ? user!.email[0].toUpperCase() : 'G');
+                          
+                          return Row(
                             children: [
+                              // Avatar
                               Container(
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF1DB954), Color(0xFF169C46)],
-                                  ),
-                                  boxShadow: [
+                                  gradient: isLoggedIn
+                                      ? const LinearGradient(colors: [Color(0xFF1DB954), Color(0xFF169C46)])
+                                      : null,
+                                  color: isLoggedIn ? null : Colors.white.withOpacity(0.1),
+                                  border: isLoggedIn ? null : Border.all(color: Colors.white.withOpacity(0.2)),
+                                  boxShadow: isLoggedIn ? [
                                     BoxShadow(
                                       color: const Color(0xFF1DB954).withOpacity(0.4),
                                       blurRadius: 20,
                                       offset: const Offset(0, 8),
                                     ),
-                                  ],
+                                  ] : null,
                                 ),
-                                child: const Center(
-                                  child: Text(
-                                    'U',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                child: Center(
+                                  child: isLoggedIn
+                                      ? Text(
+                                          initials,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        )
+                                      : const Icon(Icons.person_outline, color: Colors.white54, size: 40),
                                 ),
                               ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
-                                        blurRadius: 8,
+                              const SizedBox(width: 16),
+                              // User info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isLoggedIn ? (user?.name ?? 'User') : 'Guest',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    color: Color(0xFF1DB954),
-                                    size: 14,
-                                  ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isLoggedIn ? user!.email : 'Sign in to sync your progress',
+                                      style: const TextStyle(
+                                        color: Colors.white60,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    // Login/Logout button
+                                    isLoggedIn
+                                        ? GestureDetector(
+                                            onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.logout, color: Colors.redAccent, size: 14),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'Sign Out',
+                                                    style: TextStyle(
+                                                      color: Colors.redAccent,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          )
+                                        : GestureDetector(
+                                            onTap: () => context.go('/login'),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                              decoration: BoxDecoration(
+                                                gradient: const LinearGradient(
+                                                  colors: [Color(0xFF1DB954), Color(0xFF1ED760)],
+                                                ),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: const Text(
+                                                'Sign In',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                  ],
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(width: 16),
-                          // User info
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Wellness User',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'user@wellness.app',
-                                  style: TextStyle(
-                                    color: Colors.white60,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Text(
-                                    'Edit Profile',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 28),
                       // Stats row
@@ -370,7 +393,6 @@ class ProfilePage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
               child: _buildSection('Preferences', [
                 _MenuItem(Icons.notifications_outlined, 'Notifications', 'Push, email alerts'),
-                _MenuItem(Icons.dark_mode_outlined, 'Appearance', 'Theme, display'),
                 _MenuItem(Icons.language_outlined, 'Language', 'English (US)'),
                 _MenuItem(Icons.download_outlined, 'Downloads', 'Offline content'),
               ]),

@@ -11,6 +11,9 @@ class LoadMeditationAudios extends MeditationEvent {}
 
 class LoadMeditationTypes extends MeditationEvent {}
 
+/// Force refresh from API (for pull-to-refresh)
+class RefreshMeditationAudios extends MeditationEvent {}
+
 class SelectCategory extends MeditationEvent {
   final String category;
 

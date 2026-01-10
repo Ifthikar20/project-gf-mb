@@ -3,8 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config/app_config.dart';
+import 'core/config/environment_config.dart';
+import 'core/services/analytics_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
+import 'core/auth/auth_bloc.dart';
+import 'core/services/recently_viewed_service.dart';
 import 'features/wellness_goals/data/datasources/goals_local_datasource.dart';
 import 'features/wellness_goals/data/repositories/goals_repository_impl.dart';
 import 'features/wellness_goals/presentation/bloc/goals_bloc.dart';
@@ -20,21 +24,31 @@ import 'features/library/presentation/bloc/library_bloc.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables from .env file
+  await EnvironmentConfig.load();
+
   // Initialize app configuration (environment-aware)
-  // Build with: flutter run --dart-define=ENVIRONMENT=production
   AppConfig.initialize();
+
+  // Initialize GA4 Analytics (Measurement Protocol - no Firebase SDK needed)
+  try {
+    await AnalyticsService.instance.initialize();
+    debugPrint('✅ GA4 Analytics initialized');
+  } catch (e) {
+    debugPrint('⚠️ GA4 init failed (analytics disabled): $e');
+  }
 
   // Initialize Hive for local storage
   await Hive.initFlutter();
-  
-  // Register adapters - note: run 'flutter packages pub run build_runner build' to generate
-  // Hive.registerAdapter(GoalModelAdapter());
+
+  // Initialize recently viewed service
+  await RecentlyViewedService.instance.init();
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
     ),
   );
 
@@ -64,6 +78,10 @@ class WellnessApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
+          // Auth BLoC (check if user is logged in)
+          BlocProvider(
+            create: (context) => AuthBloc()..add(AuthCheckRequested()),
+          ),
           BlocProvider(
             create: (context) => GoalsBloc(
               repository: context.read<GoalsRepositoryImpl>(),
@@ -85,7 +103,7 @@ class WellnessApp extends StatelessWidget {
         ],
         child: MaterialApp.router(
           title: config.appName,
-          debugShowCheckedModeBanner: config.isDebugMode,
+          debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.dark,
@@ -95,4 +113,3 @@ class WellnessApp extends StatelessWidget {
     );
   }
 }
-
