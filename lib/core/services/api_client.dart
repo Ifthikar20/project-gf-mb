@@ -82,15 +82,29 @@ class ApiClient {
       return handler.next(options);
     },
     onResponse: (response, handler) {
-      AppLogger.response(response.statusCode, response.requestOptions.path);
+      AppLogger.response(
+        response.statusCode,
+        response.requestOptions.path,
+        data: kDebugMode ? response.data : null, // Log response body in debug mode
+      );
       return handler.next(response);
     },
     onError: (error, handler) async {
       final path = error.requestOptions.path;
-      
+      final statusCode = error.response?.statusCode;
+      final responseData = error.response?.data;
+      final headers = error.response?.headers;
+
       // Skip refresh for auth endpoints to prevent infinite loops
       if (path.contains('/auth/')) {
-        AppLogger.w('Auth endpoint failed: $path (${error.response?.statusCode})');
+        AppLogger.e(
+          '❌ Auth endpoint failed: $path ($statusCode)\n'
+          '📋 Response Body: $responseData\n'
+          '📨 Response Headers: ${headers?.map}\n'
+          '🔍 Error Type: ${error.type}\n'
+          '💬 Error Message: ${error.message}',
+          error: error,
+        );
         return handler.reject(error);
       }
       
@@ -119,6 +133,16 @@ class ApiClient {
           return handler.reject(error);
         }
       }
+
+      // Log all other errors with full details
+      AppLogger.e(
+        '❌ API Error: $path ($statusCode)\n'
+        '📋 Response Body: $responseData\n'
+        '🔍 Error Type: ${error.type}\n'
+        '💬 Error Message: ${error.message}',
+        error: error,
+      );
+
       return handler.next(error);
     },
   );
