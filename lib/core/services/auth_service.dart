@@ -252,7 +252,7 @@ class AuthService {
   }) async {
     await _api.post('/auth/reset-password', data: {
       'email': email,
-      'code': code,
+      'confirmation_code': code,
       'new_password': newPassword,
     });
   }

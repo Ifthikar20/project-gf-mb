@@ -132,8 +132,8 @@ class StreamingService {
   // ============================================
   
   /// Get secure streaming URLs for content
-  /// Constructs HLS URLs directly from s3_keys (matching web frontend behavior)
-  /// The streaming endpoint is not used as it requires cookie-based auth
+  /// Calls the streaming endpoint to get signed CloudFront URLs
+  /// Falls back to content detail if streaming endpoint fails
   Future<StreamingUrls> getStreamingUrls(String contentId) async {
     // Check cache first
     if (_urlCache.containsKey(contentId)) {
@@ -145,8 +145,38 @@ class StreamingService {
       }
     }
     
-    // Construct URLs directly from content detail (matching web frontend)
-    // This is faster and more reliable than the streaming endpoint
+    // Method 1: Call the streaming endpoint for signed URLs (preferred)
+    try {
+      debugPrint('🔐 Calling streaming endpoint for signed URL: /api/streaming/content/$contentId/stream');
+      final response = await _api.get('/api/streaming/content/$contentId/stream');
+      final data = response.data;
+      debugPrint('🔐 Streaming response: $data');
+      
+      // Parse the streaming response with signed URLs
+      final hlsPlaylistUrl = data['hls_playlist_url'] as String?;
+      if (hlsPlaylistUrl != null && hlsPlaylistUrl.isNotEmpty) {
+        debugPrint('✅ Got signed streaming URL: $hlsPlaylistUrl');
+        
+        final expiresAt = DateTime.tryParse(data['expires_at'] ?? '') ?? 
+            DateTime.now().add(const Duration(hours: 2));
+        
+        final urls = StreamingUrls(
+          hlsMaster: hlsPlaylistUrl,
+          thumbnail: data['thumbnail_url'],
+          expiresAt: expiresAt,
+        );
+        
+        // Cache the signed URLs
+        _urlCache[contentId] = urls;
+        return urls;
+      } else {
+        debugPrint('⚠️ Streaming response missing hls_playlist_url');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Streaming endpoint failed, trying fallback: $e');
+    }
+    
+    // Method 2: Fall back to content detail (unsigned URLs, may fail)
     final urls = await getStreamingUrlsFromContentDetail(contentId);
     if (urls != null) {
       return urls;
@@ -210,8 +240,8 @@ class StreamingService {
         expiresAt: DateTime.now().add(const Duration(hours: 2)),
       );
       
-      // Cache the URLs
-      _urlCache[contentId] = urls;
+      // NOTE: Don't cache these URLs - they are unsigned and may fail with 403
+      // Only signed URLs from the streaming endpoint should be cached
       
       return urls;
     } catch (e) {

@@ -4,6 +4,8 @@ import '../presentation/pages/home_page.dart';
 import '../auth/landing_page.dart';
 import '../auth/login_page.dart';
 import '../auth/register_page.dart';
+import '../auth/forgot_password_page.dart';
+import '../auth/reset_password_page.dart';
 import '../../features/wellness_goals/presentation/pages/goal_detail_page.dart';
 import '../../features/videos/presentation/pages/video_player_page.dart';
 import '../../features/meditation/presentation/pages/meditation_category_page.dart';
@@ -17,6 +19,8 @@ class AppRouter {
   static const String landing = '/landing';
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
   static const String wellnessGoals = '/wellness-goals';
   static const String goalDetail = '/goal-detail';
   static const String videos = '/videos';
@@ -46,6 +50,17 @@ class AppRouter {
       GoRoute(
         path: register,
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: forgotPassword,
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: resetPassword,
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          return ResetPasswordPage(email: Uri.decodeComponent(email));
+        },
       ),
       GoRoute(
         path: goalDetail,

@@ -39,6 +39,16 @@ fi
 # Common build flags
 BUILD_FLAGS="--release --obfuscate --split-debug-info=$DEBUG_INFO_DIR"
 
+# Run tests before building
+echo -e "${YELLOW}🧪 Running tests before build...${NC}"
+flutter test
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Tests failed. Aborting build.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ All tests passed!${NC}"
+echo ""
+
 case $PLATFORM in
     "android")
         echo -e "${YELLOW}📱 Building Android APK with obfuscation...${NC}"
