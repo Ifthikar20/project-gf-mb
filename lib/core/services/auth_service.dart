@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
 
@@ -88,15 +89,24 @@ class AuthService {
         'password': password,
         'full_name': fullName,
       });
-      
+
       if (response.data['success'] == true) {
         _currentUser = User.fromJson(response.data['user']);
         return _currentUser!;
       } else {
-        throw AuthException(response.data['message'] ?? 'Registration failed');
+        throw AuthException(
+          response.data['message'] ?? 'Registration failed',
+          statusCode: response.statusCode,
+        );
       }
+    } on DioException catch (e) {
+      throw AuthException(
+        e.response?.data?['message'] ?? 'Registration failed',
+        statusCode: e.response?.statusCode,
+        originalError: e,
+      );
     } catch (e) {
-      throw AuthException('Registration failed: $e');
+      throw AuthException('Registration failed', originalError: e);
     }
   }
   
@@ -111,15 +121,15 @@ class AuthService {
         'email': email,
         'password': password,
       });
-      
+
       if (response.data['success'] == true) {
         _currentUser = User.fromJson(response.data['user']);
-        
+
         // Extract and save tokens from Set-Cookie header
         final setCookies = response.headers['set-cookie'];
         String? accessToken;
         String? refreshToken;
-        
+
         if (setCookies != null) {
           for (final cookie in setCookies) {
             if (cookie.startsWith('access_token=')) {
@@ -133,12 +143,12 @@ class AuthService {
             }
           }
         }
-        
+
         // Set token in API client for immediate use
         if (accessToken != null) {
           _api.setAccessToken(accessToken);
           debugPrint('🔑 Access token extracted from cookie');
-          
+
           // Persist tokens for app restart
           await _tokenStorage.saveAccessToken(accessToken);
           if (refreshToken != null) {
@@ -147,14 +157,23 @@ class AuthService {
           // Save user data for offline display
           await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
         }
-        
+
         debugPrint('✅ Logged in as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
-        throw AuthException(response.data['message'] ?? 'Login failed');
+        throw AuthException(
+          response.data['message'] ?? 'Login failed',
+          statusCode: response.statusCode,
+        );
       }
+    } on DioException catch (e) {
+      throw AuthException(
+        e.response?.data?['message'] ?? 'Login failed',
+        statusCode: e.response?.statusCode,
+        originalError: e,
+      );
     } catch (e) {
-      throw AuthException('Login failed: $e');
+      throw AuthException('Login failed', originalError: e);
     }
   }
   
@@ -271,11 +290,14 @@ class AuthService {
   }
 }
 
-/// Auth exception
+/// Auth exception with optional status code for better error handling
 class AuthException implements Exception {
   final String message;
-  AuthException(this.message);
-  
+  final int? statusCode;
+  final Object? originalError;
+
+  AuthException(this.message, {this.statusCode, this.originalError});
+
   @override
   String toString() => message;
 }

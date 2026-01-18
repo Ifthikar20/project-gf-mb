@@ -62,30 +62,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  /// Parse error message to user-friendly format
-  String _parseErrorMessage(String error) {
-    // Handle common Cognito/AWS errors
-    if (error.contains('UsernameExistsException') || error.contains('already exists')) {
-      return 'An account with this email already exists. Please log in instead.';
-    }
-    if (error.contains('InvalidPasswordException') || error.contains('Password')) {
-      return 'Password must be at least 8 characters with uppercase, lowercase, and numbers.';
-    }
-    if (error.contains('InvalidParameterException')) {
-      return 'Please check your input and try again.';
-    }
-    if (error.contains('network') || error.contains('Network') || error.contains('connection')) {
-      return 'Network error. Please check your connection and try again.';
-    }
-    if (error.contains('timeout') || error.contains('Timeout')) {
-      return 'Request timed out. Please try again.';
-    }
-    // Return cleaned up error or generic message
-    if (error.length > 100) {
-      return 'Registration failed. Please try again.';
-    }
-    return error;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,12 +75,13 @@ class _RegisterPageState extends State<RegisterPage> {
         } else {
           setState(() => _isLoading = false);
         }
-        
+
         if (state is AuthAuthenticated) {
           context.go('/');
         } else if (state is AuthError) {
+          // Error message is already user-friendly from AuthBloc
           setState(() {
-            _errorMessage = _parseErrorMessage(state.message);
+            _errorMessage = state.message;
           });
         }
       },

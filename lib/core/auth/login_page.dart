@@ -17,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String? _errorMessage;
 
   // Purple theme color
   static const Color primaryPurple = Color(0xFF8B5CF6);
@@ -28,7 +29,14 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  void _clearError() {
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
+  }
+
   void _onLogin() {
+    _clearError();
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(AuthLoginRequested(
         email: _emailController.text.trim(),
@@ -42,21 +50,21 @@ class _LoginPageState extends State<LoginPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthLoading) {
-          setState(() => _isLoading = true);
+          setState(() {
+            _isLoading = true;
+            _errorMessage = null;
+          });
         } else {
           setState(() => _isLoading = false);
         }
-        
+
         if (state is AuthAuthenticated) {
           context.go('/');
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          // Error message is already user-friendly from AuthBloc
+          setState(() {
+            _errorMessage = state.message;
+          });
         }
       },
       child: Scaffold(
@@ -107,9 +115,44 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    
-                    const SizedBox(height: 40),
-                    
+
+                    const SizedBox(height: 24),
+
+                    // Error message banner
+                    if (_errorMessage != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: GoogleFonts.inter(
+                                  color: Colors.red.shade300,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _clearError,
+                              child: const Icon(Icons.close, color: Colors.red, size: 18),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    const SizedBox(height: 16),
+
                     // Email field
                     _buildLabel('Email'),
                     const SizedBox(height: 8),
@@ -118,6 +161,7 @@ class _LoginPageState extends State<LoginPage> {
                       hintText: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
                       prefixIcon: Icons.email_outlined,
+                      onChanged: (_) => _clearError(),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
@@ -139,6 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                       hintText: 'Enter your password',
                       obscureText: _obscurePassword,
                       prefixIcon: Icons.lock_outlined,
+                      onChanged: (_) => _clearError(),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -330,6 +375,7 @@ class _LoginPageState extends State<LoginPage> {
     bool obscureText = false,
     Widget? suffixIcon,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return TextFormField(
       controller: controller,
@@ -337,6 +383,7 @@ class _LoginPageState extends State<LoginPage> {
       obscureText: obscureText,
       style: const TextStyle(color: Colors.white),
       validator: validator,
+      onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
