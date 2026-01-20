@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
 
@@ -98,10 +99,6 @@ class AuthService {
         'full_name': fullName,
       });
       
-      debugPrint('\n✅ [STEP 2/4] Received response from server');
-      debugPrint('📊 Status Code: ${response.statusCode}');
-      debugPrint('📋 Response Data: ${response.data}');
-      
       if (response.data['success'] == true) {
         debugPrint('\n✅ [STEP 3/4] Registration successful, parsing user data');
         _currentUser = User.fromJson(response.data['user']);
@@ -141,29 +138,9 @@ class AuthService {
         
         return _currentUser!;
       } else {
-        debugPrint('\n❌ [ERROR] Server returned success=false');
-        debugPrint('📋 Response: ${response.data}');
-        final errorMsg = response.data['message'] ?? 'Registration failed';
-        throw AuthException(errorMsg);
+        throw AuthException(response.data['message'] ?? 'Registration failed');
       }
-    } on DioException catch (e) {
-      debugPrint('\n' + '='*80);
-      debugPrint('❌ [AUTH SERVICE] Registration failed with DioException');
-      debugPrint('📍 Location: AuthService.register() - catch block');
-      debugPrint('🔍 Status Code: ${e.response?.statusCode}');
-      debugPrint('� Response Data: ${e.response?.data}');
-      debugPrint('='*80 + '\n');
-      
-      // Use helper to extract structured error (handles 429 rate limits too)
-      throw extractAuthError(e, fallbackMessage: 'Registration failed');
     } catch (e) {
-      debugPrint('\n' + '='*80);
-      debugPrint('❌ [AUTH SERVICE] Registration failed with error');
-      debugPrint('�📍 Location: AuthService.register() - catch block');
-      debugPrint('🔍 Error Type: ${e.runtimeType}');
-      debugPrint('💬 Error Message: $e');
-      debugPrint('='*80 + '\n');
-      if (e is AuthException || e is RateLimitException) rethrow;
       throw AuthException('Registration failed: $e');
     }
   }
@@ -187,24 +164,14 @@ class AuthService {
         'password': password,
       });
       
-      debugPrint('\n✅ [STEP 2/5] Received response from server');
-      debugPrint('📊 Status Code: ${response.statusCode}');
-      debugPrint('📋 Response Data: ${response.data}');
-      debugPrint('📨 Response Headers: ${response.headers.map}');
-      
       if (response.data['success'] == true) {
         debugPrint('\n✅ [STEP 3/5] Login successful, parsing user data');
         _currentUser = User.fromJson(response.data['user']);
-        debugPrint('👤 User ID: ${_currentUser!.id}');
-        debugPrint('📧 User Email: ${_currentUser!.email}');
-        debugPrint('🎭 User Role: ${_currentUser!.role}');
-        debugPrint('💎 Subscription: ${_currentUser!.subscriptionTier}');
         
-        // Extract and save session_id from Set-Cookie header
-        // Note: Backend uses session_id cookie for authentication (HttpOnly, Secure)
-        debugPrint('\n🔍 [STEP 4/5] Extracting session_id from Set-Cookie headers');
+        // Extract and save tokens from Set-Cookie header
         final setCookies = response.headers['set-cookie'];
-        String? sessionId;
+        String? accessToken;
+        String? refreshToken;
         
         if (setCookies != null) {
           debugPrint('📦 Found ${setCookies.length} Set-Cookie header(s)');
@@ -217,55 +184,28 @@ class AuthService {
               debugPrint('🔑 Found session_id: ${sessionId.substring(0, sessionId.length > 20 ? 20 : sessionId.length)}...');
             }
           }
-        } else {
-          debugPrint('⚠️  No Set-Cookie headers found in response');
         }
         
-        // Save session and user data
-        debugPrint('\n💾 [STEP 5/5] Saving session and user data to storage');
-        
-        // The session_id cookie is HttpOnly and will be automatically sent by Dio's cookie jar
-        // We still save it to our token storage as a backup and for session validation
-        if (sessionId != null) {
-          await _tokenStorage.saveAccessToken(sessionId);
-          debugPrint('✅ Session ID saved to secure storage');
-        } else {
-          debugPrint('ℹ️  Session ID is managed via HttpOnly cookie (handled by cookie jar)');
+        // Set token in API client for immediate use
+        if (accessToken != null) {
+          _api.setAccessToken(accessToken);
+          debugPrint('🔑 Access token extracted from cookie');
+          
+          // Persist tokens for app restart
+          await _tokenStorage.saveAccessToken(accessToken);
+          if (refreshToken != null) {
+            await _tokenStorage.saveRefreshToken(refreshToken);
+          }
+          // Save user data for offline display
+          await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
         }
         
-        // Save user data for offline display and session persistence
-        await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
-        debugPrint('✅ User data saved to secure storage');
-        
-        debugPrint('\n' + '='*80);
-        debugPrint('🎉 [AUTH SERVICE] Login completed successfully');
-        debugPrint('👤 Logged in as: ${_currentUser!.email}');
-        debugPrint('='*80 + '\n');
+        debugPrint('✅ Logged in as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
-        debugPrint('\n❌ [ERROR] Server returned success=false');
-        debugPrint('📋 Response: ${response.data}');
-        final errorMsg = response.data['message'] ?? 'Login failed';
-        throw AuthException(errorMsg);
+        throw AuthException(response.data['message'] ?? 'Login failed');
       }
-    } on DioException catch (e) {
-      debugPrint('\n' + '='*80);
-      debugPrint('❌ [AUTH SERVICE] Login failed with DioException');
-      debugPrint('📍 Location: AuthService.login() - catch block');
-      debugPrint('🔍 Status Code: ${e.response?.statusCode}');
-      debugPrint('� Response Data: ${e.response?.data}');
-      debugPrint('='*80 + '\n');
-      
-      // Use helper to extract structured error (handles 429 rate limits too)
-      throw extractAuthError(e, fallbackMessage: 'Login failed');
     } catch (e) {
-      debugPrint('\n' + '='*80);
-      debugPrint('❌ [AUTH SERVICE] Login failed with error');
-      debugPrint('�📍 Location: AuthService.login() - catch block');
-      debugPrint('🔍 Error Type: ${e.runtimeType}');
-      debugPrint('💬 Error Message: $e');
-      debugPrint('='*80 + '\n');
-      if (e is AuthException || e is RateLimitException) rethrow;
       throw AuthException('Login failed: $e');
     }
   }
@@ -457,28 +397,10 @@ class AuthService {
   }
 }
 
-/// Auth exception with optional error code for structured handling
+/// Auth exception
 class AuthException implements Exception {
   final String message;
-  final String? code;  // e.g., 'INVALID_RESET_CODE', 'EMAIL_NOT_FOUND'
-  final String? hint;  // Additional help text from backend
-  
-  AuthException(this.message, {this.code, this.hint});
-  
-  @override
-  String toString() => message;
-  
-  /// Check if this is a specific error type
-  bool isCode(String errorCode) => code == errorCode;
-}
-
-/// Rate limit exception for HTTP 429 responses
-class RateLimitException implements Exception {
-  final int retryAfterSeconds;
-  final String message;
-  
-  RateLimitException({this.retryAfterSeconds = 60, String? message})
-      : message = message ?? 'Too many attempts. Please try again in ${retryAfterSeconds}s.';
+  AuthException(this.message);
   
   @override
   String toString() => message;

@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../services/auth_service.dart';
+import '../utils/error_messages.dart';
 
 // ============================================
 // Events
@@ -149,12 +150,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       print('✅ [AUTH BLOC] Login successful, emitting AuthAuthenticated state');
       print('👤 User: ${user.email}');
       emit(AuthAuthenticated(user));
+    } on AuthException catch (e) {
+      // Use friendly error message formatter
+      final friendlyMessage = ErrorMessages.formatAuthError(
+        e,
+        statusCode: e.statusCode,
+      );
+      emit(AuthError(friendlyMessage));
     } catch (e) {
-      print('\n❌ [AUTH BLOC] Login failed in BLoC layer');
-      print('📍 Location: AuthBloc._onLoginRequested() - catch block');
-      print('🔍 Error Type: ${e.runtimeType}');
-      print('💬 Error: $e');
-      print('🔄 [AUTH BLOC] Emitting AuthError state\n');
       emit(AuthError(e.toString()));
     }
   }
@@ -171,8 +174,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         fullName: event.fullName,
       );
       emit(AuthAuthenticated(user));
+    } on AuthException catch (e) {
+      // Use friendly error message formatter
+      final friendlyMessage = ErrorMessages.formatAuthError(
+        e,
+        statusCode: e.statusCode,
+      );
+      emit(AuthError(friendlyMessage));
     } catch (e) {
-      emit(AuthError(e.toString()));
+      // Generic error fallback
+      final friendlyMessage = ErrorMessages.formatAuthError(e);
+      emit(AuthError(friendlyMessage));
     }
   }
   

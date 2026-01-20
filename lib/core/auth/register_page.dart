@@ -98,7 +98,9 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  /// Parse error message to user-friendly format
   String _parseErrorMessage(String error) {
+    // Handle common Cognito/AWS errors
     if (error.contains('UsernameExistsException') || error.contains('already exists')) {
       return 'An account with this email already exists. Please log in instead.';
     }
@@ -114,6 +116,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (error.contains('timeout') || error.contains('Timeout')) {
       return 'Request timed out. Please try again.';
     }
+    // Return cleaned up error or generic message
     if (error.length > 100) {
       return 'Registration failed. Please try again.';
     }
@@ -132,12 +135,13 @@ class _RegisterPageState extends State<RegisterPage> {
         } else {
           setState(() => _isLoading = false);
         }
-        
+
         if (state is AuthAuthenticated) {
           context.go('/');
         } else if (state is AuthError) {
+          // Error message is already user-friendly from AuthBloc
           setState(() {
-            _errorMessage = _parseErrorMessage(state.message);
+            _errorMessage = state.message;
           });
         }
       },
