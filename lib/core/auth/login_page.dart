@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:video_player/video_player.dart';
 import '../auth/auth_bloc.dart';
+import '../services/oauth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,13 +24,40 @@ class _LoginPageState extends State<LoginPage> {
   static const Color primaryPurple = Color(0xFF8B5CF6);
 
   @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    _videoController = VideoPlayerController.asset('assets/images/main-video.mp4');
+    try {
+      await _videoController.initialize();
+      _videoController.setLooping(true);
+      _videoController.setVolume(0);
+      _videoController.play();
+      setState(() => _isVideoInitialized = true);
+    } catch (e) {
+      debugPrint('Video initialization error: $e');
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _videoController.dispose();
     super.dispose();
   }
 
+  void _clearError() {
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
+  }
+
   void _onLogin() {
+    _clearError();
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(AuthLoginRequested(
         email: _emailController.text.trim(),
@@ -42,43 +71,42 @@ class _LoginPageState extends State<LoginPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthLoading) {
-          setState(() => _isLoading = true);
+          setState(() {
+            _isLoading = true;
+            _errorMessage = null;
+          });
         } else {
           setState(() => _isLoading = false);
         }
-        
+
         if (state is AuthAuthenticated) {
           context.go('/');
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          // Error message is already user-friendly from AuthBloc
+          setState(() {
+            _errorMessage = state.message;
+          });
         }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    // Back button row
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_ios, color: Colors.white70, size: 20),
-                            onPressed: () => context.pop(),
-                          ),
-                        ],
+        body: Column(
+          children: [
+            // ===== TOP HALF: Video with Logo =====
+            Expanded(
+              flex: 1,
+              child: Stack(
+                children: [
+                  // Video Background
+                  if (_isVideoInitialized)
+                    SizedBox.expand(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _videoController.value.size.width,
+                          height: _videoController.value.size.height,
+                          child: VideoPlayer(_videoController),
+                        ),
                       ),
                     ),
                     
@@ -330,17 +358,19 @@ class _LoginPageState extends State<LoginPage> {
     bool obscureText = false,
     Widget? suffixIcon,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.white, fontSize: 15),
       validator: validator,
+      onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-        prefixIcon: Icon(prefixIcon, color: Colors.white38),
+        prefixIcon: Icon(prefixIcon, color: Colors.white38, size: 20),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: const Color(0xFF1A1A1A),
@@ -360,7 +390,7 @@ class _LoginPageState extends State<LoginPage> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }

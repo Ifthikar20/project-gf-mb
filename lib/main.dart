@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config/app_config.dart';
 import 'core/config/environment_config.dart';
 import 'core/services/analytics_service.dart';
+import 'core/services/oauth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
 import 'core/auth/auth_bloc.dart';
@@ -43,6 +44,10 @@ void main() async {
 
   // Initialize recently viewed service
   await RecentlyViewedService.instance.init();
+
+  // Initialize OAuth deep link handling
+  await OAuthService.instance.initialize();
+  debugPrint('✅ OAuth service initialized');
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
@@ -90,12 +95,12 @@ class WellnessApp extends StatelessWidget {
           BlocProvider(
             create: (context) => VideosBloc(
               repository: context.read<VideosRepository>(),
-            )..add(const LoadVideos()),
+            ), // Data loaded on-demand in VideosPage/ExplorePage
           ),
           BlocProvider(
             create: (context) => MeditationBloc(
               repository: context.read<MeditationRepository>(),
-            )..add(LoadMeditationAudios()),
+            ), // Data loaded on-demand in MeditationPage/ExplorePage
           ),
           BlocProvider(
             create: (context) => LibraryBloc(),

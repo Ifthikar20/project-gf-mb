@@ -51,6 +51,10 @@ dependencies:
   # Analytics (GA4 Measurement Protocol - no Firebase SDK needed)
   http: ^1.2.0
   logger: ^2.6.2
+  
+  # OAuth / Deep Links
+  url_launcher: ^6.2.1
+  app_links: ^4.0.1
 
 dev_dependencies:
   flutter_test:

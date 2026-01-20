@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:video_player/video_player.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -12,10 +13,39 @@ class LandingPage extends StatefulWidget {
 
 class _LandingPageState extends State<LandingPage> {
   bool _agreedToTerms = false;
+  
+  // Video controller
+  late VideoPlayerController _videoController;
+  bool _isVideoInitialized = false;
 
   // Purple theme color
   static const Color primaryPurple = Color(0xFF8B5CF6);
   static const Color lightPurple = Color(0xFFA78BFA);
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    _videoController = VideoPlayerController.asset('assets/images/main-video.mp4');
+    try {
+      await _videoController.initialize();
+      _videoController.setLooping(true);
+      _videoController.setVolume(0); // Muted background video
+      _videoController.play();
+      setState(() => _isVideoInitialized = true);
+    } catch (e) {
+      debugPrint('Video initialization error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    super.dispose();
+  }
 
   void _showTermsDialog() {
     showDialog(
@@ -112,169 +142,208 @@ If you have any questions about this Privacy Policy, please contact us.''',
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              
-              // App Logo/Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  'assets/images/visual-warning-img.png',
-                  width: 140,
-                  height: 140,
-                  fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          // ===== FULLSCREEN VIDEO BACKGROUND =====
+          if (_isVideoInitialized)
+            SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _videoController.value.size.width,
+                  height: _videoController.value.size.height,
+                  child: VideoPlayer(_videoController),
                 ),
               ),
-              
-              const SizedBox(height: 40),
-              
-              // Welcome text
-              Text(
-                'Welcome to\nGreat Feel.',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                ),
-                textAlign: TextAlign.center,
+            )
+          else
+            Container(color: const Color(0xFF0A0A0A)),
+          
+          // ===== LIGHT OVERLAY FOR TOP (keeps video visible) =====
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.2), // Light at top - video visible
+                  Colors.black.withOpacity(0.3), // Still light
+                  Colors.black.withOpacity(0.85), // Darker at bottom for buttons
+                ],
+                stops: const [0.0, 0.5, 1.0],
               ),
-              
-              const Spacer(flex: 3),
-              
-              // Terms & Conditions checkbox
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          
+          // ===== CONTENT =====
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
                 children: [
-                  SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: Checkbox(
-                      value: _agreedToTerms,
-                      onChanged: (value) {
-                        setState(() => _agreedToTerms = value ?? false);
-                      },
-                      activeColor: primaryPurple,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      side: BorderSide(
-                        color: Colors.white.withOpacity(0.4),
-                        width: 1.5,
-                      ),
-                    ),
+                  const Spacer(flex: 2),
+                  
+                  // Centered Logo
+                  Image.asset(
+                    'assets/images/logo-main.png',
+                    width: 160,
+                    height: 160,
+                    fit: BoxFit.contain,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 12,
-                          height: 1.4,
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Welcome text
+                  Text(
+                    'Welcome to\nGreat Feel.',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 10,
                         ),
-                        children: [
-                          const TextSpan(text: 'I agree to the '),
-                          TextSpan(
-                            text: 'Terms & Conditions',
-                            style: TextStyle(
-                              color: lightPurple,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = _showTermsDialog,
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const Spacer(flex: 3),
+                  
+                  // Terms & Conditions checkbox
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: Checkbox(
+                          value: _agreedToTerms,
+                          onChanged: (value) {
+                            setState(() => _agreedToTerms = value ?? false);
+                          },
+                          activeColor: primaryPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                          const TextSpan(text: ' and '),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: TextStyle(
-                              color: lightPurple,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = _showPrivacyDialog,
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.6),
+                            width: 1.5,
                           ),
-                          const TextSpan(text: '.'),
-                        ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.inter(
+                              color: Colors.white.withOpacity(0.85),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                            children: [
+                              const TextSpan(text: 'I agree to the '),
+                              TextSpan(
+                                text: 'Terms & Conditions',
+                                style: TextStyle(
+                                  color: lightPurple,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = _showTermsDialog,
+                              ),
+                              const TextSpan(text: ' and '),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: TextStyle(
+                                  color: lightPurple,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = _showPrivacyDialog,
+                              ),
+                              const TextSpan(text: '.'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Sign up button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _agreedToTerms
+                          ? () => context.push('/register')
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryPurple,
+                        disabledBackgroundColor: primaryPurple.withOpacity(0.3),
+                        foregroundColor: Colors.white,
+                        disabledForegroundColor: Colors.white.withOpacity(0.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Sign up free',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Log in button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: _agreedToTerms
+                          ? () => context.push('/login')
+                          : null,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: BorderSide(
+                          color: _agreedToTerms 
+                              ? Colors.white.withOpacity(0.6) 
+                              : Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                      ),
+                      child: Text(
+                        'Log in',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: _agreedToTerms 
+                              ? Colors.white 
+                              : Colors.white.withOpacity(0.4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 40),
                 ],
               ),
-              
-              const SizedBox(height: 24),
-              
-              // Sign up button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _agreedToTerms
-                      ? () => context.push('/register')
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryPurple,
-                    disabledBackgroundColor: primaryPurple.withOpacity(0.3),
-                    foregroundColor: Colors.white,
-                    disabledForegroundColor: Colors.white.withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(26),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Sign up free',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Log in button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: _agreedToTerms
-                      ? () => context.push('/login')
-                      : null,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(
-                      color: _agreedToTerms 
-                          ? Colors.white.withOpacity(0.6) 
-                          : Colors.white.withOpacity(0.2),
-                      width: 1,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(26),
-                    ),
-                  ),
-                  child: Text(
-                    'Log in',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: _agreedToTerms 
-                          ? Colors.white 
-                          : Colors.white.withOpacity(0.4),
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

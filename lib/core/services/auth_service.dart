@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
 
@@ -82,7 +84,15 @@ class AuthService {
     required String password,
     required String fullName,
   }) async {
+    debugPrint('\n' + '='*80);
+    debugPrint('📝 [AUTH SERVICE] Starting registration flow');
+    debugPrint('📧 Email: $email');
+    debugPrint('👤 Full Name: $fullName');
+    debugPrint('📍 Location: AuthService.register()');
+    debugPrint('='*80);
+    
     try {
+      debugPrint('\n📤 [STEP 1/4] Sending POST request to /auth/register');
       final response = await _api.post('/auth/register', data: {
         'email': email,
         'password': password,
@@ -90,7 +100,42 @@ class AuthService {
       });
       
       if (response.data['success'] == true) {
+        debugPrint('\n✅ [STEP 3/4] Registration successful, parsing user data');
         _currentUser = User.fromJson(response.data['user']);
+        debugPrint('👤 User ID: ${_currentUser!.id}');
+        debugPrint('📧 User Email: ${_currentUser!.email}');
+        debugPrint('🎭 User Role: ${_currentUser!.role}');
+        debugPrint('💎 Subscription: ${_currentUser!.subscriptionTier}');
+        
+        // Extract and save session_id from Set-Cookie header if present
+        debugPrint('\n🔍 [STEP 4/4] Checking for session_id cookie');
+        final setCookies = response.headers['set-cookie'];
+        String? sessionId;
+        
+        if (setCookies != null) {
+          for (final cookie in setCookies) {
+            if (cookie.startsWith('session_id=')) {
+              final tokenStart = cookie.indexOf('=') + 1;
+              final tokenEnd = cookie.indexOf(';');
+              sessionId = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
+              debugPrint('🔑 Found session_id from registration');
+            }
+          }
+        }
+        
+        // Save session and user data
+        if (sessionId != null) {
+          await _tokenStorage.saveAccessToken(sessionId);
+          debugPrint('✅ Session ID saved to secure storage');
+        }
+        await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
+        debugPrint('✅ User data saved to secure storage');
+        
+        debugPrint('\n' + '='*80);
+        debugPrint('🎉 [AUTH SERVICE] Registration completed successfully');
+        debugPrint('👤 Registered as: ${_currentUser!.email}');
+        debugPrint('='*80 + '\n');
+        
         return _currentUser!;
       } else {
         throw AuthException(response.data['message'] ?? 'Registration failed');
@@ -106,13 +151,21 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    debugPrint('\n' + '='*80);
+    debugPrint('🔐 [AUTH SERVICE] Starting login flow');
+    debugPrint('📧 Email: $email');
+    debugPrint('📍 Location: AuthService.login()');
+    debugPrint('='*80);
+    
     try {
+      debugPrint('\n📤 [STEP 1/5] Sending POST request to /auth/login');
       final response = await _api.post('/auth/login', data: {
         'email': email,
         'password': password,
       });
       
       if (response.data['success'] == true) {
+        debugPrint('\n✅ [STEP 3/5] Login successful, parsing user data');
         _currentUser = User.fromJson(response.data['user']);
         
         // Extract and save tokens from Set-Cookie header
@@ -121,15 +174,14 @@ class AuthService {
         String? refreshToken;
         
         if (setCookies != null) {
+          debugPrint('📦 Found ${setCookies.length} Set-Cookie header(s)');
           for (final cookie in setCookies) {
-            if (cookie.startsWith('access_token=')) {
+            debugPrint('🍪 Cookie: ${cookie.substring(0, cookie.length > 50 ? 50 : cookie.length)}...');
+            if (cookie.startsWith('session_id=')) {
               final tokenStart = cookie.indexOf('=') + 1;
               final tokenEnd = cookie.indexOf(';');
-              accessToken = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
-            } else if (cookie.startsWith('refresh_token=')) {
-              final tokenStart = cookie.indexOf('=') + 1;
-              final tokenEnd = cookie.indexOf(';');
-              refreshToken = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
+              sessionId = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
+              debugPrint('🔑 Found session_id: ${sessionId.substring(0, sessionId.length > 20 ? 20 : sessionId.length)}...');
             }
           }
         }
@@ -237,24 +289,98 @@ class AuthService {
     }
   }
   
-  /// Request password reset
+  /// Request password reset - sends 6-digit code to email
+  /// Always succeeds from API perspective (security: don't reveal if email exists)
   Future<void> forgotPassword(String email) async {
-    await _api.post('/auth/forgot-password', data: {
-      'email': email,
-    });
+    debugPrint('\n' + '='*80);
+    debugPrint('📧 [AUTH SERVICE] Requesting password reset');
+    debugPrint('📧 Email: $email');
+    debugPrint('='*80);
+    
+    try {
+      await _api.post('/auth/forgot-password', data: {
+        'email': email,
+      });
+      debugPrint('✅ Password reset code sent (if account exists)');
+    } on DioException catch (e) {
+      debugPrint('⚠️ Forgot password request: ${e.response?.data}');
+      // Don't throw - API always returns success for security
+    } catch (e) {
+      debugPrint('⚠️ Forgot password error: $e');
+      // Don't throw - always show success message to user
+    }
   }
   
-  /// Reset password with code
+  /// Reset password with 6-digit verification code
   Future<void> resetPassword({
     required String email,
     required String code,
     required String newPassword,
   }) async {
-    await _api.post('/auth/reset-password', data: {
-      'email': email,
-      'confirmation_code': code,
-      'new_password': newPassword,
-    });
+    debugPrint('\n' + '='*80);
+    debugPrint('🔐 [AUTH SERVICE] Resetting password with code');
+    debugPrint('📧 Email: $email');
+    debugPrint('🔢 Code: ${code.substring(0, 2)}****');
+    debugPrint('='*80);
+    
+    try {
+      final response = await _api.post('/auth/reset-password', data: {
+        'email': email,
+        'confirmation_code': code,
+        'new_password': newPassword,
+      });
+      
+      debugPrint('✅ Password reset successful');
+      debugPrint('📋 Response: ${response.data}');
+    } on DioException catch (e) {
+      debugPrint('❌ Password reset failed: ${e.response?.statusCode}');
+      debugPrint('📋 Response: ${e.response?.data}');
+      
+      final responseData = e.response?.data;
+      String errorMsg = 'Password reset failed';
+      if (responseData is Map) {
+        errorMsg = responseData['detail'] ?? responseData['message'] ?? errorMsg;
+      }
+      throw AuthException(errorMsg);
+    } catch (e) {
+      debugPrint('❌ Password reset error: $e');
+      if (e is AuthException) rethrow;
+      throw AuthException('Password reset failed: $e');
+    }
+  }
+  
+  /// Change password while logged in (requires current password)
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    debugPrint('\n' + '='*80);
+    debugPrint('🔑 [AUTH SERVICE] Changing password');
+    debugPrint('='*80);
+    
+    try {
+      final response = await _api.post('/auth/change-password', data: {
+        'old_password': oldPassword,
+        'new_password': newPassword,
+      });
+      
+      debugPrint('✅ Password changed successfully');
+      debugPrint('📋 Response: ${response.data}');
+    } on DioException catch (e) {
+      debugPrint('❌ Password change failed: ${e.response?.statusCode}');
+      debugPrint('📋 Response: ${e.response?.data}');
+      
+      final responseData = e.response?.data;
+      String errorMsg = 'Password change failed';
+      if (responseData is Map) {
+        errorMsg = responseData['detail'] ?? responseData['message'] ?? errorMsg;
+      }
+      throw AuthException(errorMsg);
+    } catch (e) {
+      debugPrint('❌ Password change error: $e');
+      if (e is AuthException) rethrow;
+      throw AuthException('Password change failed: $e');
+    }
   }
   
   /// Check if user can access content tier
@@ -278,4 +404,38 @@ class AuthException implements Exception {
   
   @override
   String toString() => message;
+}
+
+/// Helper to extract structured error from API response
+/// Supports both legacy format: {"detail": "..."}
+/// And new structured format: {"error": {"code": "...", "message": "...", "hint": "..."}}
+AuthException extractAuthError(DioException e, {String fallbackMessage = 'Operation failed'}) {
+  final statusCode = e.response?.statusCode;
+  final responseData = e.response?.data;
+  
+  // Handle rate limiting (429)
+  if (statusCode == 429) {
+    final retryAfter = int.tryParse(
+      e.response?.headers.value('Retry-After') ?? '60'
+    ) ?? 60;
+    throw RateLimitException(retryAfterSeconds: retryAfter);
+  }
+  
+  if (responseData is Map) {
+    // New structured error format: {"error": {"code": "...", "message": "..."}}
+    if (responseData['error'] is Map) {
+      final error = responseData['error'] as Map;
+      return AuthException(
+        error['message'] ?? fallbackMessage,
+        code: error['code'],
+        hint: error['hint'],
+      );
+    }
+    
+    // Legacy format: {"detail": "..."} or {"message": "..."}
+    final errorMsg = responseData['detail'] ?? responseData['message'] ?? fallbackMessage;
+    return AuthException(errorMsg);
+  }
+  
+  return AuthException(fallbackMessage);
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../navigation/app_router.dart';
+import '../utils/password_validator.dart';
 
 /// Reset Password Page - Step 2 of password reset flow
 /// User enters the 6-digit code from email and their new password
@@ -79,18 +80,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       context.go(AppRouter.login);
       
     } catch (e) {
-      String errorMessage = 'Password reset failed';
-      final error = e.toString();
-      
-      if (error.contains('Invalid') || error.contains('invalid')) {
-        errorMessage = 'Invalid verification code. Please check and try again.';
-      } else if (error.contains('expired') || error.contains('Expired')) {
-        errorMessage = 'Code has expired. Please request a new one.';
-      } else if (error.contains('password') && error.contains('requirements')) {
-        errorMessage = 'Password does not meet requirements.';
-      }
-      
-      setState(() => _error = errorMessage);
+      // AuthService now extracts user-friendly error messages from backend
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -259,23 +250,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     style: const TextStyle(color: Colors.white),
+                    onChanged: (_) => setState(() {}), // Rebuild for requirements checklist
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter a password';
                       }
-                      if (value.length < 8) {
-                        return 'Password must be at least 8 characters';
-                      }
-                      if (!value.contains(RegExp(r'[A-Z]'))) {
-                        return 'Password must contain an uppercase letter';
-                      }
-                      if (!value.contains(RegExp(r'[a-z]'))) {
-                        return 'Password must contain a lowercase letter';
-                      }
-                      if (!value.contains(RegExp(r'[0-9]'))) {
-                        return 'Password must contain a number';
-                      }
-                      return null;
+                      return PasswordValidator.validate(value);
                     },
                     decoration: InputDecoration(
                       hintText: 'Enter new password',
@@ -358,17 +338,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                     ),
                   ),
                   
-                  // Password requirements hint
+                  // Interactive password requirements checklist
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Text(
-                      '• 8+ characters • Uppercase • Lowercase • Number',
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withOpacity(0.4),
-                        fontSize: 12,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    child: _buildPasswordRequirements(),
                   ),
                   
                   // Error message
@@ -465,6 +438,35 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Builds interactive password requirements checklist
+  /// Shows checkmarks turning green as each requirement is met
+  Widget _buildPasswordRequirements() {
+    final requirements = PasswordValidator.getRequirements(_passwordController.text);
+    
+    return Column(
+      children: requirements.map((req) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            Icon(
+              req.isMet ? Icons.check_circle : Icons.circle_outlined,
+              size: 16,
+              color: req.isMet ? Colors.green : Colors.white.withOpacity(0.4),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              req.label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: req.isMet ? Colors.green : Colors.white.withOpacity(0.4),
+              ),
+            ),
+          ],
+        ),
+      )).toList(),
     );
   }
 

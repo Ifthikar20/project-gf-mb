@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../auth/auth_bloc.dart';
+import '../utils/password_validator.dart';
+import '../services/oauth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -52,6 +54,40 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  void _signInWithGoogle() {
+    // Set up OAuth callbacks
+    OAuthService.instance.onAuthSuccess = (user) {
+      context.read<AuthBloc>().add(AuthUserChanged(user));
+    };
+    OAuthService.instance.onAuthError = (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    };
+    OAuthService.instance.signInWithGoogle();
+  }
+
+  void _signInWithApple() {
+    // Set up OAuth callbacks
+    OAuthService.instance.onAuthSuccess = (user) {
+      context.read<AuthBloc>().add(AuthUserChanged(user));
+    };
+    OAuthService.instance.onAuthError = (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    };
+    OAuthService.instance.signInWithApple();
+  }
+
   void _showSocialLoginMessage(String provider) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -99,113 +135,141 @@ class _RegisterPageState extends State<RegisterPage> {
         } else {
           setState(() => _isLoading = false);
         }
-        
+
         if (state is AuthAuthenticated) {
           context.go('/');
         } else if (state is AuthError) {
+          // Error message is already user-friendly from AuthBloc
           setState(() {
-            _errorMessage = _parseErrorMessage(state.message);
+            _errorMessage = state.message;
           });
         }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
+        body: Column(
+          children: [
+            // ===== TOP SECTION: Backdrop Image =====
+            Expanded(
+              flex: 2,
+              child: Stack(
                 children: [
-                  // Back button row
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white70, size: 20),
-                        onPressed: () {
-                          if (_showEmailForm) {
-                            setState(() {
-                              _showEmailForm = false;
-                              _errorMessage = null;
-                            });
-                          } else {
-                            context.pop();
-                          }
-                        },
-                        padding: EdgeInsets.zero,
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // App Logo/Image
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                  // Backdrop Image
+                  SizedBox.expand(
                     child: Image.asset(
-                      'assets/images/visual-warning-img.png',
-                      width: 80,
-                      height: 80,
+                      'assets/images/sign-up-backgrop.png',
                       fit: BoxFit.cover,
                     ),
                   ),
                   
-                  const SizedBox(height: 20),
-                  
-                  // Title
-                  Text(
-                    _showEmailForm ? 'Create your account' : 'Sign up to start\nyour journey',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
+                  // Gradient overlay at bottom for smooth transition
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 60,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black,
+                          ],
+                        ),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
                   ),
                   
-                  const SizedBox(height: 24),
-                  
-                  // Error message banner
-                  if (_errorMessage != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: GoogleFonts.inter(
-                                color: Colors.red.shade300,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _clearError,
-                            child: const Icon(Icons.close, color: Colors.red, size: 18),
-                          ),
-                        ],
-                      ),
+                  // Back button
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    left: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                      onPressed: () {
+                        if (_showEmailForm) {
+                          setState(() {
+                            _showEmailForm = false;
+                            _errorMessage = null;
+                          });
+                        } else {
+                          context.pop();
+                        }
+                      },
                     ),
-                    const SizedBox(height: 16),
-                  ],
-                  
-                  if (_showEmailForm) 
-                    _buildEmailForm() 
-                  else 
-                    _buildSocialLoginOptions(),
+                  ),
                 ],
               ),
             ),
-          ),
+            
+            // ===== BOTTOM SECTION: Form =====
+            Expanded(
+              flex: 3,
+              child: Container(
+                color: Colors.black,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  child: Column(
+                    children: [
+                      // Title
+                      Text(
+                        _showEmailForm ? 'Create your account' : 'Sign up to start\nyour journey',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Error message banner
+                      if (_errorMessage != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.red.shade300,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _clearError,
+                                child: const Icon(Icons.close, color: Colors.red, size: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      
+                      if (_showEmailForm) 
+                        _buildEmailForm() 
+                      else 
+                        _buildSocialLoginOptions(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -228,7 +292,7 @@ class _RegisterPageState extends State<RegisterPage> {
           icon: Icons.g_mobiledata,
           iconColor: const Color(0xFFDB4437),
           label: 'Continue with Google',
-          onTap: () => _showSocialLoginMessage('Google'),
+          onTap: _signInWithGoogle,
         ),
         const SizedBox(height: 10),
         
@@ -236,10 +300,10 @@ class _RegisterPageState extends State<RegisterPage> {
         _buildSocialButton(
           icon: Icons.apple,
           label: 'Continue with Apple',
-          onTap: () => _showSocialLoginMessage('Apple'),
+          onTap: _signInWithApple,
         ),
         
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         
         // Already have account
         Row(
@@ -249,7 +313,7 @@ class _RegisterPageState extends State<RegisterPage> {
               'Already have an account? ',
               style: GoogleFonts.inter(
                 color: Colors.white.withOpacity(0.6),
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
             GestureDetector(
@@ -258,15 +322,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 'Log in',
                 style: GoogleFonts.inter(
                   color: primaryPurple,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           ],
         ),
-        
-        const SizedBox(height: 24),
       ],
     );
   }
@@ -280,7 +342,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: 48,
       child: isPrimary
           ? ElevatedButton(
               onPressed: onTap,
@@ -288,7 +350,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 backgroundColor: primaryPurple,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 elevation: 0,
               ),
@@ -300,7 +362,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   Text(
                     label,
                     style: GoogleFonts.inter(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -313,7 +375,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 foregroundColor: Colors.white,
                 side: BorderSide(color: Colors.white.withOpacity(0.3)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(24),
                 ),
               ),
               child: Row(
@@ -324,7 +386,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   Text(
                     label,
                     style: GoogleFonts.inter(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -353,7 +415,7 @@ class _RegisterPageState extends State<RegisterPage> {
               return null;
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
           // Email
           _buildTextField(
@@ -372,20 +434,23 @@ class _RegisterPageState extends State<RegisterPage> {
               return null;
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
           // Password
           _buildTextField(
             controller: _passwordController,
-            hintText: 'Password (min 8 characters)',
+            hintText: 'Password',
             obscureText: _obscurePassword,
             prefixIcon: Icons.lock_outlined,
-            onChanged: (_) => _clearError(),
+            onChanged: (_) {
+              _clearError();
+              setState(() {});
+            },
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword ? Icons.visibility_off : Icons.visibility,
                 color: Colors.white38,
-                size: 20,
+                size: 18,
               ),
               onPressed: () {
                 setState(() => _obscurePassword = !_obscurePassword);
@@ -395,13 +460,14 @@ class _RegisterPageState extends State<RegisterPage> {
               if (value == null || value.isEmpty) {
                 return 'Please enter a password';
               }
-              if (value.length < 8) {
-                return 'Password must be at least 8 characters';
-              }
-              return null;
+              return PasswordValidator.validate(value);
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
+          
+          // Password requirements checklist
+          _buildPasswordRequirements(),
+          const SizedBox(height: 10),
           
           // Confirm Password
           _buildTextField(
@@ -414,7 +480,7 @@ class _RegisterPageState extends State<RegisterPage> {
               icon: Icon(
                 _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                 color: Colors.white38,
-                size: 20,
+                size: 18,
               ),
               onPressed: () {
                 setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
@@ -427,12 +493,12 @@ class _RegisterPageState extends State<RegisterPage> {
               return null;
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           
           // Create Account button
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 48,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _onRegister,
               style: ElevatedButton.styleFrom(
@@ -440,7 +506,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: primaryPurple.withOpacity(0.5),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 elevation: 0,
               ),
@@ -456,14 +522,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   : Text(
                       'Create Account',
                       style: GoogleFonts.inter(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
             ),
           ),
           
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           
           // Already have account
           Center(
@@ -474,7 +540,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   'Already have an account? ',
                   style: GoogleFonts.inter(
                     color: Colors.white.withOpacity(0.6),
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
                 GestureDetector(
@@ -483,7 +549,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     'Log in',
                     style: GoogleFonts.inter(
                       color: primaryPurple,
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -491,10 +557,35 @@ class _RegisterPageState extends State<RegisterPage> {
               ],
             ),
           ),
-          
-          const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+
+  Widget _buildPasswordRequirements() {
+    final requirements = PasswordValidator.getRequirements(_passwordController.text);
+    
+    return Column(
+      children: requirements.map((req) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Row(
+          children: [
+            Icon(
+              req.isMet ? Icons.check_circle : Icons.circle_outlined,
+              size: 12,
+              color: req.isMet ? Colors.green : Colors.white.withOpacity(0.4),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              req.label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: req.isMet ? Colors.green : Colors.white.withOpacity(0.4),
+              ),
+            ),
+          ],
+        ),
+      )).toList(),
     );
   }
 
@@ -512,13 +603,13 @@ class _RegisterPageState extends State<RegisterPage> {
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      style: const TextStyle(color: Colors.white, fontSize: 15),
+      style: const TextStyle(color: Colors.white, fontSize: 14),
       validator: validator,
       onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 15),
-        prefixIcon: Icon(prefixIcon, color: Colors.white38, size: 20),
+        hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
+        prefixIcon: Icon(prefixIcon, color: Colors.white38, size: 18),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: const Color(0xFF1A1A1A),
@@ -542,8 +633,8 @@ class _RegisterPageState extends State<RegisterPage> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        errorStyle: const TextStyle(fontSize: 11),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        errorStyle: const TextStyle(fontSize: 10),
       ),
     );
   }
