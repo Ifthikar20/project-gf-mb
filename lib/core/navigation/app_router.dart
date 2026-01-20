@@ -34,6 +34,18 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     initialLocation: landing,
+    // Handle OAuth callback and unknown routes gracefully
+    errorBuilder: (context, state) {
+      // Check if this is an OAuth callback - don't show error page
+      if (state.uri.path.contains('/auth/callback') || 
+          state.uri.toString().contains('betterbliss://auth')) {
+        // OAuth callbacks are handled by OAuthService via app_links
+        // Return to landing page silently
+        return const LandingPage();
+      }
+      // For other unknown routes, go to landing
+      return const LandingPage();
+    },
     routes: [
       GoRoute(
         path: home,
@@ -41,15 +53,36 @@ class AppRouter {
       ),
       GoRoute(
         path: landing,
-        builder: (context, state) => const LandingPage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LandingPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: login,
-        builder: (context, state) => const LoginPage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const LoginPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: register,
-        builder: (context, state) => const RegisterPage(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const RegisterPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: forgotPassword,

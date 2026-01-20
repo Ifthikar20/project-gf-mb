@@ -41,6 +41,16 @@ class AuthRegisterRequested extends AuthEvent {
 
 class AuthLogoutRequested extends AuthEvent {}
 
+/// Event triggered when OAuth completes successfully
+class AuthUserChanged extends AuthEvent {
+  final User user;
+  
+  const AuthUserChanged(this.user);
+  
+  @override
+  List<Object?> get props => [user];
+}
+
 // ============================================
 // States
 // ============================================
@@ -89,6 +99,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthUserChanged>(_onUserChanged);
+  }
+  
+  /// Handle OAuth success
+  void _onUserChanged(
+    AuthUserChanged event,
+    Emitter<AuthState> emit,
+  ) {
+    emit(AuthAuthenticated(event.user));
   }
   
   Future<void> _onCheckRequested(
@@ -113,14 +132,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
+    print('\n📱 [AUTH BLOC] Login event received');
+    print('📧 Email: ${event.email}');
+    print('📍 Location: AuthBloc._onLoginRequested()');
+    
+    print('\n🔄 [AUTH BLOC] Emitting AuthLoading state');
     emit(AuthLoading());
+    
     try {
+      print('🔐 [AUTH BLOC] Calling AuthService.login()...');
       final user = await _authService.login(
         email: event.email,
         password: event.password,
       );
+      
+      print('✅ [AUTH BLOC] Login successful, emitting AuthAuthenticated state');
+      print('👤 User: ${user.email}');
       emit(AuthAuthenticated(user));
     } catch (e) {
+      print('\n❌ [AUTH BLOC] Login failed in BLoC layer');
+      print('📍 Location: AuthBloc._onLoginRequested() - catch block');
+      print('🔍 Error Type: ${e.runtimeType}');
+      print('💬 Error: $e');
+      print('🔄 [AUTH BLOC] Emitting AuthError state\n');
       emit(AuthError(e.toString()));
     }
   }

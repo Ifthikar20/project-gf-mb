@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../videos/presentation/bloc/videos_bloc.dart';
+import '../../../videos/presentation/bloc/videos_event.dart';
 import '../../../videos/presentation/bloc/videos_state.dart';
 import '../../../meditation/presentation/bloc/meditation_bloc.dart';
+import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -18,6 +20,20 @@ class ExplorePage extends StatefulWidget {
 class _ExplorePageState extends State<ExplorePage> {
   String _selectedCategory = 'All';
   final List<String> _categories = ['All', 'Video', 'Audio', 'Podcasts'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Lazy load: Only fetch data if not already loaded
+    final videosState = context.read<VideosBloc>().state;
+    if (videosState is VideosInitial) {
+      context.read<VideosBloc>().add(const LoadVideos());
+    }
+    final meditationState = context.read<MeditationBloc>().state;
+    if (meditationState is MeditationInitial) {
+      context.read<MeditationBloc>().add(LoadMeditationAudios());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

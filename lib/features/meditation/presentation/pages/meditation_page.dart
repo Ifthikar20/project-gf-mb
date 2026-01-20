@@ -9,8 +9,23 @@ import '../widgets/meditation_type_card.dart';
 import '../widgets/horizontal_section.dart';
 import '../../domain/entities/meditation_type.dart';
 
-class MeditationPage extends StatelessWidget {
+class MeditationPage extends StatefulWidget {
   const MeditationPage({super.key});
+
+  @override
+  State<MeditationPage> createState() => _MeditationPageState();
+}
+
+class _MeditationPageState extends State<MeditationPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Lazy load: Only fetch data if not already loaded
+    final state = context.read<MeditationBloc>().state;
+    if (state is MeditationInitial) {
+      context.read<MeditationBloc>().add(LoadMeditationAudios());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

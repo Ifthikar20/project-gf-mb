@@ -20,6 +20,16 @@ class _VideosPageState extends State<VideosPage> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Lazy load: Only fetch data if not already loaded
+    final state = context.read<VideosBloc>().state;
+    if (state is VideosInitial) {
+      context.read<VideosBloc>().add(const LoadVideos());
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
