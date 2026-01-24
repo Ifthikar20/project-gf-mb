@@ -7,6 +7,7 @@ import 'core/config/environment_config.dart';
 import 'core/services/analytics_service.dart';
 import 'core/services/oauth_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_bloc.dart';
 import 'core/navigation/app_router.dart';
 import 'core/auth/auth_bloc.dart';
 import 'core/services/recently_viewed_service.dart';
@@ -83,6 +84,10 @@ class WellnessApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
+          // Theme BLoC (handles vintage/classic dark mode switching)
+          BlocProvider(
+            create: (context) => ThemeBloc()..add(LoadTheme()),
+          ),
           // Auth BLoC (check if user is logged in)
           BlocProvider(
             create: (context) => AuthBloc()..add(AuthCheckRequested()),

@@ -58,3 +58,28 @@ class SearchSubmitted extends SearchEvent {
   const SearchSubmitted();
 }
 
+/// Event to toggle unified search mode
+class SearchUnifiedModeToggled extends SearchEvent {
+  final bool enabled;
+  
+  const SearchUnifiedModeToggled(this.enabled);
+  
+  @override
+  List<Object?> get props => [enabled];
+}
+
+/// Event to request autocomplete suggestions
+class SearchSuggestionsRequested extends SearchEvent {
+  final String query;
+  
+  const SearchSuggestionsRequested(this.query);
+  
+  @override
+  List<Object?> get props => [query];
+}
+
+/// Event to clear suggestions
+class SearchSuggestionsCleared extends SearchEvent {
+  const SearchSuggestionsCleared();
+}
+

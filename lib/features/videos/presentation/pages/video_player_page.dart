@@ -199,6 +199,16 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     }
   }
 
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    if (duration.inHours > 0) {
+      final hours = duration.inHours.toString();
+      return '$hours:$minutes:$seconds';
+    }
+    return '$minutes:$seconds';
+  }
+
   @override
   void dispose() {
     // Track watch progress before disposing
@@ -335,7 +345,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           left: 0,
           right: 0,
           bottom: 0,
-          height: MediaQuery.of(context).size.height * 0.45,
+          height: MediaQuery.of(context).size.height * 0.50,
           child: IgnorePointer(
             child: Container(
               decoration: BoxDecoration(
@@ -344,11 +354,11 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.3),
-                    Colors.black.withOpacity(0.7),
-                    Colors.black.withOpacity(0.95),
+                    Colors.black.withOpacity(0.4),
+                    Colors.black.withOpacity(0.85),
+                    Colors.black,
                   ],
-                  stops: const [0.0, 0.3, 0.6, 1.0],
+                  stops: const [0.0, 0.25, 0.6, 1.0],
                 ),
               ),
             ),
@@ -527,27 +537,65 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                   ),
                 ),
                 
-                // Video progress bar
-                Container(
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: _videoProgress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1DB954),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                // Video progress bar with time labels
+                if (_controller != null && _controller!.value.isInitialized)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        // Interactive slider
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            activeTrackColor: const Color(0xFF1DB954),
+                            inactiveTrackColor: Colors.white24,
+                            thumbColor: const Color(0xFF1DB954),
+                            overlayColor: const Color(0xFF1DB954).withOpacity(0.2),
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                            trackHeight: 4,
+                          ),
+                          child: Slider(
+                            value: _videoProgress.clamp(0.0, 1.0),
+                            onChanged: (value) {
+                              setState(() => _videoProgress = value);
+                            },
+                            onChangeEnd: (value) {
+                              final duration = _controller!.value.duration;
+                              final newPosition = Duration(
+                                milliseconds: (value * duration.inMilliseconds).round(),
+                              );
+                              _controller!.seekTo(newPosition);
+                            },
+                          ),
+                        ),
+                        // Time labels
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDuration(_controller!.value.position),
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                _formatDuration(_controller!.value.duration),
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                
-                const SizedBox(height: 8),
                 
                 // Episodes button - only show when video belongs to a series
                 if (_video?.belongsToSeries == true || _episodes.isNotEmpty)

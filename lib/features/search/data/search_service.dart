@@ -1,6 +1,7 @@
 import '../../../../core/services/api_client.dart';
 import '../../../../core/services/app_logger.dart';
 import '../domain/entities/search_result.dart';
+import '../domain/entities/unified_search_result.dart';
 
 /// Secure service for searching content and experts
 /// 
@@ -268,6 +269,123 @@ class SearchService {
       return [];
     } catch (e) {
       AppLogger.e('Content search failed', error: e);
+      return [];
+    }
+  }
+
+  /// Unified search - Spotify/YouTube style with grouped results
+  /// 
+  /// Returns experts, series, and content separately for grouped display
+  Future<UnifiedSearchResult> unifiedSearch({required String query}) async {
+    final sanitizedQuery = _sanitizeQuery(query);
+    if (sanitizedQuery.isEmpty) {
+      return UnifiedSearchResult(
+        query: query,
+        experts: [],
+        series: [],
+        content: [],
+        totalResults: 0,
+      );
+    }
+
+    try {
+      AppLogger.i('Unified search: "$sanitizedQuery"');
+      
+      final response = await _apiClient.get(
+        '/content/unified-search',
+        queryParameters: {'q': sanitizedQuery},
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final result = UnifiedSearchResult.fromJson(response.data);
+        AppLogger.i('Unified search returned: ${result.experts.length} experts, '
+            '${result.series.length} series, ${result.content.length} content');
+        return result;
+      }
+
+      return UnifiedSearchResult(
+        query: query,
+        experts: [],
+        series: [],
+        content: [],
+        totalResults: 0,
+      );
+    } catch (e, stackTrace) {
+      AppLogger.e('Unified search failed', error: e, stackTrace: stackTrace);
+      
+      // Fallback to regular search if unified search endpoint fails
+      try {
+        final fallbackResults = await search(query: query);
+        return UnifiedSearchResult(
+          query: query,
+          experts: [],
+          series: [],
+          content: fallbackResults
+              .where((r) => !r.isSpeaker)
+              .map((r) => UnifiedContentResult(
+                    id: r.id,
+                    title: r.title,
+                    contentType: r.type.name,
+                    thumbnailUrl: r.imageUrl,
+                    expertName: r.authorName,
+                    durationSeconds: r.durationInSeconds,
+                    category: r.category,
+                  ))
+              .toList(),
+          totalResults: fallbackResults.length,
+        );
+      } catch (_) {
+        return UnifiedSearchResult(
+          query: query,
+          experts: [],
+          series: [],
+          content: [],
+          totalResults: 0,
+        );
+      }
+    }
+  }
+
+  /// Get search suggestions for autocomplete
+  /// 
+  /// Returns typeahead suggestions as user types
+  Future<List<SearchSuggestion>> getSuggestions({required String query}) async {
+    final sanitizedQuery = _sanitizeQuery(query);
+    if (sanitizedQuery.isEmpty || sanitizedQuery.length < 2) {
+      return [];
+    }
+
+    try {
+      AppLogger.i('Getting suggestions for: "$sanitizedQuery"');
+      
+      final response = await _apiClient.get(
+        '/content/search-suggestions',
+        queryParameters: {'q': sanitizedQuery},
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        List<dynamic> items;
+        
+        if (data is List) {
+          items = data;
+        } else if (data is Map) {
+          items = data['suggestions'] ?? data['items'] ?? [];
+        } else {
+          items = [];
+        }
+
+        final suggestions = items
+            .map((s) => SearchSuggestion.fromJson(s is Map<String, dynamic> ? s : {'text': s.toString()}))
+            .toList();
+        
+        AppLogger.i('Got ${suggestions.length} suggestions');
+        return suggestions;
+      }
+
+      return [];
+    } catch (e) {
+      AppLogger.w('Suggestions failed: $e');
       return [];
     }
   }

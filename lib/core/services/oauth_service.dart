@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:app_links/app_links.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
@@ -105,63 +105,105 @@ class OAuthService {
   }
 
   
-  /// Launch Google Sign In
+  /// Launch Google Sign In using native ASWebAuthenticationSession
   Future<void> signInWithGoogle() async {
     const baseUrl = 'https://api.betterandbliss.com';
-    const redirectUri = 'betterbliss://auth/callback';
+    const callbackScheme = 'betterbliss';
     
-    final url = Uri.parse('$baseUrl/auth/google?redirect=$redirectUri');
+    final authUrl = '$baseUrl/auth/google?redirect=$callbackScheme://auth/callback';
     
-    debugPrint('🔐 Launching Google OAuth: $url');
+    debugPrint('🔐 Launching Google OAuth (native): $authUrl');
     
     try {
-      // Check if we can launch the URL
-      final canLaunch = await canLaunchUrl(url);
-      debugPrint('📱 Can launch URL: $canLaunch');
+      // This opens ASWebAuthenticationSession on iOS (in-app secure browser)
+      // preferEphemeral: true creates isolated session (no shared cookies)
+      // This ensures the account picker ALWAYS shows
+      final resultUrl = await FlutterWebAuth2.authenticate(
+        url: authUrl,
+        callbackUrlScheme: callbackScheme,
+        options: const FlutterWebAuth2Options(
+          preferEphemeral: false, // Share cookies - shows account picker!
+        ),
+      );
       
-      if (!canLaunch) {
-        debugPrint('❌ Cannot launch URL - check LSApplicationQueriesSchemes in Info.plist');
-        onAuthError?.call('Cannot open browser for sign in');
+      debugPrint('📱 OAuth callback received: $resultUrl');
+      
+      // Parse the callback URL
+      final uri = Uri.parse(resultUrl);
+      final sessionId = uri.queryParameters['session_id'];
+      final error = uri.queryParameters['error'];
+      
+      if (error != null) {
+        debugPrint('❌ OAuth error: $error');
+        onAuthError?.call(error);
         return;
       }
       
-      final launched = await launchUrl(
-        url,
-        mode: LaunchMode.externalApplication,
-      );
-      
-      debugPrint('📱 URL launch result: $launched');
-      
-      if (!launched) {
-        onAuthError?.call('Could not launch browser for sign in');
+      if (sessionId != null) {
+        debugPrint('✅ OAuth session received');
+        await _completeOAuthLogin(sessionId);
+      } else {
+        onAuthError?.call('No session received from sign in');
       }
     } catch (e) {
-      debugPrint('❌ Failed to launch Google OAuth: $e');
-      onAuthError?.call('Failed to launch sign in: $e');
+      debugPrint('❌ Google OAuth cancelled or failed: $e');
+      // User likely cancelled - don't show an error for cancellation
+      if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
+        debugPrint('User cancelled OAuth');
+      } else {
+        onAuthError?.call('Sign in was cancelled');
+      }
     }
   }
   
-  /// Launch Apple Sign In
+  /// Launch Apple Sign In using native ASWebAuthenticationSession
   Future<void> signInWithApple() async {
     const baseUrl = 'https://api.betterandbliss.com';
-    const redirectUri = 'betterbliss://auth/callback';
+    const callbackScheme = 'betterbliss';
     
-    final url = Uri.parse('$baseUrl/auth/apple?redirect=$redirectUri');
+    final authUrl = '$baseUrl/auth/apple?redirect=$callbackScheme://auth/callback';
     
-    debugPrint('🔐 Launching Apple OAuth: $url');
+    debugPrint('🔐 Launching Apple OAuth (native): $authUrl');
     
     try {
-      final launched = await launchUrl(
-        url,
-        mode: LaunchMode.externalApplication,
+      // This opens ASWebAuthenticationSession on iOS (in-app secure browser)
+      // preferEphemeral: true creates isolated session (no shared cookies)
+      // This ensures the account picker ALWAYS shows
+      final resultUrl = await FlutterWebAuth2.authenticate(
+        url: authUrl,
+        callbackUrlScheme: callbackScheme,
+        options: const FlutterWebAuth2Options(
+          preferEphemeral: false, // Share cookies - shows account picker!
+        ),
       );
       
-      if (!launched) {
-        onAuthError?.call('Could not launch browser for sign in');
+      debugPrint('📱 OAuth callback received: $resultUrl');
+      
+      // Parse the callback URL
+      final uri = Uri.parse(resultUrl);
+      final sessionId = uri.queryParameters['session_id'];
+      final error = uri.queryParameters['error'];
+      
+      if (error != null) {
+        debugPrint('❌ OAuth error: $error');
+        onAuthError?.call(error);
+        return;
+      }
+      
+      if (sessionId != null) {
+        debugPrint('✅ OAuth session received');
+        await _completeOAuthLogin(sessionId);
+      } else {
+        onAuthError?.call('No session received from sign in');
       }
     } catch (e) {
-      debugPrint('❌ Failed to launch Apple OAuth: $e');
-      onAuthError?.call('Failed to launch sign in');
+      debugPrint('❌ Apple OAuth cancelled or failed: $e');
+      // User likely cancelled - don't show an error for cancellation
+      if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
+        debugPrint('User cancelled OAuth');
+      } else {
+        onAuthError?.call('Sign in was cancelled');
+      }
     }
   }
 }

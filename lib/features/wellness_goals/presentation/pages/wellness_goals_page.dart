@@ -215,11 +215,11 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // App Logo
-                        Image.asset(
-                          'assets/images/logo.png',
-                          height: 48,
-                          fit: BoxFit.contain,
+                        // App Logo (using icon instead of missing asset)
+                        const Icon(
+                          Icons.spa,
+                          size: 48,
+                          color: Colors.white,
                         ),
                         const SizedBox(height: 32),
                         const Text(
