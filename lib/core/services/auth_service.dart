@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
 
@@ -180,8 +179,8 @@ class AuthService {
             if (cookie.startsWith('session_id=')) {
               final tokenStart = cookie.indexOf('=') + 1;
               final tokenEnd = cookie.indexOf(';');
-              sessionId = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
-              debugPrint('🔑 Found session_id: ${sessionId.substring(0, sessionId.length > 20 ? 20 : sessionId.length)}...');
+              accessToken = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
+              debugPrint('🔑 Found session_id: ${accessToken.substring(0, accessToken.length > 20 ? 20 : accessToken.length)}...');
             }
           }
         }
@@ -400,10 +399,23 @@ class AuthService {
 /// Auth exception
 class AuthException implements Exception {
   final String message;
-  AuthException(this.message);
+  final int? statusCode;
+  final String? code;
+  final String? hint;
+  
+  AuthException(this.message, {this.statusCode, this.code, this.hint});
   
   @override
   String toString() => message;
+}
+
+/// Rate limit exception
+class RateLimitException implements Exception {
+  final int retryAfterSeconds;
+  RateLimitException({required this.retryAfterSeconds});
+  
+  @override
+  String toString() => 'Rate limited. Please try again in $retryAfterSeconds seconds.';
 }
 
 /// Helper to extract structured error from API response

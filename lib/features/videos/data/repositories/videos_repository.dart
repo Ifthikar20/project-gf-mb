@@ -315,7 +315,7 @@ class VideosRepository {
     
     final allVideos = [
       const VideoEntity(
-        id: '1',
+        id: 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
         title: 'Morning Yoga Flow',
         description: 'Start your day with this energizing 15-minute yoga flow',
         thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&h=400&fit=crop',
@@ -326,7 +326,7 @@ class VideosRepository {
         viewCount: 1247,  // Mock view count
       ),
       const VideoEntity(
-        id: '2',
+        id: 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e',
         title: '5-Minute Breathing Exercise',
         description: 'Calm your mind with guided breathwork',
         thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&h=400&fit=crop',
@@ -337,7 +337,7 @@ class VideosRepository {
         viewCount: 892,  // Mock view count
       ),
       const VideoEntity(
-        id: '3',
+        id: 'c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f',
         title: 'Full Body Workout',
         description: '20-minute home workout for all fitness levels',
         thumbnailUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=400&fit=crop',
@@ -348,7 +348,7 @@ class VideosRepository {
         viewCount: 3456,  // Mock view count
       ),
       const VideoEntity(
-        id: '4',
+        id: 'd4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a',
         title: 'Mindfulness Meditation',
         description: 'Guided meditation for stress relief and clarity',
         thumbnailUrl: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=600&h=400&fit=crop',
@@ -359,7 +359,7 @@ class VideosRepository {
         viewCount: 5621,  // Mock view count
       ),
       const VideoEntity(
-        id: '5',
+        id: 'e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b',
         title: 'Evening Stretch Routine',
         description: 'Gentle stretches to wind down your day',
         thumbnailUrl: 'https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600&h=400&fit=crop',

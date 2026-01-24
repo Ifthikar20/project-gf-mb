@@ -11,6 +11,7 @@ import '../../features/videos/presentation/pages/video_player_page.dart';
 import '../../features/meditation/presentation/pages/meditation_category_page.dart';
 import '../../features/meditation/presentation/pages/audio_player_page.dart';
 import '../../features/library/presentation/pages/library_page.dart';
+import '../../features/library/presentation/pages/watch_history_page.dart';
 import '../../features/speakers/presentation/pages/speaker_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 
@@ -29,6 +30,7 @@ class AppRouter {
   static const String meditationCategory = '/meditation-category';
   static const String audioPlayer = '/audio-player';
   static const String library = '/library';
+  static const String watchHistory = '/watch-history';
   static const String speakerProfile = '/speaker';
   static const String search = '/search';
 
@@ -141,6 +143,10 @@ class AppRouter {
       GoRoute(
         path: library,
         builder: (context, state) => const LibraryPage(),
+      ),
+      GoRoute(
+        path: watchHistory,
+        builder: (context, state) => const WatchHistoryPage(),
       ),
       GoRoute(
         path: speakerProfile,
