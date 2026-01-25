@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/theme_bloc.dart';
+import '../../../../core/theme/app_theme.dart';
 
 /// Mood data model
 class MoodOption {
@@ -97,91 +101,124 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
         ? Moods.getById(widget.selectedMoodId!) 
         : null;
     
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: selectedMood != null
-              ? [selectedMood.color.withOpacity(0.2), selectedMood.color.withOpacity(0.1)]
-              : [const Color(0xFF1A1A1A), const Color(0xFF151515)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selectedMood?.color.withOpacity(0.3) ?? Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Left side - question
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'How are you feeling?',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+    return BlocBuilder<ThemeBloc, ThemeState>(
+      builder: (context, themeState) {
+        final isVintage = themeState.isVintage;
+        final mode = themeState.mode;
+        final bgColor = ThemeColors.background(mode);
+        final surfaceColor = ThemeColors.surface(mode);
+        final primaryColor = ThemeColors.primary(mode);
+        final textColor = ThemeColors.textPrimary(mode);
+        final textSecondary = ThemeColors.textSecondary(mode);
+        
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: isVintage
+                ? LinearGradient(
+                    colors: selectedMood != null
+                        ? [selectedMood.color.withOpacity(0.15), surfaceColor]
+                        : [surfaceColor, ThemeColors.creamLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : LinearGradient(
+                    colors: selectedMood != null
+                        ? [selectedMood.color.withOpacity(0.2), selectedMood.color.withOpacity(0.1)]
+                        : [const Color(0xFF1A1A1A), const Color(0xFF151515)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  selectedMood != null 
-                      ? "You're feeling ${selectedMood.label.toLowerCase()}"
-                      : 'Tap to check in with yourself',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+            borderRadius: BorderRadius.circular(isVintage ? 16 : 20),
+            border: Border.all(
+              color: isVintage 
+                  ? primaryColor.withOpacity(0.3)
+                  : (selectedMood?.color.withOpacity(0.3) ?? Colors.white.withOpacity(0.1)),
+              width: isVintage ? 1.5 : 1,
             ),
           ),
-          // Animated button
-          GestureDetector(
-            onTap: _showMoodPopup,
-            child: AnimatedBuilder(
-              animation: _pulseAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: selectedMood == null ? _pulseAnimation.value : 1.0,
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: selectedMood != null
-                            ? [selectedMood.color, selectedMood.color.withOpacity(0.7)]
-                            : [const Color(0xFF1DB954), const Color(0xFF1ED760)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+          child: Row(
+            children: [
+              // Left side - question
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'How are you feeling?',
+                      style: isVintage
+                          ? GoogleFonts.playfairDisplay(
+                              color: textColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            )
+                          : TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      selectedMood != null 
+                          ? "You're feeling ${selectedMood.label.toLowerCase()}"
+                          : 'Tap to check in with yourself',
+                      style: TextStyle(
+                        color: isVintage ? textSecondary : Colors.white.withOpacity(0.6),
+                        fontSize: 13,
+                        fontStyle: isVintage ? FontStyle.italic : FontStyle.normal,
                       ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (selectedMood?.color ?? const Color(0xFF1DB954)).withOpacity(0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+              ),
+              // Animated button
+              GestureDetector(
+                onTap: _showMoodPopup,
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: selectedMood == null ? _pulseAnimation.value : 1.0,
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: isVintage
+                                ? (selectedMood != null
+                                    ? [selectedMood.color, selectedMood.color.withOpacity(0.7)]
+                                    : [primaryColor, ThemeColors.vintageBrass])
+                                : (selectedMood != null
+                                    ? [selectedMood.color, selectedMood.color.withOpacity(0.7)]
+                                    : [const Color(0xFF1DB954), const Color(0xFF1ED760)]),
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (isVintage ? primaryColor : (selectedMood?.color ?? const Color(0xFF1DB954))).withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Icon(
-                      selectedMood?.icon ?? Icons.add_reaction_outlined,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                );
-              },
-            ),
+                        child: Icon(
+                          selectedMood?.icon ?? Icons.add_reaction_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

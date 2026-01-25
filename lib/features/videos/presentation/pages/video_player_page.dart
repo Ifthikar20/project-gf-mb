@@ -10,7 +10,6 @@ import '../../../../core/services/recently_viewed_service.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_event.dart';
-import '../../../library/presentation/bloc/library_state.dart';
 import '../../data/repositories/videos_repository.dart';
 import '../../domain/entities/video_entity.dart';
 import '../../domain/entities/episode_entity.dart';
@@ -49,6 +48,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     _loadVideo();
   }
 
+  String? _errorMessage;
+  bool _isPermissionError = false;
+
   Future<void> _loadVideo() async {
     try {
       final repository = VideosRepository();
@@ -74,20 +76,30 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           final streamingUrls = await StreamingService.instance.getStreamingUrls(widget.videoId);
           videoUrl = streamingUrls.hlsMaster;
           _streamingUrl = videoUrl;
-          debugPrint('📼 Using HLS stream: $videoUrl');
+          
+          // Diagnostic: Log if URL is likely unsigned
+          bool isSigned = videoUrl.contains('Policy=') || videoUrl.contains('Signature=') || videoUrl.contains('md5=');
+          if (!isSigned) {
+            debugPrint('⚠️ WARNING: Using unsigned URL which may fail: $videoUrl');
+          }
+          
+          debugPrint('Kit 📼 Using HLS stream: $videoUrl');
         } catch (e) {
           debugPrint('⚠️ Streaming failed, using fallback: $e');
-          // Keep using video.videoUrl as fallback
         }
 
         _controller = VideoPlayerController.networkUrl(
           Uri.parse(videoUrl),
         )..initialize().then((_) {
-            setState(() => _isLoading = false);
+            setState(() {
+              _isLoading = false;
+              _errorMessage = null;
+              _isPermissionError = false;
+            });
             _controller!.play();
             _controller!.addListener(_videoListener);
             
-            // Track as recently viewed
+            // Track as recently viewed ... (analytics code remains same)
             RecentlyViewedService.instance.addItem(
               contentId: video.id,
               title: video.title,
@@ -96,7 +108,6 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
               durationSeconds: video.durationInSeconds,
             );
             
-            // Track video view (GA4 + Backend dual tracking)
             AnalyticsService.instance.trackVideoView(
               videoId: video.id,
               videoTitle: video.title,
@@ -106,14 +117,32 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
             );
           }).catchError((error) {
             debugPrint('❌ Video initialization failed: $error');
-            setState(() { _hasError = true; _isLoading = false; });
+            String errorMsg = error.toString();
+            bool is403 = errorMsg.contains('403') || errorMsg.contains('Forbidden');
+            
+            setState(() { 
+              _hasError = true; 
+              _isLoading = false; 
+              _isPermissionError = is403;
+              _errorMessage = is403 
+                ? 'Security: This video requires a signed URL which was not provided (403).' 
+                : 'Failed to initialize video player.';
+            });
           });
       } else {
-        setState(() { _hasError = true; _isLoading = false; });
+        setState(() { 
+          _hasError = true; 
+          _isLoading = false; 
+          _errorMessage = 'Video not found.';
+        });
       }
     } catch (e) {
       debugPrint('❌ Video loading failed: $e');
-      setState(() { _hasError = true; _isLoading = false; });
+      setState(() { 
+        _hasError = true; 
+        _isLoading = false; 
+        _errorMessage = 'An error occurred while loading the video.';
+      });
     }
   }
   
@@ -263,41 +292,71 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     return Stack(
       children: [
         Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.white),
-              const SizedBox(height: 16),
-              const Text('Failed to load video', style: TextStyle(color: Colors.white, fontSize: 18)),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    label: const Text('Go Back', style: TextStyle(color: Colors.white)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white54),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() { _isLoading = true; _hasError = false; });
-                      _loadVideo();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1DB954),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _isPermissionError ? Icons.lock_outline : Icons.error_outline, 
+                  size: 64, 
+                  color: Colors.white70
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  _isPermissionError ? 'Access Denied' : 'Oops!',
+                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage ?? 'An unexpected error occurred.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                if (_isPermissionError) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Technical details: The CDN rejected this request because the URL signature is missing or invalid.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white38, fontSize: 13),
                   ),
                 ],
-              ),
-            ],
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      label: const Text('Go Back', style: TextStyle(color: Colors.white)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white54),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() { 
+                          _isLoading = true; 
+                          _hasError = false; 
+                          _isPermissionError = false;
+                        });
+                        _loadVideo();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1DB954),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
         // Top-left back button
@@ -435,11 +494,24 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                       GestureDetector(
                         onTap: () {
                           if (_video != null) {
-                            final speakerName = _video!.instructor ?? 'Wellness Guide';
-                            final speakerImageUrl = 'https://picsum.photos/seed/${speakerName}/100/100';
-                            context.push(
-                              '${AppRouter.speakerProfile}?id=${_video!.id}&name=${Uri.encodeComponent(speakerName)}&imageUrl=${Uri.encodeComponent(speakerImageUrl)}',
-                            );
+                            // Use expertSlug if available, otherwise don't navigate
+                            final expertSlug = _video!.expertSlug;
+                            if (expertSlug != null && expertSlug.isNotEmpty) {
+                              final speakerName = _video!.instructor ?? 'Wellness Guide';
+                              final speakerImageUrl = _video!.expertAvatarUrl ?? 
+                                  'https://picsum.photos/seed/${speakerName.replaceAll(' ', '')}/100/100';
+                              context.push(
+                                '${AppRouter.speakerProfile}?id=$expertSlug&name=${Uri.encodeComponent(speakerName)}&imageUrl=${Uri.encodeComponent(speakerImageUrl)}',
+                              );
+                            } else {
+                              // Show snackbar if no expert profile available
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Expert profile not available'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
                           }
                         },
                         child: Row(

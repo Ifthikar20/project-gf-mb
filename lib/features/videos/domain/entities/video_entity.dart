@@ -11,6 +11,8 @@ class VideoEntity extends Equatable {
   final String instructor;
   final String accessTier; // 'free', 'basic', or 'premium'
   final int viewCount; // View count from backend analytics
+  final String? expertSlug; // Expert's slug for navigation to profile
+  final String? expertAvatarUrl; // Expert's avatar for display
   
   // Series fields
   final bool isSeries;
@@ -29,6 +31,8 @@ class VideoEntity extends Equatable {
     required this.instructor,
     this.accessTier = 'free',
     this.viewCount = 0,
+    this.expertSlug,
+    this.expertAvatarUrl,
     this.isSeries = false,
     this.seriesId,
     this.episodeNumber,
@@ -69,6 +73,8 @@ class VideoEntity extends Equatable {
         instructor,
         accessTier,
         viewCount,
+        expertSlug,
+        expertAvatarUrl,
         isSeries,
         seriesId,
         episodeNumber,

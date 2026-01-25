@@ -3,8 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/services/recently_viewed_service.dart';
+import '../../../../core/theme/theme_bloc.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_state.dart';
 import '../../../videos/presentation/bloc/videos_bloc.dart';
@@ -13,17 +16,24 @@ import '../../../meditation/presentation/bloc/meditation_bloc.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
 import '../widgets/mood_selector_widget.dart';
 
-class WellnessGoalsPage extends StatefulWidget {
-  const WellnessGoalsPage({super.key});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  State<WellnessGoalsPage> createState() => _WellnessGoalsPageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
+class _HomePageState extends State<HomePage> {
   String _selectedFilter = 'Video';
   String? _selectedMoodId;
   VideoPlayerController? _bannerVideoController;
+  
+  // Theme state (updated in build)
+  bool _isVintage = false;
+  Color _primaryColor = const Color(0xFF8B4513);
+  Color _textColor = const Color(0xFF1A1A1A);
+  Color _textSecondary = const Color(0xFF4A4A4A);
+  Color _surfaceColor = const Color(0xFFFAF8F3);
   
   @override
   void initState() {
@@ -154,20 +164,39 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
+    return BlocBuilder<ThemeBloc, ThemeState>(
+      builder: (context, themeState) {
+        final mode = themeState.mode;
+        final isVintage = themeState.isVintage;
+        
+        // Dynamic colors based on theme
+        final bgColor = ThemeColors.background(mode);
+        final surfaceColor = ThemeColors.surface(mode);
+        final primaryColor = ThemeColors.primary(mode);
+        final textColor = ThemeColors.textPrimary(mode);
+        final textSecondary = ThemeColors.textSecondary(mode);
+        
+        // Sync to class level for helper methods
+        _isVintage = isVintage;
+        _primaryColor = primaryColor;
+        _textColor = textColor;
+        _textSecondary = textSecondary;
+        _surfaceColor = surfaceColor;
+        
+        return Scaffold(
+          backgroundColor: bgColor,
+          body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
           // Large Header Banner with video background
           SliverToBoxAdapter(
             child: Stack(
               children: [
-                // Background video
-                ClipRect(
-                  child: Container(
-                    height: 240,
-                    color: const Color(0xFF0A0A0A),
+              // Background video
+              ClipRect(
+                child: Container(
+                  height: 240,
+                  color: bgColor,
                     child: _bannerVideoController != null &&
                             _bannerVideoController!.value.isInitialized
                         ? Stack(
@@ -183,22 +212,29 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                                   ),
                                 ),
                               ),
-                              // Dark gradient overlay - strong fade at bottom
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.black.withOpacity(0.2),
-                                      Colors.black.withOpacity(0.4),
-                                      Colors.black.withOpacity(0.8),
-                                      const Color(0xFF0A0A0A),
-                                    ],
-                                    stops: const [0.0, 0.4, 0.75, 1.0],
-                                  ),
+                            // Gradient overlay - theme-aware
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: isVintage 
+                                      ? [
+                                          ThemeColors.vintageBrass.withOpacity(0.3),
+                                          bgColor.withOpacity(0.5),
+                                          bgColor.withOpacity(0.9),
+                                          bgColor,
+                                        ]
+                                      : [
+                                          Colors.black.withOpacity(0.2),
+                                          Colors.black.withOpacity(0.4),
+                                          Colors.black.withOpacity(0.8),
+                                          const Color(0xFF0A0A0A),
+                                        ],
+                                  stops: const [0.0, 0.4, 0.75, 1.0],
                                 ),
                               ),
+                            ),
                             ],
                           )
                         : const Center(
@@ -215,26 +251,32 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // App Logo (using icon instead of missing asset)
-                        const Icon(
+                        // App Logo
+                        Icon(
                           Icons.spa,
                           size: 48,
-                          color: Colors.white,
+                          color: isVintage ? primaryColor : Colors.white,
                         ),
                         const SizedBox(height: 32),
-                        const Text(
+                        Text(
                           'Good evening',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: isVintage
+                              ? GoogleFonts.playfairDisplay(
+                                  color: textColor,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                )
+                              : const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Ready for your daily wellness?',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: isVintage ? textSecondary : Colors.white.withOpacity(0.8),
                             fontSize: 14,
                           ),
                         ),
@@ -277,10 +319,10 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    _buildFilterTab('Video'),
-                    _buildFilterTab('Audio'),
-                    _buildFilterTab('Podcast'),
-                    _buildFilterTab('Sounds'),
+                    _buildFilterTab('Video', isVintage, primaryColor, surfaceColor, textColor),
+                    _buildFilterTab('Audio', isVintage, primaryColor, surfaceColor, textColor),
+                    _buildFilterTab('Podcast', isVintage, primaryColor, surfaceColor, textColor),
+                    _buildFilterTab('Sounds', isVintage, primaryColor, surfaceColor, textColor),
                   ],
                 ),
               ),
@@ -294,19 +336,26 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Recommended for you',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: isVintage
+                        ? GoogleFonts.playfairDisplay(
+                            color: textColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          )
+                        : const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                   ),
                   Text(
                     'See all',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: isVintage ? primaryColor : Colors.white.withOpacity(0.6),
                       fontSize: 14,
+                      fontWeight: isVintage ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -327,19 +376,26 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Recently Viewed',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: isVintage
+                        ? GoogleFonts.playfairDisplay(
+                            color: textColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          )
+                        : const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                   ),
                   Text(
                     'See all',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: isVintage ? primaryColor : Colors.white.withOpacity(0.6),
                       fontSize: 14,
+                      fontWeight: isVintage ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -380,19 +436,19 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A1A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(isVintage ? 12 : 12),
+                      border: Border.all(color: isVintage ? primaryColor.withOpacity(0.2) : Colors.white.withOpacity(0.1)),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: isVintage ? primaryColor.withOpacity(0.1) : Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.history, color: Colors.white54, size: 24),
+                          child: Icon(Icons.history, color: isVintage ? primaryColor : Colors.white54, size: 24),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -401,8 +457,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                             children: [
                               Text(
                                 'No recent ${_selectedFilter.toLowerCase()}',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: textColor,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -410,8 +466,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                               const SizedBox(height: 4),
                               Text(
                                 'Watch ${_selectedFilter.toLowerCase()} content to see it here',
-                                style: const TextStyle(
-                                  color: Colors.white54,
+                                style: TextStyle(
+                                  color: textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -437,20 +493,26 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'My Library',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: isVintage
+                        ? GoogleFonts.playfairDisplay(
+                            color: textColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          )
+                        : const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                   ),
                   GestureDetector(
                     onTap: () => context.push(AppRouter.library),
-                    child: const Text(
+                    child: Text(
                       'See all',
                       style: TextStyle(
-                        color: Color(0xFF1DB954),
+                        color: isVintage ? primaryColor : const Color(0xFF1DB954),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -509,9 +571,11 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
         ],
       ),
     );
+      },
+    );
   }
 
-  Widget _buildFilterTab(String label) {
+  Widget _buildFilterTab(String label, bool isVintage, Color primaryColor, Color surfaceColor, Color textColor) {
     final isSelected = _selectedFilter == label;
     return GestureDetector(
       onTap: () => setState(() => _selectedFilter = label),
@@ -519,13 +583,23 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(20),
+          color: isVintage
+              ? (isSelected ? Colors.black : Colors.white) // Clean black/white for vintage
+              : (isSelected ? Colors.white : const Color(0xFF1A1A1A)),
+          borderRadius: BorderRadius.circular(20), // Pill shape like reference
+          border: Border.all(
+            color: isVintage 
+                ? (isSelected ? Colors.black : ThemeColors.vintageBorder)
+                : Colors.transparent,
+            width: 1,
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white,
+            color: isVintage
+                ? (isSelected ? Colors.white : Colors.black) // Clean black/white text
+                : (isSelected ? Colors.black : Colors.white),
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
@@ -541,7 +615,7 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
         children: [
           // Thumbnail
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(_isVintage ? 12 : 8),
             child: CachedNetworkImage(
               imageUrl: item['imageUrl'],
               width: 56,
@@ -550,8 +624,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
               errorWidget: (context, url, error) => Container(
                 width: 56,
                 height: 56,
-                color: const Color(0xFF282828),
-                child: const Icon(Icons.music_note, color: Colors.white24),
+                color: _isVintage ? _surfaceColor : const Color(0xFF282828),
+                child: Icon(Icons.music_note, color: _isVintage ? _primaryColor.withOpacity(0.5) : Colors.white24),
               ),
             ),
           ),
@@ -563,8 +637,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
               children: [
                 Text(
                   item['title'],
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: _textColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -572,20 +646,20 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                 const SizedBox(height: 2),
                 Text(
                   item['subtitle'],
-                  style: const TextStyle(
-                    color: Colors.white54,
+                  style: TextStyle(
+                    color: _textSecondary,
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.play_arrow, color: Colors.white38, size: 14),
+                    Icon(Icons.play_arrow, color: _textSecondary.withOpacity(0.7), size: 14),
                     const SizedBox(width: 4),
                     Text(
                       '${item['views']} • ${item['duration']}',
-                      style: const TextStyle(
-                        color: Colors.white38,
+                      style: TextStyle(
+                        color: _textSecondary.withOpacity(0.7),
                         fontSize: 12,
                       ),
                     ),
@@ -596,7 +670,7 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
           ),
           // Menu button
           IconButton(
-            icon: const Icon(Icons.more_horiz, color: Colors.white54),
+            icon: Icon(Icons.more_horiz, color: _textSecondary),
             onPressed: () {},
           ),
         ],
@@ -624,7 +698,7 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
           children: [
             // Thumbnail
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_isVintage ? 12 : 8),
               child: item.thumbnailUrl != null
                   ? CachedNetworkImage(
                       imageUrl: item.thumbnailUrl!,
@@ -634,20 +708,20 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                       errorWidget: (context, url, error) => Container(
                         width: 56,
                         height: 56,
-                        color: const Color(0xFF282828),
+                        color: _isVintage ? _surfaceColor : const Color(0xFF282828),
                         child: Icon(
                           isVideo ? Icons.play_circle_outline : Icons.music_note,
-                          color: Colors.white24,
+                          color: _isVintage ? _primaryColor.withOpacity(0.5) : Colors.white24,
                         ),
                       ),
                     )
                   : Container(
                       width: 56,
                       height: 56,
-                      color: const Color(0xFF282828),
+                      color: _isVintage ? _surfaceColor : const Color(0xFF282828),
                       child: Icon(
                         isVideo ? Icons.play_circle_outline : Icons.music_note,
-                        color: Colors.white24,
+                        color: _isVintage ? _primaryColor.withOpacity(0.5) : Colors.white24,
                       ),
                     ),
             ),
@@ -659,8 +733,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                 children: [
                   Text(
                     item.title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: _textColor,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -670,8 +744,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                   const SizedBox(height: 2),
                   Text(
                     item.contentType.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    style: TextStyle(
+                      color: _textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -681,14 +755,14 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                       children: [
                         Icon(
                           isVideo ? Icons.videocam : Icons.headphones, 
-                          color: Colors.white38, 
+                          color: _textSecondary.withOpacity(0.7), 
                           size: 14,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           duration,
-                          style: const TextStyle(
-                            color: Colors.white38,
+                          style: TextStyle(
+                            color: _textSecondary.withOpacity(0.7),
                             fontSize: 12,
                           ),
                         ),
@@ -699,7 +773,7 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
               ),
             ),
             // Play icon
-            const Icon(Icons.play_arrow, color: Colors.white54),
+            Icon(Icons.play_arrow, color: _textSecondary),
           ],
         ),
       ),
@@ -829,7 +903,7 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(_isVintage ? 12 : 8),
                   child: CachedNetworkImage(
                     imageUrl: imageUrl,
                     width: 130,
@@ -838,13 +912,13 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                     placeholder: (context, url) => Container(
                       width: 130,
                       height: 130,
-                      color: const Color(0xFF282828),
+                      color: _isVintage ? _surfaceColor : const Color(0xFF282828),
                     ),
                     errorWidget: (context, url, error) => Container(
                       width: 130,
                       height: 130,
-                      color: const Color(0xFF282828),
-                      child: const Icon(Icons.play_circle_outline, color: Colors.white24, size: 40),
+                      color: _isVintage ? _surfaceColor : const Color(0xFF282828),
+                      child: Icon(Icons.play_circle_outline, color: _isVintage ? _primaryColor.withOpacity(0.5) : Colors.white24, size: 40),
                     ),
                   ),
                 ),
@@ -855,8 +929,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _getBadgeColor(badge),
-                        borderRadius: BorderRadius.circular(4),
+                        color: _isVintage ? _primaryColor : _getBadgeColor(badge),
+                        borderRadius: BorderRadius.circular(_isVintage ? 4 : 4),
                       ),
                       child: Text(
                         badge,
@@ -873,8 +947,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: _textColor,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -883,8 +957,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
             ),
             Text(
               subtitle,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: _textSecondary,
                 fontSize: 11,
               ),
               maxLines: 1,
@@ -927,7 +1001,7 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
         children: [
           // Image
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(_isVintage ? 12 : 8),
             child: CachedNetworkImage(
               imageUrl: item['imageUrl'],
               width: 130,
@@ -936,16 +1010,16 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
               errorWidget: (context, url, error) => Container(
                 width: 130,
                 height: 130,
-                color: const Color(0xFF282828),
-                child: const Icon(Icons.music_note, color: Colors.white24, size: 40),
+                color: _isVintage ? _surfaceColor : const Color(0xFF282828),
+                child: Icon(Icons.music_note, color: _isVintage ? _primaryColor.withOpacity(0.5) : Colors.white24, size: 40),
               ),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             item['title'],
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: _textColor,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -954,8 +1028,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
           ),
           Text(
             item['subtitle'],
-            style: const TextStyle(
-              color: Colors.white54,
+            style: TextStyle(
+              color: _textSecondary,
               fontSize: 11,
             ),
             maxLines: 1,
@@ -979,13 +1053,14 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(12),
+          color: _surfaceColor,
+          borderRadius: BorderRadius.circular(_isVintage ? 16 : 12),
+          border: _isVintage ? Border.all(color: _primaryColor.withOpacity(0.2)) : null,
         ),
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(_isVintage ? 12 : 8),
               child: CachedNetworkImage(
                 imageUrl: imageUrl,
                 width: 80,
@@ -994,8 +1069,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                 errorWidget: (context, url, error) => Container(
                   width: 80,
                   height: 80,
-                  color: const Color(0xFF282828),
-                  child: const Icon(Icons.favorite, color: Color(0xFFFF2D55)),
+                  color: _isVintage ? _surfaceColor : const Color(0xFF282828),
+                  child: Icon(Icons.favorite, color: _isVintage ? _primaryColor : const Color(0xFFFF2D55)),
                 ),
               ),
             ),
@@ -1007,8 +1082,8 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: _textColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1018,15 +1093,15 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    style: TextStyle(
+                      color: _textSecondary,
                       fontSize: 12,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  const Icon(Icons.favorite, color: Color(0xFFFF2D55), size: 16),
+                  Icon(Icons.favorite, color: _isVintage ? _primaryColor : const Color(0xFFFF2D55), size: 16),
                 ],
               ),
             ),
@@ -1043,45 +1118,45 @@ class _WellnessGoalsPageState extends State<WellnessGoalsPage> {
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          color: _surfaceColor,
+          borderRadius: BorderRadius.circular(_isVintage ? 16 : 12),
+          border: Border.all(color: _isVintage ? _primaryColor.withOpacity(0.2) : Colors.white.withOpacity(0.1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF2D55).withOpacity(0.15),
+                color: _isVintage ? _primaryColor.withOpacity(0.15) : const Color(0xFFFF2D55).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.favorite_border, color: Color(0xFFFF2D55), size: 24),
+              child: Icon(Icons.favorite_border, color: _isVintage ? _primaryColor : const Color(0xFFFF2D55), size: 24),
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Start Your Library',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: _textColor,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Like videos to see them here',
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: _textSecondary,
                       fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white38),
+            Icon(Icons.chevron_right, color: _textSecondary.withOpacity(0.7)),
           ],
         ),
       ),

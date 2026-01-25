@@ -34,6 +34,8 @@ class VideosRepository {
         instructor: json['expert_name'] ?? json['instructor'] ?? 'Instructor',
         accessTier: json['access_tier'] ?? 'free',
         viewCount: json['view_count'] ?? 0,
+        expertSlug: json['expert_slug'],
+        expertAvatarUrl: json['expert_avatar_url'] ?? json['expert_image_url'],
         // Series fields
         isSeries: json['is_series'] ?? false,
         seriesId: json['series_id'],
@@ -82,6 +84,8 @@ class VideosRepository {
         instructor: json['expert_name'] ?? json['instructor'] ?? 'Instructor',
         accessTier: json['access_tier'] ?? 'free',
         viewCount: json['view_count'] ?? 0,
+        expertSlug: json['expert_slug'],
+        expertAvatarUrl: json['expert_avatar_url'] ?? json['expert_image_url'],
         // Series fields
         isSeries: json['is_series'] ?? false,
         seriesId: json['series_id'],
@@ -159,6 +163,8 @@ class VideosRepository {
       instructor: video.instructor,
       accessTier: video.accessTier,
       viewCount: viewCount,
+      expertSlug: video.expertSlug,
+      expertAvatarUrl: video.expertAvatarUrl,
       // Preserve series fields
       isSeries: video.isSeries,
       seriesId: video.seriesId,

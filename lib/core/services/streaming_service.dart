@@ -155,7 +155,17 @@ class StreamingService {
       // Parse the streaming response with signed URLs
       final hlsPlaylistUrl = data['hls_playlist_url'] as String?;
       if (hlsPlaylistUrl != null && hlsPlaylistUrl.isNotEmpty) {
-        debugPrint('✅ Got signed streaming URL: $hlsPlaylistUrl');
+        // Diagnostic: Check if the URL appears to be signed
+        final isSigned = hlsPlaylistUrl.contains('Policy=') || 
+                         hlsPlaylistUrl.contains('Signature=') || 
+                         hlsPlaylistUrl.contains('md5=');
+        
+        if (isSigned) {
+          debugPrint('✅ Got signed streaming URL: $hlsPlaylistUrl');
+        } else {
+          debugPrint('⚠️ WARNING: Got UNSIGNED streaming URL from endpoint: $hlsPlaylistUrl');
+          debugPrint('💡 TIP: CloudFront likely requires a signed URL. This may cause a 403 Forbidden error.');
+        }
         
         final expiresAt = DateTime.tryParse(data['expires_at'] ?? '') ?? 
             DateTime.now().add(const Duration(hours: 2));

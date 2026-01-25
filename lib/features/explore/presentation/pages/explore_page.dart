@@ -172,13 +172,14 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Widget _buildTopSpeakersSection(bool isVintage, Color primaryColor, Color surfaceColor, Color textColor, Color textSecondary) {
+    // Using real expert slugs from the backend
     final speakers = [
-      {'id': 'speaker1', 'name': 'Dr. Sarah', 'imageUrl': 'https://picsum.photos/seed/speaker1/200/200'},
-      {'id': 'speaker2', 'name': 'Mark', 'imageUrl': 'https://picsum.photos/seed/speaker2/200/200'},
-      {'id': 'speaker3', 'name': 'Emma', 'imageUrl': 'https://picsum.photos/seed/speaker3/200/200'},
-      {'id': 'speaker4', 'name': 'James', 'imageUrl': 'https://picsum.photos/seed/speaker4/200/200'},
-      {'id': 'speaker5', 'name': 'Lisa', 'imageUrl': 'https://picsum.photos/seed/speaker5/200/200'},
-      {'id': 'speaker6', 'name': 'David', 'imageUrl': 'https://picsum.photos/seed/speaker6/200/200'},
+      {'id': 'dr-sarah-johnson', 'name': 'Dr. Sarah', 'imageUrl': 'https://picsum.photos/seed/sarah/200/200'},
+      {'id': 'dr-michael-chen', 'name': 'Dr. Michael', 'imageUrl': 'https://picsum.photos/seed/michael/200/200'},
+      {'id': 'dr-emily-rodriguez', 'name': 'Dr. Emily', 'imageUrl': 'https://picsum.photos/seed/emily/200/200'},
+      {'id': 'dr-james-wilson', 'name': 'Dr. James', 'imageUrl': 'https://picsum.photos/seed/james/200/200'},
+      {'id': 'dr-lisa-park', 'name': 'Dr. Lisa', 'imageUrl': 'https://picsum.photos/seed/lisa/200/200'},
+      {'id': 'dr-david-brown', 'name': 'Dr. David', 'imageUrl': 'https://picsum.photos/seed/david/200/200'},
     ];
 
     return ListView.builder(
@@ -258,17 +259,23 @@ class _ExplorePageState extends State<ExplorePage> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(isVintage ? 6 : 20),
+            color: isVintage 
+                ? (isSelected ? Colors.black : Colors.white) // Clean black/white for vintage
+                : (isSelected ? primaryColor : Colors.transparent),
+            borderRadius: BorderRadius.circular(20), // Pill shape like reference
             border: Border.all(
-              color: isSelected ? primaryColor : textSecondary.withOpacity(0.5),
+              color: isVintage 
+                  ? (isSelected ? Colors.black : ThemeColors.vintageBorder)
+                  : (isSelected ? primaryColor : textSecondary.withOpacity(0.5)),
               width: 1,
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? (isVintage ? bgColor : Colors.white) : textColor,
+              color: isVintage 
+                  ? (isSelected ? Colors.white : Colors.black)
+                  : (isSelected ? Colors.white : textColor),
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
@@ -284,7 +291,7 @@ class _ExplorePageState extends State<ExplorePage> {
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
         child: Row(
           children: [
-            if (icon != null) ...[
+            if (icon != null && !isVintage) ...[ // Hide icons in vintage for cleaner look
               Icon(icon, color: primaryColor, size: 20),
               const SizedBox(width: 8),
             ],
@@ -292,7 +299,7 @@ class _ExplorePageState extends State<ExplorePage> {
               title,
               style: isVintage
                   ? GoogleFonts.playfairDisplay(
-                      color: textColor,
+                      color: Colors.black, // Clean black text
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     )
@@ -302,19 +309,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       fontWeight: FontWeight.bold,
                     ),
             ),
-            if (isVintage) ...[
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  height: 1,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor.withOpacity(0.4), Colors.transparent],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            // Removed decorative line for cleaner look in vintage mode
           ],
         ),
       ),

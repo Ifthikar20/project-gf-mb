@@ -32,7 +32,16 @@ class ExpertStats extends Equatable {
 
 /// A content item associated with an expert
 class ExpertContentItem extends Equatable {
+  final String id;
+  final String title;
+  final String contentType;
   final String slug;
+  final String? thumbnailUrl;
+  final int? durationSeconds;
+  final String? category;
+  final int? episodeNumber;
+  final String? seriesId;
+  final int? viewCount;
   final String? accessTier;
   final bool isLocked;
   final String? lockMessage;
@@ -94,7 +103,13 @@ class ExpertContentItem extends Equatable {
 
 /// A series associated with an expert
 class ExpertSeries extends Equatable {
+  final String id;
+  final String title;
+  final String? thumbnailUrl;
+  final int episodeCount;
   final int totalEpisodes;
+  final String? category;
+  final String? description;
   final String? accessTier;
   final bool isLocked;
   final String? lockMessage;

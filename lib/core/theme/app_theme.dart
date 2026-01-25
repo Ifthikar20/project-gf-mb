@@ -6,18 +6,20 @@ import 'theme_bloc.dart';
 /// Color palettes for different theme modes
 class ThemeColors {
   // =============================================
-  // VINTAGE (RETRO) THEME COLORS - White & Brown
+  // VINTAGE (LIGHT) THEME COLORS - Clean White Design
+  // Based on Alo Wellness Club reference
   // =============================================
-  static const Color vintageBackground = Color(0xFFF5F0E8); // Warm off-white
-  static const Color vintageSurface = Color(0xFFFAF8F3); // Lighter off-white
-  static const Color vintageGold = Color(0xFF8B4513); // Saddle brown
-  static const Color vintageBrass = Color(0xFFA0522D); // Sienna
-  static const Color vintageCream = Color(0xFF1A1A1A); // Black text
-  static const Color vintageTan = Color(0xFF4A4A4A); // Dark gray for secondary text
-  static const Color dustyRose = Color(0xFFA67C52); // Warm brown
-  static const Color sageGreen = Color(0xFF5D7D5D); // Muted green
-  static const Color vintageRed = Color(0xFF8B3A3A); // Muted red
-  static const Color vintageBorder = Color(0xFFD4C5B0); // Light tan border
+  static const Color vintageBackground = Color(0xFFFBFBFB); // Near-pure white
+  static const Color vintageSurface = Color(0xFFFFFFFF); // Pure white
+  static const Color vintageGold = Color(0xFF000000); // Black accent
+  static const Color vintageBrass = Color(0xFF333333); // Dark gray
+  static const Color vintageCream = Color(0xFF000000); // Black text
+  static const Color vintageTan = Color(0xFF6B7280); // Gray-500 for secondary text
+  static const Color dustyRose = Color(0xFF374151); // Gray-700
+  static const Color sageGreen = Color(0xFF059669); // Emerald for success states
+  static const Color vintageRed = Color(0xFFDC2626); // Red for errors
+  static const Color vintageBorder = Color(0xFFE5E7EB); // Gray-200 border
+  static const Color creamLight = Color(0xFFF9FAFB); // Gray-50
 
   // =============================================
   // CLASSIC DARK THEME COLORS (Original)

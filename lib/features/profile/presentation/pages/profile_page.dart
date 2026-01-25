@@ -72,13 +72,7 @@ class ProfilePage extends StatelessWidget {
                                         fontWeight: FontWeight.bold,
                                       ),
                               ),
-                              Row(
-                                children: [
-                                  _buildIconButton(Icons.share_outlined, surfaceColor, textSecondary, isVintage ? primaryColor : null),
-                                  const SizedBox(width: 8),
-                                  _buildIconButton(Icons.settings_outlined, surfaceColor, textSecondary, isVintage ? primaryColor : null),
-                                ],
-                              ),
+                              // Buttons removed as per user request
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -97,7 +91,7 @@ class ProfilePage extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      borderRadius: isVintage ? BorderRadius.circular(12) : null,
+                                      borderRadius: isVintage ? BorderRadius.circular(16) : null,
                                       shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
                                       border: Border.all(
                                         color: isLoggedIn ? primaryColor : textSecondary.withOpacity(0.5),
@@ -115,7 +109,7 @@ class ProfilePage extends StatelessWidget {
                                       width: 72,
                                       height: 72,
                                       decoration: BoxDecoration(
-                                        borderRadius: isVintage ? BorderRadius.circular(8) : null,
+                                        borderRadius: isVintage ? BorderRadius.circular(12) : null,
                                         shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
                                         gradient: isLoggedIn
                                             ? LinearGradient(colors: [primaryColor, isVintage ? ThemeColors.vintageBrass : ThemeColors.classicSecondary])
