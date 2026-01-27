@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
 import '../auth/auth_bloc.dart';
+import '../config/api_endpoints.dart';
 import '../services/oauth_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -23,8 +24,12 @@ class _LoginPageState extends State<LoginPage> {
   bool _isVideoInitialized = false;
   String? _errorMessage;
 
-  // Purple theme color
+  // Theme colors
   static const Color primaryPurple = Color(0xFF8B5CF6);
+  static const Color darkText = Color(0xFF1A1A1A);
+  static const Color greyText = Color(0xFF6B7280);
+  static const Color inputBg = Color(0xFFF3F4F6);
+  static const Color inputBorder = Color(0xFFE5E7EB);
 
   @override
   void initState() {
@@ -33,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _initializeVideo() async {
-    _videoController = VideoPlayerController.asset('assets/images/main-video.mp4');
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(ApiEndpoints.landingVideo));
     try {
       await _videoController.initialize();
       _videoController.setLooping(true);
@@ -70,7 +75,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _signInWithGoogle() {
-    // Set up OAuth callbacks
     OAuthService.instance.onAuthSuccess = (user) {
       context.read<AuthBloc>().add(AuthUserChanged(user));
     };
@@ -88,6 +92,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthLoading) {
@@ -102,110 +110,116 @@ class _LoginPageState extends State<LoginPage> {
         if (state is AuthAuthenticated) {
           context.go('/');
         } else if (state is AuthError) {
-          // Error message is already user-friendly from AuthBloc
           setState(() {
             _errorMessage = state.message;
           });
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Column(
-          children: [
-            // ===== TOP HALF: Video with Logo =====
-            Expanded(
-              flex: 1,
-              child: Stack(
-                children: [
-                  // Video Background
-                  if (_isVideoInitialized)
-                    SizedBox.expand(
-                      child: FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: _videoController.value.size.width,
-                          height: _videoController.value.size.height,
-                          child: VideoPlayer(_videoController),
+        backgroundColor: Colors.white,
+        body: SizedBox(
+          height: screenHeight,
+          child: Stack(
+            children: [
+              // ===== FULL SCREEN VIDEO with fog at bottom =====
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: screenHeight * 0.55, // Video takes top 55%
+                child: Stack(
+                  children: [
+                    // Video Background - full coverage
+                    if (_isVideoInitialized)
+                      Positioned.fill(
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                          child: SizedBox(
+                            width: _videoController.value.size.width,
+                            height: _videoController.value.size.height,
+                            child: VideoPlayer(_videoController),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              primaryPurple.withOpacity(0.2),
+                              Colors.white,
+                            ],
+                          ),
+                        ),
+                      ),
+                    
+                    // HEAVY FOG/CLOUD effect at bottom
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: 200,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withOpacity(0.0),
+                              Colors.white.withOpacity(0.15),
+                              Colors.white.withOpacity(0.4),
+                              Colors.white.withOpacity(0.7),
+                              Colors.white.withOpacity(0.9),
+                              Colors.white,
+                            ],
+                            stops: const [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                          ),
                         ),
                       ),
                     ),
-                  // Gradient overlay
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: 60,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            // ===== BOTTOM HALF: Login Form =====
-            Expanded(
-              flex: 2,
-              child: Container(
-                color: Colors.black,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+              
+              // ===== FORM AT BOTTOM =====
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                  ),
+                  padding: EdgeInsets.fromLTRB(28, 0, 28, bottomPadding + 20),
                   child: Form(
                     key: _formKey,
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 20),
-                        
-                        // App Logo/Image
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.asset(
-                            'assets/images/visual-warning-img.png',
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 20),
-                        
-                        // Title
-                        Text(
-                          'Welcome back',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
                         // Error message
-                        if (_errorMessage != null) ...[
+                        if (_errorMessage != null)
                           Container(
                             width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.withAlpha(38),
+                              color: Colors.red.shade50,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.red.withAlpha(77)),
+                              border: Border.all(color: Colors.red.shade200),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                                Icon(Icons.error_outline, color: Colors.red.shade400, size: 18),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
                                     style: GoogleFonts.inter(
-                                      color: Colors.red.shade300,
+                                      color: Colors.red.shade700,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -213,78 +227,55 @@ class _LoginPageState extends State<LoginPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
-                        ],
                         
                         // Email field
-                        _buildLabel('Email'),
-                        const SizedBox(height: 8),
                         _buildTextField(
                           controller: _emailController,
-                          hintText: 'Enter your email',
+                          hintText: 'Email address',
                           keyboardType: TextInputType.emailAddress,
                           prefixIcon: Icons.email_outlined,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!value.contains('@')) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
                         ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         
                         // Password field
-                        _buildLabel('Password'),
-                        const SizedBox(height: 8),
                         _buildTextField(
                           controller: _passwordController,
-                          hintText: 'Enter your password',
+                          hintText: 'Password',
                           obscureText: _obscurePassword,
                           prefixIcon: Icons.lock_outlined,
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: Colors.white38,
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: greyText,
+                              size: 20,
                             ),
-                            onPressed: () {
-                              setState(() => _obscurePassword = !_obscurePassword);
-                            },
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your password';
-                            }
-                            if (value.length < 8) {
-                              return 'Password must be at least 8 characters';
-                            }
-                            return null;
-                          },
                         ),
                         
-                        const SizedBox(height: 8),
-                        
-                        // Forgot password
+                        // Forgot password - aligned right
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              context.push('/forgot-password');
-                            },
+                            onPressed: () => context.push('/forgot-password'),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 6),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             child: Text(
                               'Forgot Password?',
                               style: GoogleFonts.inter(
                                 color: primaryPurple,
-                                fontSize: 14,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                         ),
                         
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         
                         // Login button
                         SizedBox(
@@ -296,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
                               backgroundColor: primaryPurple,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               elevation: 0,
                             ),
@@ -319,27 +310,27 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 14),
                         
                         // Divider
                         Row(
                           children: [
-                            Expanded(child: Divider(color: Colors.white.withAlpha(51))),
+                            Expanded(child: Divider(color: inputBorder, thickness: 1)),
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
                                 'or',
                                 style: GoogleFonts.inter(
-                                  color: Colors.white.withAlpha(128),
-                                  fontSize: 14,
+                                  color: greyText,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
-                            Expanded(child: Divider(color: Colors.white.withAlpha(51))),
+                            Expanded(child: Divider(color: inputBorder, thickness: 1)),
                           ],
                         ),
                         
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 14),
                         
                         // Google login button
                         SizedBox(
@@ -348,22 +339,30 @@ class _LoginPageState extends State<LoginPage> {
                           child: OutlinedButton(
                             onPressed: _signInWithGoogle,
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: BorderSide(color: Colors.white.withAlpha(102)),
+                              foregroundColor: darkText,
+                              backgroundColor: Colors.white,
+                              side: BorderSide(color: inputBorder, width: 1.5),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.g_mobiledata, color: Color(0xFFDB4437), size: 22),
-                                const SizedBox(width: 10),
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CustomPaint(
+                                    painter: GoogleLogoPainter(),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
                                 Text(
                                   'Continue with Google',
                                   style: GoogleFonts.inter(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
+                                    color: darkText,
                                   ),
                                 ),
                               ],
@@ -371,51 +370,63 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
                         
                         // Sign up link
-                        Text(
-                          "Don't have an account?",
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withAlpha(153),
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        GestureDetector(
-                          onTap: () => context.push('/register'),
-                          child: Text(
-                            'Sign up',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account? ",
+                              style: GoogleFonts.inter(
+                                color: greyText,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
+                            GestureDetector(
+                              onTap: () => context.push('/register'),
+                              child: Text(
+                                'Sign up',
+                                style: GoogleFonts.inter(
+                                  color: primaryPurple,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  Widget _buildLabel(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        text,
-        style: GoogleFonts.inter(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
+              
+              // Back button
+              Positioned(
+                top: topPadding + 8,
+                left: 8,
+                child: IconButton(
+                  onPressed: () => context.go('/landing'),
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.85),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_back_ios_new, size: 18, color: darkText),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -428,41 +439,115 @@ class _LoginPageState extends State<LoginPage> {
     TextInputType? keyboardType,
     bool obscureText = false,
     Widget? suffixIcon,
-    String? Function(String?)? validator,
-    void Function(String)? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      style: const TextStyle(color: Colors.white, fontSize: 15),
-      validator: validator,
-      onChanged: onChanged,
+      style: GoogleFonts.inter(color: darkText, fontSize: 15),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: TextStyle(color: Colors.white.withAlpha(77)),
-        prefixIcon: Icon(prefixIcon, color: Colors.white38, size: 20),
+        hintStyle: GoogleFonts.inter(color: greyText, fontSize: 15),
+        prefixIcon: Icon(prefixIcon, color: greyText, size: 20),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: const Color(0xFF1A1A1A),
+        fillColor: inputBg,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withAlpha(26)),
+          borderSide: BorderSide(color: inputBorder, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryPurple),
+          borderSide: const BorderSide(color: primaryPurple, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
+          borderSide: BorderSide(color: Colors.red.shade300),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
+      validator: (value) {
+        if (hintText.contains('Email')) {
+          if (value == null || value.isEmpty) return 'Please enter your email';
+          if (!value.contains('@')) return 'Please enter a valid email';
+        } else if (hintText.contains('Password')) {
+          if (value == null || value.isEmpty) return 'Please enter your password';
+          if (value.length < 8) return 'Password must be at least 8 characters';
+        }
+        return null;
+      },
     );
   }
+}
+
+/// Custom painter for Google "G" logo
+class GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final Offset center = Offset(w / 2, h / 2);
+    final double radius = w * 0.45;
+    final double strokeWidth = w * 0.18;
+    
+    final Paint paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+    
+    // Blue arc (right side)
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -0.4,
+      1.3,
+      false,
+      paint,
+    );
+    
+    // Green arc (bottom right)
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      0.9,
+      1.0,
+      false,
+      paint,
+    );
+    
+    // Yellow arc (bottom left)
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      1.9,
+      0.9,
+      false,
+      paint,
+    );
+    
+    // Red arc (top)
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      2.8,
+      1.0,
+      false,
+      paint,
+    );
+    
+    // Blue horizontal bar
+    paint.style = PaintingStyle.fill;
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.5, h * 0.38, w * 0.5, h * 0.24),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

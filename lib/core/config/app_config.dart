@@ -29,6 +29,7 @@ class AppConfig {
   // API Configuration
   final String apiBaseUrl;
   final String cdnBaseUrl;
+  final String r2BaseUrl; // Cloudflare R2 for video assets
   final Duration apiTimeout;
   final int maxRetries;
   
@@ -62,6 +63,7 @@ class AppConfig {
     required this.environment,
     required this.apiBaseUrl,
     required this.cdnBaseUrl,
+    required this.r2BaseUrl,
     required this.apiTimeout,
     required this.maxRetries,
     required this.enableAnalytics,
@@ -110,6 +112,7 @@ class AppConfig {
       environment: Environment.development,
       apiBaseUrl: 'https://api-dev.betterandbliss.app',
       cdnBaseUrl: 'https://cdn-dev.betterandbliss.app',
+      r2BaseUrl: 'https://pub-aab30380758e431a9c177896a92abeca.r2.dev',
       apiTimeout: const Duration(seconds: 30),
       maxRetries: 3,
       enableAnalytics: false,
@@ -136,6 +139,7 @@ class AppConfig {
       environment: Environment.staging,
       apiBaseUrl: 'https://api-staging.betterandbliss.app',
       cdnBaseUrl: 'https://cdn-staging.betterandbliss.app',
+      r2BaseUrl: 'https://pub-aab30380758e431a9c177896a92abeca.r2.dev',
       apiTimeout: const Duration(seconds: 20),
       maxRetries: 2,
       enableAnalytics: true,
@@ -162,6 +166,7 @@ class AppConfig {
       environment: Environment.production,
       apiBaseUrl: 'https://api.betterandbliss.app',
       cdnBaseUrl: 'https://cdn.betterandbliss.app',
+      r2BaseUrl: 'https://pub-aab30380758e431a9c177896a92abeca.r2.dev',
       apiTimeout: const Duration(seconds: 15),
       maxRetries: 2,
       enableAnalytics: true,

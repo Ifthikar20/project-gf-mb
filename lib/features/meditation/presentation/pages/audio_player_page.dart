@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/config/api_endpoints.dart';
 import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_event.dart';
 import '../../data/repositories/meditation_repository.dart';
@@ -60,8 +61,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   Future<void> _initializeVideo() async {
-    _videoController = VideoPlayerController.asset(
-      'assets/videos/sunset-waves.mp4',
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(ApiEndpoints.sunsetWavesVideo),
     );
     
     await _videoController.initialize();

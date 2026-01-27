@@ -111,13 +111,21 @@ class WellnessApp extends StatelessWidget {
             create: (context) => LibraryBloc(),
           ),
         ],
-        child: MaterialApp.router(
-          title: config.appName,
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.dark,
-          routerConfig: AppRouter.router,
+        // Use Builder to access AuthBloc and create auth-aware router
+        child: Builder(
+          builder: (context) {
+            final authBloc = context.read<AuthBloc>();
+            final router = AppRouter.createRouter(authBloc);
+            
+            return MaterialApp.router(
+              title: config.appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: ThemeMode.dark,
+              routerConfig: router,
+            );
+          },
         ),
       ),
     );

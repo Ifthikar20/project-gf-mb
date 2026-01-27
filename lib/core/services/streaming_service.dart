@@ -19,21 +19,54 @@ class StreamingUrls {
   });
   
   factory StreamingUrls.fromJson(Map<String, dynamic> json) {
+    final hlsUrl = json['hls_master'] ?? json['stream_url'] ?? '';
+    
+    // Parse expiration from URL's e= parameter (most reliable)
+    final urlExpiry = parseExpirationFromUrl(hlsUrl);
+    
+    // Fall back to expires_at field, then 2 hours default
+    final apiExpiry = DateTime.tryParse(json['expires_at'] ?? '');
+    
+    // Use the earliest expiration (most conservative)
+    DateTime expiresAt;
+    if (urlExpiry != null && apiExpiry != null) {
+      expiresAt = urlExpiry.isBefore(apiExpiry) ? urlExpiry : apiExpiry;
+    } else {
+      expiresAt = urlExpiry ?? apiExpiry ?? DateTime.now().add(const Duration(hours: 2));
+    }
+    
     return StreamingUrls(
-      hlsMaster: json['hls_master'] ?? json['stream_url'] ?? '',
+      hlsMaster: hlsUrl,
       hls720p: json['hls_720p'],
       hls1080p: json['hls_1080p'],
       thumbnail: json['thumbnail'],
-      expiresAt: DateTime.tryParse(json['expires_at'] ?? '') ?? 
-                 DateTime.now().add(const Duration(hours: 2)),
+      expiresAt: expiresAt,
     );
   }
   
-  /// Check if URLs are still valid
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
+  /// Parse expiration timestamp from signed URL's e= parameter
+  /// Returns null if not found or invalid
+  static DateTime? parseExpirationFromUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final expParam = uri.queryParameters['e'];
+      if (expParam != null) {
+        final expSeconds = int.tryParse(expParam);
+        if (expSeconds != null) {
+          return DateTime.fromMillisecondsSinceEpoch(expSeconds * 1000);
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not parse expiration from URL: $e');
+    }
+    return null;
+  }
   
-  /// Time until expiry
-  Duration get timeUntilExpiry => expiresAt.difference(DateTime.now());
+  /// Check if URLs are still valid (with 5 minute safety buffer)
+  bool get isExpired => DateTime.now().isAfter(expiresAt.subtract(const Duration(minutes: 5)));
+  
+  /// Time until expiry (with 5 minute safety buffer)
+  Duration get timeUntilExpiry => expiresAt.subtract(const Duration(minutes: 5)).difference(DateTime.now());
 }
 
 /// Content detail from backend
@@ -138,10 +171,13 @@ class StreamingService {
     // Check cache first
     if (_urlCache.containsKey(contentId)) {
       final cached = _urlCache[contentId]!;
-      // Return cached if still valid (with 5 min buffer)
-      if (cached.timeUntilExpiry.inMinutes > 5) {
-        debugPrint('📼 Using cached streaming URLs for $contentId');
+      // Return cached if still valid (isExpired includes 5 min safety buffer)
+      if (!cached.isExpired) {
+        debugPrint('📼 Using cached streaming URLs for $contentId (expires in ${cached.timeUntilExpiry.inMinutes} min)');
         return cached;
+      } else {
+        debugPrint('📼 Cached URL expired for $contentId, fetching fresh URL');
+        _urlCache.remove(contentId);
       }
     }
     
@@ -167,8 +203,19 @@ class StreamingService {
           debugPrint('💡 TIP: CloudFront likely requires a signed URL. This may cause a 403 Forbidden error.');
         }
         
-        final expiresAt = DateTime.tryParse(data['expires_at'] ?? '') ?? 
-            DateTime.now().add(const Duration(hours: 2));
+        // Parse expiration from URL's e= parameter (most reliable)
+        final urlExpiry = StreamingUrls.parseExpirationFromUrl(hlsPlaylistUrl);
+        final apiExpiry = DateTime.tryParse(data['expires_at'] ?? '');
+        
+        // Use the earliest expiration (most conservative)
+        DateTime expiresAt;
+        if (urlExpiry != null && apiExpiry != null) {
+          expiresAt = urlExpiry.isBefore(apiExpiry) ? urlExpiry : apiExpiry;
+        } else {
+          expiresAt = urlExpiry ?? apiExpiry ?? DateTime.now().add(const Duration(hours: 2));
+        }
+        
+        debugPrint('🕐 URL expires at: $expiresAt (in ${expiresAt.difference(DateTime.now()).inMinutes} min)');
         
         final urls = StreamingUrls(
           hlsMaster: hlsPlaylistUrl,

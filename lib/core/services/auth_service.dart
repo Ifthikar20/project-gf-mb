@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'token_storage.dart';
+import 'streaming_service.dart';
 
 /// User model from API
 class User {
@@ -220,6 +221,16 @@ class AuthService {
       _api.setAccessToken(null);
       await _tokenStorage.clearAll(); // Clear persisted tokens
       await _api.clearCookies();
+      
+      // Clear streaming URL cache to prevent 403 errors from expired signed URLs
+      try {
+        // Import streaming service only when needed to avoid circular dependency
+        final streaming = StreamingService.instance;
+        streaming.clearCache();
+        debugPrint('📼 Streaming URL cache cleared on logout');
+      } catch (e) {
+        debugPrint('⚠️ Could not clear streaming cache: $e');
+      }
     }
   }
   

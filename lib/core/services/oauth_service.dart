@@ -110,7 +110,8 @@ class OAuthService {
     const baseUrl = 'https://api.betterandbliss.com';
     const callbackScheme = 'betterbliss';
     
-    final authUrl = '$baseUrl/auth/google?redirect=$callbackScheme://auth/callback';
+    // Add prompt=select_account to force Google to show account picker every time
+    final authUrl = '$baseUrl/auth/google?redirect=$callbackScheme://auth/callback&prompt=select_account';
     
     debugPrint('🔐 Launching Google OAuth (native): $authUrl');
     

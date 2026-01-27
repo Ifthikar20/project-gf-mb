@@ -50,6 +50,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
 
   String? _errorMessage;
   bool _isPermissionError = false;
+  int _retryCount = 0;  // Track retries for 403 errors
+  static const int _maxRetries = 2;  // Max retry attempts
 
   Future<void> _loadVideo() async {
     try {
@@ -115,17 +117,35 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
               expert: video.instructor,
               durationSeconds: video.durationInSeconds,
             );
-          }).catchError((error) {
+          }).catchError((error) async {
             debugPrint('❌ Video initialization failed: $error');
             String errorMsg = error.toString();
             bool is403 = errorMsg.contains('403') || errorMsg.contains('Forbidden');
+            
+            // Auto-retry on 403 by clearing cache and getting fresh URL
+            if (is403 && _retryCount < _maxRetries) {
+              _retryCount++;
+              debugPrint('🔄 403 detected - auto-retrying with fresh URL (attempt $_retryCount/$_maxRetries)');
+              
+              // Clear the cached URL for this video and force fresh fetch
+              StreamingService.instance.refreshStreamingUrls(widget.videoId);
+              
+              // Dispose the failing controller
+              _controller?.dispose();
+              _controller = null;
+              
+              // Wait briefly then retry
+              await Future.delayed(const Duration(milliseconds: 500));
+              _loadVideo();
+              return;
+            }
             
             setState(() { 
               _hasError = true; 
               _isLoading = false; 
               _isPermissionError = is403;
               _errorMessage = is403 
-                ? 'Security: This video requires a signed URL which was not provided (403).' 
+                ? 'Unable to play video. Please try again or check your connection.' 
                 : 'Failed to initialize video player.';
             });
           });

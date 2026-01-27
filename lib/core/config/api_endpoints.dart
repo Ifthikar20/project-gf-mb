@@ -8,6 +8,14 @@ class ApiEndpoints {
   // Base URLs
   static String get baseUrl => _config.apiBaseUrl;
   static String get cdnUrl => _config.cdnBaseUrl;
+  static String get r2Url => _config.r2BaseUrl;
+  
+  // ============================================
+  // R2 Video Assets (Background Videos)
+  // ============================================
+  static String get landingVideo => '$r2Url/main-video.mp4';
+  static String get sunsetWavesVideo => '$r2Url/sunset-waves.mp4';
+  static String get bannerVideo => '$r2Url/banner-video-1.mp4';
   
   // ============================================
   // Authentication Endpoints

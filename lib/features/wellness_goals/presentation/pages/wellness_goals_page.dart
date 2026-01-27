@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/config/api_endpoints.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/services/recently_viewed_service.dart';
 import '../../../../core/theme/theme_bloc.dart';
@@ -42,8 +43,8 @@ class _HomePageState extends State<HomePage> {
   }
   
   Future<void> _initBannerVideo() async {
-    _bannerVideoController = VideoPlayerController.asset(
-      'assets/videos/banner-video-1.mp4',
+    _bannerVideoController = VideoPlayerController.networkUrl(
+      Uri.parse(ApiEndpoints.bannerVideo),
     );
     
     await _bannerVideoController!.initialize();

@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
+import '../config/api_endpoints.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -29,7 +30,7 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Future<void> _initializeVideo() async {
-    _videoController = VideoPlayerController.asset('assets/images/main-video.mp4');
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(ApiEndpoints.landingVideo));
     try {
       await _videoController.initialize();
       _videoController.setLooping(true);
@@ -146,9 +147,10 @@ If you have any questions about this Privacy Policy, please contact us.''',
         children: [
           // ===== FULLSCREEN VIDEO BACKGROUND =====
           if (_isVideoInitialized)
-            SizedBox.expand(
+            Positioned.fill(
               child: FittedBox(
                 fit: BoxFit.cover,
+                alignment: Alignment.center,
                 child: SizedBox(
                   width: _videoController.value.size.width,
                   height: _videoController.value.size.height,

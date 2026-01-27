@@ -68,9 +68,11 @@ flutter:
   
   assets:
     - .env
-    - assets/images/
+    - assets/images/logo-main.png
+    - assets/images/sign-up-backgrop.png
+    - assets/images/visual-warning-img.png
     - assets/audio/
-    - assets/videos/
+    # Note: Videos removed - now streamed from Cloudflare R2
   
   # Uncomment to add custom fonts
   # fonts:
