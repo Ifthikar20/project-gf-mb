@@ -9,6 +9,7 @@ import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_event.dart';
 import '../../data/repositories/meditation_repository.dart';
 import '../../domain/entities/meditation_audio.dart';
+import '../../../../core/services/goal_tracking_service.dart';
 
 class AudioPlayerPage extends StatefulWidget {
   final String audioId;
@@ -37,6 +38,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   // Heads-up overlay state
   bool _showHeadsUpOverlay = true;
   Timer? _headsUpTimer;
+  bool _hasTrackedCompletion = false; // Prevent double tracking
 
   @override
   void initState() {
@@ -90,8 +92,32 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
     _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
+        // Track goal completion when audio finishes
+        if (_audio != null && _duration != null) {
+          GoalTrackingService.instance.trackAudioCompletion(
+            audioId: _audio!.id,
+            category: _audio!.category ?? 'Meditation',
+            durationSeconds: _duration!.inSeconds,
+          );
+        }
         _audioPlayer.seek(Duration.zero);
         _audioPlayer.pause();
+      }
+    });
+    
+    // Also track if user reaches 80%+ progress
+    _audioPlayer.positionStream.listen((position) {
+      if (_audio != null && _duration != null && _duration!.inSeconds > 0) {
+        final progress = position.inSeconds / _duration!.inSeconds;
+        // Track at 80% completion (only once)
+        if (progress >= 0.80 && !_hasTrackedCompletion) {
+          _hasTrackedCompletion = true;
+          GoalTrackingService.instance.trackAudioCompletion(
+            audioId: _audio!.id,
+            category: _audio!.category ?? 'Meditation',
+            durationSeconds: _duration!.inSeconds,
+          );
+        }
       }
     });
   }

@@ -26,13 +26,20 @@ class GoalModelAdapter extends TypeAdapter<GoalModel> {
       createdAt: fields[6] as DateTime,
       targetDate: fields[7] as DateTime?,
       isCompleted: fields[8] as bool,
+      typeIndex: fields[9] as int,
+      periodIndex: fields[10] as int,
+      periodStart: fields[11] as DateTime?,
+      trackedIdsList: (fields[12] as List).cast<String>(),
+      streakDays: fields[13] as int,
+      lastActivityDate: fields[14] as DateTime?,
+      iconName: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, GoalModel obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +57,21 @@ class GoalModelAdapter extends TypeAdapter<GoalModel> {
       ..writeByte(7)
       ..write(obj.targetDate)
       ..writeByte(8)
-      ..write(obj.isCompleted);
+      ..write(obj.isCompleted)
+      ..writeByte(9)
+      ..write(obj.typeIndex)
+      ..writeByte(10)
+      ..write(obj.periodIndex)
+      ..writeByte(11)
+      ..write(obj.periodStart)
+      ..writeByte(12)
+      ..write(obj.trackedIdsList)
+      ..writeByte(13)
+      ..write(obj.streakDays)
+      ..writeByte(14)
+      ..write(obj.lastActivityDate)
+      ..writeByte(15)
+      ..write(obj.iconName);
   }
 
   @override

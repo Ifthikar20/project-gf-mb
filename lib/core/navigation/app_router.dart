@@ -7,7 +7,7 @@ import '../auth/register_page.dart';
 import '../auth/forgot_password_page.dart';
 import '../auth/reset_password_page.dart';
 import '../auth/auth_bloc.dart';
-import '../../features/wellness_goals/presentation/pages/goal_detail_page.dart';
+
 import '../../features/videos/presentation/pages/video_player_page.dart';
 import '../../features/meditation/presentation/pages/meditation_category_page.dart';
 import '../../features/meditation/presentation/pages/audio_player_page.dart';
@@ -24,7 +24,7 @@ class AppRouter {
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
   static const String wellnessGoals = '/wellness-goals';
-  static const String goalDetail = '/goal-detail';
+
   static const String videos = '/videos';
   static const String videoPlayer = '/video-player';
   static const String meditation = '/meditation';
@@ -133,13 +133,7 @@ class AppRouter {
             return ResetPasswordPage(email: Uri.decodeComponent(email));
           },
         ),
-        GoRoute(
-          path: goalDetail,
-          builder: (context, state) {
-            final goalId = state.uri.queryParameters['id'];
-            return GoalDetailPage(goalId: goalId);
-          },
-        ),
+
         GoRoute(
           path: videoPlayer,
           pageBuilder: (context, state) {
@@ -265,13 +259,7 @@ class AppRouter {
           return ResetPasswordPage(email: Uri.decodeComponent(email));
         },
       ),
-      GoRoute(
-        path: goalDetail,
-        builder: (context, state) {
-          final goalId = state.uri.queryParameters['id'];
-          return GoalDetailPage(goalId: goalId);
-        },
-      ),
+
       GoRoute(
         path: videoPlayer,
         pageBuilder: (context, state) {

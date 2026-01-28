@@ -7,6 +7,11 @@ import '../../../../core/auth/auth_bloc.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../wellness_goals/presentation/bloc/goals_bloc.dart';
+import '../../../wellness_goals/presentation/bloc/goals_state.dart';
+import '../../../wellness_goals/presentation/bloc/goals_event.dart';
+import '../../../wellness_goals/domain/entities/goal_entity.dart';
+import '../../../wellness_goals/presentation/widgets/goal_picker_sheet.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -226,27 +231,91 @@ class ProfilePage extends StatelessWidget {
                             },
                           ),
                           const SizedBox(height: 28),
-                          // Stats row
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
-                              border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatItem('7', 'Day Streak', Icons.local_fire_department, 
-                                    isVintage ? ThemeColors.dustyRose : ThemeColors.classicOrange, isVintage, textColor, textSecondary),
-                                Container(width: 1, height: 40, color: textSecondary.withOpacity(0.2)),
-                                _buildStatItem('23', 'Sessions', Icons.headphones, 
-                                    primaryColor, isVintage, textColor, textSecondary),
-                                Container(width: 1, height: 40, color: textSecondary.withOpacity(0.2)),
-                                _buildStatItem('156', 'Minutes', Icons.timer_outlined, 
-                                    isVintage ? ThemeColors.sageGreen : ThemeColors.classicBlue, isVintage, textColor, textSecondary),
-                              ],
-                            ),
+                          // Goals Stats Row - Dynamic based on active goals
+                          BlocBuilder<GoalsBloc, GoalsState>(
+                            builder: (context, goalsState) {
+                              if (goalsState is! GoalsLoaded) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: surfaceColor,
+                                    borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
+                                    border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Loading goals...',
+                                      style: TextStyle(color: textSecondary, fontSize: 14),
+                                    ),
+                                  ),
+                                );
+                              }
+                              
+                              final activeGoals = goalsState.goals
+                                  .where((g) => !g.isCompleted)
+                                  .take(3)
+                                  .toList();
+                              
+                              // If no goals, show empty state with "Add Goal" prompt
+                              if (activeGoals.isEmpty) {
+                                return GestureDetector(
+                                  onTap: () => _showGoalPicker(context),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                    decoration: BoxDecoration(
+                                      color: surfaceColor,
+                                      borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
+                                      border: Border.all(
+                                        color: primaryColor.withOpacity(0.3),
+                                        style: BorderStyle.solid,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.add_circle_outline, color: primaryColor, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Set Your First Goal',
+                                          style: TextStyle(
+                                            color: primaryColor,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }
+                              
+                              // Show up to 3 goals with dividers
+                              return Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: surfaceColor,
+                                  borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
+                                  border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    for (int i = 0; i < activeGoals.length; i++) ...[
+                                      if (i > 0)
+                                        Container(width: 1, height: 45, color: textSecondary.withOpacity(0.2)),
+                                      Expanded(
+                                        child: _buildGoalStatItem(
+                                          activeGoals[i],
+                                          isVintage,
+                                          textColor,
+                                          textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -822,6 +891,200 @@ class ProfilePage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildCompactGoalItem(
+    GoalEntity goal,
+    AppThemeMode mode,
+    Color surfaceColor,
+    Color textColor,
+    Color textSecondary,
+    Color primaryColor,
+    bool isVintage,
+  ) {
+    final progress = goal.progress;
+    final progressColor = _getGoalColor(goal.type, primaryColor);
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  goal.title,
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.9),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${goal.currentValue}/${goal.targetValue}',
+                style: TextStyle(
+                  color: textSecondary.withOpacity(0.7),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Linear progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              backgroundColor: mode == AppThemeMode.classicDark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.black.withOpacity(0.08),
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              minHeight: 5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getGoalColor(GoalType type, Color defaultColor) {
+    switch (type) {
+      case GoalType.videoCompletion:
+        return const Color(0xFF7C3AED);
+      case GoalType.audioCompletion:
+        return const Color(0xFF8B5CF6);
+      case GoalType.dailyStreak:
+        return const Color(0xFFEF4444);
+      case GoalType.weeklyUsage:
+        return const Color(0xFF3B82F6);
+      case GoalType.categoryExplore:
+        return const Color(0xFF06B6D4);
+      case GoalType.watchTime:
+        return const Color(0xFF14B8A6);
+      case GoalType.manual:
+      default:
+        return defaultColor;
+    }
+  }
+
+  void _showGoalPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const GoalPickerSheet(),
+    );
+  }
+
+  Widget _buildGoalStatItem(
+    GoalEntity goal,
+    bool isVintage,
+    Color textColor,
+    Color textSecondary,
+  ) {
+    final color = _getGoalColor(goal.type, const Color(0xFF7C3AED));
+    final icon = _getGoalIcon(goal.type);
+    final progressPercent = (goal.progress * 100).toInt();
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Circular progress with icon
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: CircularProgressIndicator(
+                value: goal.progress,
+                strokeWidth: 3,
+                backgroundColor: color.withOpacity(0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            ),
+            Icon(icon, color: color, size: 18),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Progress text
+        Text(
+          '$progressPercent%',
+          style: isVintage
+              ? GoogleFonts.playfairDisplay(
+                  color: textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                )
+              : TextStyle(
+                  color: textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+        ),
+        const SizedBox(height: 2),
+        // Goal label (truncated)
+        SizedBox(
+          width: 80,
+          child: Text(
+            _getGoalLabel(goal),
+            style: TextStyle(
+              color: textSecondary.withOpacity(0.7),
+              fontSize: 10,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _getGoalIcon(GoalType type) {
+    switch (type) {
+      case GoalType.videoCompletion:
+        return Icons.play_circle_filled;
+      case GoalType.audioCompletion:
+        return Icons.headphones;
+      case GoalType.dailyStreak:
+        return Icons.local_fire_department;
+      case GoalType.weeklyUsage:
+        return Icons.calendar_today;
+      case GoalType.categoryExplore:
+        return Icons.explore;
+      case GoalType.watchTime:
+        return Icons.timer;
+      case GoalType.manual:
+      default:
+        return Icons.flag;
+    }
+  }
+
+  String _getGoalLabel(GoalEntity goal) {
+    switch (goal.type) {
+      case GoalType.dailyStreak:
+        return '${goal.currentValue}/${goal.targetValue} Days';
+      case GoalType.watchTime:
+        return '${goal.currentValue}/${goal.targetValue} Min';
+      case GoalType.videoCompletion:
+        return '${goal.currentValue}/${goal.targetValue} Videos';
+      case GoalType.audioCompletion:
+        return '${goal.currentValue}/${goal.targetValue} Sessions';
+      case GoalType.weeklyUsage:
+        return '${goal.currentValue}/${goal.targetValue} Days';
+      case GoalType.categoryExplore:
+        return '${goal.currentValue}/${goal.targetValue} Categories';
+      case GoalType.manual:
+      default:
+        return '${goal.currentValue}/${goal.targetValue}';
+    }
   }
 }
 

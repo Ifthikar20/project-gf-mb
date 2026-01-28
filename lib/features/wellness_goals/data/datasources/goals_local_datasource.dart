@@ -4,10 +4,19 @@ import '../models/goal_model.dart';
 class GoalsLocalDataSource {
   static const String _boxName = 'goals_box';
   
-  Future<Box<GoalModel>> get _box async {
-    if (!Hive.isBoxOpen(_boxName)) {
-      return await Hive.openBox<GoalModel>(_boxName);
+  bool _initialized = false;
+
+  Future<void> _ensureInitialized() async {
+    if (!_initialized) {
+      if (!Hive.isBoxOpen(_boxName)) {
+        await Hive.openBox<GoalModel>(_boxName);
+      }
+      _initialized = true;
     }
+  }
+
+  Future<Box<GoalModel>> get _box async {
+    await _ensureInitialized();
     return Hive.box<GoalModel>(_boxName);
   }
 

@@ -13,6 +13,7 @@ import '../../../library/presentation/bloc/library_event.dart';
 import '../../data/repositories/videos_repository.dart';
 import '../../domain/entities/video_entity.dart';
 import '../../domain/entities/episode_entity.dart';
+import '../../../../core/services/goal_tracking_service.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   final String videoId;
@@ -273,6 +274,25 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         AnalyticsService.instance.trackVideoComplete(
           videoId: _video!.id,
           videoTitle: _video!.title,
+          watchTimeSeconds: position.inSeconds,
+        );
+        
+        // Track goal completion (80% threshold for goals)
+        GoalTrackingService.instance.trackVideoCompletion(
+          videoId: _video!.id,
+          category: _video!.category ?? 'Wellness',
+          durationSeconds: duration.inSeconds,
+        );
+      } else if (progressPercent >= 80) {
+        // Also track for goal if 80%+ watched
+        GoalTrackingService.instance.trackVideoCompletion(
+          videoId: _video!.id,
+          category: _video!.category ?? 'Wellness',
+          durationSeconds: duration.inSeconds,
+        );
+        AnalyticsService.instance.trackVideoProgress(
+          videoId: _video!.id,
+          progressPercent: progressPercent,
           watchTimeSeconds: position.inSeconds,
         );
       } else {

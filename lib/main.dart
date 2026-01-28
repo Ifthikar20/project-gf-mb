@@ -22,6 +22,7 @@ import 'features/meditation/data/repositories/meditation_repository.dart';
 import 'features/meditation/presentation/bloc/meditation_bloc.dart';
 import 'features/meditation/presentation/bloc/meditation_event.dart';
 import 'features/library/presentation/bloc/library_bloc.dart';
+import 'core/services/goal_tracking_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,14 @@ void main() async {
   // Initialize OAuth deep link handling
   await OAuthService.instance.initialize();
   debugPrint('✅ OAuth service initialized');
+
+  // Initialize goal tracking service with the local data source
+  final goalsDataSource = GoalsLocalDataSource();
+  GoalTrackingService.instance.initialize(goalsDataSource);
+  
+  // Track daily app usage for streak goals
+  GoalTrackingService.instance.trackDailyUsage();
+  debugPrint('✅ Goal tracking service initialized');
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(

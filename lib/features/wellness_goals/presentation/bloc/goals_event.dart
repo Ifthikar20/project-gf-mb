@@ -10,6 +10,9 @@ abstract class GoalsEvent extends Equatable {
 
 class LoadGoals extends GoalsEvent {}
 
+/// Refresh goals from storage (used after auto-tracking updates)
+class RefreshGoals extends GoalsEvent {}
+
 class AddGoal extends GoalsEvent {
   final GoalEntity goal;
 
