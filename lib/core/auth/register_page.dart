@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../auth/auth_bloc.dart';
 import '../utils/password_validator.dart';
 import '../services/oauth_service.dart';
+import '../navigation/app_router.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -137,7 +138,9 @@ class _RegisterPageState extends State<RegisterPage> {
         }
 
         if (state is AuthAuthenticated) {
-          context.go('/');
+          context.go(AppRouter.home);
+        } else if (state is AuthNeedsOnboarding) {
+          context.go(AppRouter.onboarding);
         } else if (state is AuthError) {
           // Error message is already user-friendly from AuthBloc
           setState(() {

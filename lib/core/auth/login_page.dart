@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../auth/auth_bloc.dart';
 import '../config/api_endpoints.dart';
 import '../services/oauth_service.dart';
+import '../navigation/app_router.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -108,7 +109,9 @@ class _LoginPageState extends State<LoginPage> {
         }
 
         if (state is AuthAuthenticated) {
-          context.go('/');
+          context.go(AppRouter.home);
+        } else if (state is AuthNeedsOnboarding) {
+          context.go(AppRouter.onboarding);
         } else if (state is AuthError) {
           setState(() {
             _errorMessage = state.message;

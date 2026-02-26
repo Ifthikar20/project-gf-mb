@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../services/auth_service.dart';
+import '../services/personalization_service.dart';
 import '../utils/error_messages.dart';
 
 // ============================================
@@ -52,6 +53,9 @@ class AuthUserChanged extends AuthEvent {
   List<Object?> get props => [user];
 }
 
+/// Event triggered when onboarding is completed or skipped
+class AuthOnboardingCompleted extends AuthEvent {}
+
 // ============================================
 // States
 // ============================================
@@ -75,6 +79,16 @@ class AuthAuthenticated extends AuthState {
   List<Object?> get props => [user];
 }
 
+/// User is authenticated but has not completed onboarding
+class AuthNeedsOnboarding extends AuthState {
+  final User user;
+  
+  const AuthNeedsOnboarding(this.user);
+  
+  @override
+  List<Object?> get props => [user];
+}
+
 class AuthUnauthenticated extends AuthState {}
 
 class AuthError extends AuthState {
@@ -92,23 +106,39 @@ class AuthError extends AuthState {
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService _authService;
+  final PersonalizationService _personalizationService;
   
-  AuthBloc({AuthService? authService}) 
+  AuthBloc({AuthService? authService, PersonalizationService? personalizationService}) 
       : _authService = authService ?? AuthService.instance,
+        _personalizationService = personalizationService ?? PersonalizationService.instance,
         super(AuthInitial()) {
     on<AuthCheckRequested>(_onCheckRequested);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthUserChanged>(_onUserChanged);
+    on<AuthOnboardingCompleted>(_onOnboardingCompleted);
   }
   
-  /// Handle OAuth success
-  void _onUserChanged(
+  /// Handle OAuth success — check onboarding
+  Future<void> _onUserChanged(
     AuthUserChanged event,
     Emitter<AuthState> emit,
+  ) async {
+    await _emitAuthenticatedOrOnboarding(event.user, emit);
+  }
+  
+  /// Handle onboarding completed — transition to AuthAuthenticated
+  void _onOnboardingCompleted(
+    AuthOnboardingCompleted event,
+    Emitter<AuthState> emit,
   ) {
-    emit(AuthAuthenticated(event.user));
+    final currentState = state;
+    if (currentState is AuthNeedsOnboarding) {
+      emit(AuthAuthenticated(currentState.user));
+    } else if (currentState is AuthAuthenticated) {
+      // Already authenticated, no-op
+    }
   }
   
   Future<void> _onCheckRequested(
@@ -117,10 +147,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      // Try to restore session from stored tokens first
+      // Try to restore session from stored tokens
       final user = await _authService.tryRestoreSession();
       if (user != null) {
-        emit(AuthAuthenticated(user));
+        await _emitAuthenticatedOrOnboarding(user, emit);
       } else {
         emit(AuthUnauthenticated());
       }
@@ -135,26 +165,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     print('\n📱 [AUTH BLOC] Login event received');
     print('📧 Email: ${event.email}');
-    print('📍 Location: AuthBloc._onLoginRequested()');
     
-    print('\n🔄 [AUTH BLOC] Emitting AuthLoading state');
     emit(AuthLoading());
     
     try {
-      print('🔐 [AUTH BLOC] Calling AuthService.login()...');
       final user = await _authService.login(
         email: event.email,
         password: event.password,
       );
       
-      print('✅ [AUTH BLOC] Login successful, emitting AuthAuthenticated state');
-      print('👤 User: ${user.email}');
-      emit(AuthAuthenticated(user));
+      print('✅ [AUTH BLOC] Login successful, checking onboarding...');
+      await _emitAuthenticatedOrOnboarding(user, emit);
     } on AuthException catch (e) {
-      // Use friendly error message formatter
       final friendlyMessage = ErrorMessages.formatAuthError(
         e,
         statusCode: e.statusCode,
+        code: e.code,
       );
       emit(AuthError(friendlyMessage));
     } catch (e) {
@@ -173,16 +199,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
         fullName: event.fullName,
       );
-      emit(AuthAuthenticated(user));
+      // New users always need onboarding
+      emit(AuthNeedsOnboarding(user));
     } on AuthException catch (e) {
-      // Use friendly error message formatter
       final friendlyMessage = ErrorMessages.formatAuthError(
         e,
         statusCode: e.statusCode,
+        code: e.code,
       );
       emit(AuthError(friendlyMessage));
     } catch (e) {
-      // Generic error fallback
       final friendlyMessage = ErrorMessages.formatAuthError(e);
       emit(AuthError(friendlyMessage));
     }
@@ -195,5 +221,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     await _authService.logout();
     emit(AuthUnauthenticated());
+  }
+  
+  /// Check onboarding status and emit the appropriate state
+  Future<void> _emitAuthenticatedOrOnboarding(
+    User user,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      final completed = await _personalizationService.isOnboardingCompleted();
+      if (completed) {
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(AuthNeedsOnboarding(user));
+      }
+    } catch (e) {
+      // If check fails, let them through (don't block on optional onboarding)
+      print('⚠️ Onboarding check failed, proceeding: $e');
+      emit(AuthAuthenticated(user));
+    }
   }
 }

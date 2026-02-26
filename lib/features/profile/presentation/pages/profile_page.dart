@@ -99,12 +99,12 @@ class ProfilePage extends StatelessWidget {
                                       borderRadius: isVintage ? BorderRadius.circular(16) : null,
                                       shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
                                       border: Border.all(
-                                        color: isLoggedIn ? primaryColor : textSecondary.withOpacity(0.5),
+                                        color: isLoggedIn ? textColor : textSecondary.withOpacity(0.5),
                                         width: 2,
                                       ),
                                       boxShadow: isLoggedIn ? [
                                         BoxShadow(
-                                          color: primaryColor.withOpacity(0.3),
+                                          color: Colors.black.withOpacity(0.2),
                                           blurRadius: 16,
                                           offset: const Offset(0, 6),
                                         ),
@@ -117,7 +117,7 @@ class ProfilePage extends StatelessWidget {
                                         borderRadius: isVintage ? BorderRadius.circular(12) : null,
                                         shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
                                         gradient: isLoggedIn
-                                            ? LinearGradient(colors: [primaryColor, isVintage ? ThemeColors.vintageBrass : ThemeColors.classicSecondary])
+                                            ? LinearGradient(colors: [textColor.withOpacity(0.8), isVintage ? ThemeColors.vintageBrass : Colors.grey.shade700])
                                             : null,
                                         color: isLoggedIn ? null : surfaceColor,
                                       ),
@@ -273,12 +273,12 @@ class ProfilePage extends StatelessWidget {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.add_circle_outline, color: primaryColor, size: 20),
+                                        Icon(Icons.add_circle_outline, color: textSecondary, size: 20),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Set Your First Goal',
                                           style: TextStyle(
-                                            color: primaryColor,
+                                            color: textColor,
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -336,22 +336,22 @@ class ProfilePage extends StatelessWidget {
                         gradient: LinearGradient(
                           colors: isVintage
                               ? [ThemeColors.vintageGold.withOpacity(0.2), ThemeColors.vintageBrass.withOpacity(0.1)]
-                              : [ThemeColors.classicSecondary.withOpacity(0.2), ThemeColors.classicPrimary.withOpacity(0.1)],
+                              : [Colors.grey.shade800.withOpacity(0.3), Colors.grey.shade700.withOpacity(0.2)],
                         ),
                         borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
-                        border: Border.all(color: primaryColor.withOpacity(0.3)),
+                        border: Border.all(color: textSecondary.withOpacity(0.2)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.2),
+                              color: textSecondary.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
                             ),
                             child: Icon(
                               isVintage ? Icons.auto_awesome : Icons.dark_mode,
-                              color: primaryColor,
+                              color: textColor,
                               size: 24,
                             ),
                           ),
@@ -389,7 +389,7 @@ class ProfilePage extends StatelessWidget {
                           ),
                           Icon(
                             Icons.swap_horiz,
-                            color: primaryColor,
+                            color: textSecondary,
                             size: 24,
                           ),
                         ],
@@ -408,7 +408,7 @@ class ProfilePage extends StatelessWidget {
                     children: [
                       _buildSectionTitle('Membership', textColor, primaryColor, isVintage),
                       const SizedBox(height: 12),
-                      // Premium Card
+                      // Free Plan Card - Darker style
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -416,13 +416,13 @@ class ProfilePage extends StatelessWidget {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: isVintage
-                                ? [ThemeColors.vintageGold, ThemeColors.vintageBrass, const Color(0xFF8B6914)]
-                                : [const Color(0xFFFFD700), const Color(0xFFFFA500), const Color(0xFFFF8C00)],
+                                ? [const Color(0xFF3D3D3D), const Color(0xFF2A2A2A), const Color(0xFF1F1F1F)]
+                                : [const Color(0xFF404040), const Color(0xFF2D2D2D), const Color(0xFF1A1A1A)],
                           ),
                           borderRadius: BorderRadius.circular(isVintage ? 12 : 20),
                           boxShadow: [
                             BoxShadow(
-                              color: (isVintage ? ThemeColors.vintageGold : const Color(0xFFFFD700)).withOpacity(0.3),
+                              color: Colors.black.withOpacity(0.3),
                               blurRadius: isVintage ? 16 : 20,
                               offset: Offset(0, isVintage ? 8 : 10),
                             ),
@@ -497,7 +497,7 @@ class ProfilePage extends StatelessWidget {
                                   child: Text(
                                     'Upgrade',
                                     style: TextStyle(
-                                      color: isVintage ? ThemeColors.vintageGold : const Color(0xFFFFA500),
+                                      color: const Color(0xFF1A1A1A),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),

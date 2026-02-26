@@ -2,16 +2,46 @@
 ///
 /// Converts technical error messages and status codes into friendly,
 /// calm messages that users can understand without technical details.
+/// Supports the BetterBliss Auth backend structured error codes.
 class ErrorMessages {
   /// Format authentication errors into user-friendly messages
-  static String formatAuthError(Object error, {int? statusCode}) {
+  /// Supports structured error codes from the backend
+  static String formatAuthError(Object error, {int? statusCode, String? code}) {
     final errorString = error.toString().toLowerCase();
+
+    // Handle structured error codes from the backend
+    if (code != null) {
+      switch (code) {
+        case 'INVALID_CREDENTIALS':
+          return 'The email or password you entered is incorrect. Please try again.';
+        case 'ACCOUNT_NOT_FOUND':
+          return 'No account found with this email. Would you like to create one?';
+        case 'ACCOUNT_DISABLED':
+          return 'Your account has been deactivated. Please contact support.';
+        case 'EMAIL_ALREADY_EXISTS':
+          return 'An account with this email already exists. Please log in instead.';
+        case 'INCORRECT_CURRENT_PASSWORD':
+          return 'The current password you entered is incorrect. Please try again.';
+        case 'VALIDATION_ERROR':
+          return 'Please check your input and try again.';
+        case 'TOO_MANY_ATTEMPTS':
+          return 'Too many attempts. Please wait a moment before trying again.';
+        case 'OAUTH_FAILED':
+          return 'Sign in was cancelled or failed. Please try again.';
+        case 'SERVER_ERROR':
+          return 'We\'re having trouble connecting right now. Please try again in a moment.';
+      }
+    }
 
     // Handle specific status codes
     if (statusCode != null) {
       switch (statusCode) {
+        case 400:
+          return 'Please check your input and try again.';
         case 401:
           return 'The email or password you entered is incorrect. Please try again.';
+        case 403:
+          return 'Your account has been deactivated. Please contact support.';
         case 409:
           return 'An account with this email already exists. Please log in instead.';
         case 429:
@@ -25,7 +55,7 @@ class ErrorMessages {
       }
     }
 
-    // Handle common error patterns
+    // Handle common error patterns in message text
     if (errorString.contains('email') && errorString.contains('exists')) {
       return 'An account with this email already exists. Please log in instead.';
     }

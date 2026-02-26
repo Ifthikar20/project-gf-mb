@@ -5,52 +5,68 @@ import 'api_client.dart';
 import 'token_storage.dart';
 import 'streaming_service.dart';
 
-/// User model from API
+/// User model from the BetterBliss Auth API
 class User {
   final String id;
   final String email;
-  final String? name;
+  final String? displayName;
+  final String? avatarUrl;
   final String role;
   final String subscriptionTier;
-  final List<String> permissions;
+  final String status;
+  final String? createdAt;
+  final String? updatedAt;
   
   User({
     required this.id,
     required this.email,
-    this.name,
+    this.displayName,
+    this.avatarUrl,
     required this.role,
     required this.subscriptionTier,
-    this.permissions = const [],
+    this.status = 'active',
+    this.createdAt,
+    this.updatedAt,
   });
   
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? json['cognito_sub'] ?? '',
+      id: json['id'] ?? '',
       email: json['email'] ?? '',
-      name: json['name'] ?? json['display_name'],
+      displayName: json['display_name'] ?? json['name'],
+      avatarUrl: json['avatar_url'],
       role: json['role'] ?? 'free_user',
       subscriptionTier: json['subscription_tier'] ?? 'free',
-      permissions: List<String>.from(json['permissions'] ?? []),
+      status: json['status'] ?? 'active',
+      createdAt: json['created_at'],
+      updatedAt: json['updated_at'],
     );
   }
   
   Map<String, dynamic> toJson() => {
     'id': id,
     'email': email,
-    'name': name,
+    'display_name': displayName,
+    'avatar_url': avatarUrl,
     'role': role,
     'subscription_tier': subscriptionTier,
-    'permissions': permissions,
+    'status': status,
+    'created_at': createdAt,
+    'updated_at': updatedAt,
   };
+  
+  /// Legacy getter for backward compatibility
+  String? get name => displayName;
   
   bool get isPremium => subscriptionTier == 'premium';
   bool get isBasic => subscriptionTier == 'basic';
   bool get isFree => subscriptionTier == 'free';
+  bool get isActive => status == 'active';
 }
 
-/// Authentication service
-/// Handles login, register, logout, and user management
-/// Persists tokens securely for staying logged in
+/// Authentication service for DRF TokenAuthentication
+/// Handles login, register, logout, profile, and password management
+/// Token is returned in JSON response body and stored securely
 class AuthService {
   static AuthService? _instance;
   final ApiClient _api;
@@ -79,20 +95,17 @@ class AuthService {
   // ============================================
   
   /// Register a new user
+  /// Backend returns token in response body — NOT in cookies
   Future<User> register({
     required String email,
     required String password,
     required String fullName,
   }) async {
-    debugPrint('\n' + '='*80);
-    debugPrint('📝 [AUTH SERVICE] Starting registration flow');
-    debugPrint('📧 Email: $email');
-    debugPrint('👤 Full Name: $fullName');
-    debugPrint('📍 Location: AuthService.register()');
-    debugPrint('='*80);
+    debugPrint('\n${'=' * 60}');
+    debugPrint('📝 [AUTH SERVICE] Registering: $email');
+    debugPrint('=' * 60);
     
     try {
-      debugPrint('\n📤 [STEP 1/4] Sending POST request to /auth/register');
       final response = await _api.post('/auth/register', data: {
         'email': email,
         'password': password,
@@ -100,117 +113,74 @@ class AuthService {
       });
       
       if (response.data['success'] == true) {
-        debugPrint('\n✅ [STEP 3/4] Registration successful, parsing user data');
+        // Extract DRF token from response body
+        final token = response.data['token'] as String?;
+        if (token != null) {
+          _api.setAccessToken(token);
+          await _tokenStorage.saveAccessToken(token);
+          debugPrint('🔑 DRF token saved');
+        }
+        
+        // Parse user data
         _currentUser = User.fromJson(response.data['user']);
-        debugPrint('👤 User ID: ${_currentUser!.id}');
-        debugPrint('📧 User Email: ${_currentUser!.email}');
-        debugPrint('🎭 User Role: ${_currentUser!.role}');
-        debugPrint('💎 Subscription: ${_currentUser!.subscriptionTier}');
-        
-        // Extract and save session_id from Set-Cookie header if present
-        debugPrint('\n🔍 [STEP 4/4] Checking for session_id cookie');
-        final setCookies = response.headers['set-cookie'];
-        String? sessionId;
-        
-        if (setCookies != null) {
-          for (final cookie in setCookies) {
-            if (cookie.startsWith('session_id=')) {
-              final tokenStart = cookie.indexOf('=') + 1;
-              final tokenEnd = cookie.indexOf(';');
-              sessionId = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
-              debugPrint('🔑 Found session_id from registration');
-            }
-          }
-        }
-        
-        // Save session and user data
-        if (sessionId != null) {
-          await _tokenStorage.saveAccessToken(sessionId);
-          debugPrint('✅ Session ID saved to secure storage');
-        }
         await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
-        debugPrint('✅ User data saved to secure storage');
         
-        debugPrint('\n' + '='*80);
-        debugPrint('🎉 [AUTH SERVICE] Registration completed successfully');
-        debugPrint('👤 Registered as: ${_currentUser!.email}');
-        debugPrint('='*80 + '\n');
-        
+        debugPrint('✅ Registered as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
         throw AuthException(response.data['message'] ?? 'Registration failed');
       }
+    } on DioException catch (e) {
+      throw _extractError(e, fallback: 'Registration failed');
     } catch (e) {
+      if (e is AuthException) rethrow;
       throw AuthException('Registration failed: $e');
     }
   }
   
   /// Login with email and password
-  /// Persists tokens for staying logged in
+  /// Backend returns token in response body — NOT in cookies
   Future<User> login({
     required String email,
     required String password,
   }) async {
-    debugPrint('\n' + '='*80);
-    debugPrint('🔐 [AUTH SERVICE] Starting login flow');
-    debugPrint('📧 Email: $email');
-    debugPrint('📍 Location: AuthService.login()');
-    debugPrint('='*80);
+    debugPrint('\n${'=' * 60}');
+    debugPrint('🔐 [AUTH SERVICE] Logging in: $email');
+    debugPrint('=' * 60);
     
     try {
-      debugPrint('\n📤 [STEP 1/5] Sending POST request to /auth/login');
       final response = await _api.post('/auth/login', data: {
         'email': email,
         'password': password,
       });
       
       if (response.data['success'] == true) {
-        debugPrint('\n✅ [STEP 3/5] Login successful, parsing user data');
+        // Extract DRF token from response body
+        final token = response.data['token'] as String?;
+        if (token != null) {
+          _api.setAccessToken(token);
+          await _tokenStorage.saveAccessToken(token);
+          debugPrint('🔑 DRF token saved');
+        }
+        
+        // Parse user data
         _currentUser = User.fromJson(response.data['user']);
-        
-        // Extract and save tokens from Set-Cookie header
-        final setCookies = response.headers['set-cookie'];
-        String? accessToken;
-        String? refreshToken;
-        
-        if (setCookies != null) {
-          debugPrint('📦 Found ${setCookies.length} Set-Cookie header(s)');
-          for (final cookie in setCookies) {
-            debugPrint('🍪 Cookie: ${cookie.substring(0, cookie.length > 50 ? 50 : cookie.length)}...');
-            if (cookie.startsWith('session_id=')) {
-              final tokenStart = cookie.indexOf('=') + 1;
-              final tokenEnd = cookie.indexOf(';');
-              accessToken = cookie.substring(tokenStart, tokenEnd > 0 ? tokenEnd : cookie.length);
-              debugPrint('🔑 Found session_id: ${accessToken.substring(0, accessToken.length > 20 ? 20 : accessToken.length)}...');
-            }
-          }
-        }
-        
-        // Set token in API client for immediate use
-        if (accessToken != null) {
-          _api.setAccessToken(accessToken);
-          debugPrint('🔑 Access token extracted from cookie');
-          
-          // Persist tokens for app restart
-          await _tokenStorage.saveAccessToken(accessToken);
-          if (refreshToken != null) {
-            await _tokenStorage.saveRefreshToken(refreshToken);
-          }
-          // Save user data for offline display
-          await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
-        }
+        await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
         
         debugPrint('✅ Logged in as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
         throw AuthException(response.data['message'] ?? 'Login failed');
       }
+    } on DioException catch (e) {
+      throw _extractError(e, fallback: 'Login failed');
     } catch (e) {
+      if (e is AuthException) rethrow;
       throw AuthException('Login failed: $e');
     }
   }
   
-  /// Logout current user and clear stored tokens
+  /// Logout current user — deletes token server-side
   Future<void> logout() async {
     try {
       await _api.post('/auth/logout');
@@ -219,14 +189,11 @@ class AuthService {
     } finally {
       _currentUser = null;
       _api.setAccessToken(null);
-      await _tokenStorage.clearAll(); // Clear persisted tokens
-      await _api.clearCookies();
+      await _tokenStorage.clearAll();
       
-      // Clear streaming URL cache to prevent 403 errors from expired signed URLs
+      // Clear streaming URL cache
       try {
-        // Import streaming service only when needed to avoid circular dependency
-        final streaming = StreamingService.instance;
-        streaming.clearCache();
+        StreamingService.instance.clearCache();
         debugPrint('📼 Streaming URL cache cleared on logout');
       } catch (e) {
         debugPrint('⚠️ Could not clear streaming cache: $e');
@@ -235,12 +202,15 @@ class AuthService {
   }
   
   /// Get current user from server
+  /// Backend returns {success: true, user: {...}}
   Future<User?> getCurrentUser() async {
     try {
       final response = await _api.get('/auth/me');
       
       if (response.data != null) {
-        _currentUser = User.fromJson(response.data);
+        // Backend wraps user in {success, user} envelope
+        final userData = response.data['user'] ?? response.data;
+        _currentUser = User.fromJson(userData);
         return _currentUser;
       }
       return null;
@@ -251,11 +221,10 @@ class AuthService {
     }
   }
   
-  /// Try to restore session from stored tokens
-  /// Called on app start to keep user logged in
+  /// Try to restore session from stored token
+  /// If token is expired (7 days), returns null and clears storage
   Future<User?> tryRestoreSession() async {
     try {
-      // Check if we have stored credentials
       final hasCredentials = await _tokenStorage.hasStoredCredentials();
       if (!hasCredentials) {
         debugPrint('📱 No stored credentials found');
@@ -268,20 +237,30 @@ class AuthService {
         _api.setAccessToken(accessToken);
         debugPrint('🔑 Access token restored from storage');
         
-        // Try to restore user data from storage first (for offline display)
+        // Restore cached user data for offline display
         final userJson = await _tokenStorage.getUserData();
         if (userJson != null) {
           _currentUser = User.fromJson(jsonDecode(userJson));
           debugPrint('👤 User data restored: ${_currentUser!.email}');
         }
         
-        // Optionally verify with server (but don't fail if offline)
+        // Verify with server
         try {
           final user = await getCurrentUser();
           if (user != null) {
             debugPrint('✅ Session verified with server');
             return user;
           }
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 401) {
+            // Token expired — clear everything
+            debugPrint('⏰ Token expired, clearing session');
+            _currentUser = null;
+            _api.setAccessToken(null);
+            await _tokenStorage.clearAll();
+            return null;
+          }
+          debugPrint('⚠️ Server verification failed, using cached user: $e');
         } catch (e) {
           debugPrint('⚠️ Server verification failed, using cached user: $e');
         }
@@ -293,103 +272,98 @@ class AuthService {
       return null;
     } catch (e) {
       debugPrint('❌ Session restore failed: $e');
-      // Clear potentially corrupted data
       await _tokenStorage.clearAll();
       return null;
     }
   }
   
-  /// Request password reset - sends 6-digit code to email
+  /// Update user profile (display name, avatar)
+  Future<User> updateProfile({
+    String? displayName,
+    String? avatarUrl,
+  }) async {
+    try {
+      final response = await _api.patch('/auth/profile', data: {
+        if (displayName != null) 'display_name': displayName,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+      });
+      
+      final userData = response.data['user'] ?? response.data;
+      _currentUser = User.fromJson(userData);
+      await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
+      
+      debugPrint('✅ Profile updated');
+      return _currentUser!;
+    } on DioException catch (e) {
+      throw _extractError(e, fallback: 'Profile update failed');
+    }
+  }
+  
+  /// Request password reset — sends email
   /// Always succeeds from API perspective (security: don't reveal if email exists)
   Future<void> forgotPassword(String email) async {
-    debugPrint('\n' + '='*80);
-    debugPrint('📧 [AUTH SERVICE] Requesting password reset');
-    debugPrint('📧 Email: $email');
-    debugPrint('='*80);
+    debugPrint('📧 [AUTH SERVICE] Requesting password reset for: $email');
     
     try {
       await _api.post('/auth/forgot-password', data: {
         'email': email,
       });
-      debugPrint('✅ Password reset code sent (if account exists)');
-    } on DioException catch (e) {
-      debugPrint('⚠️ Forgot password request: ${e.response?.data}');
-      // Don't throw - API always returns success for security
+      debugPrint('✅ Password reset requested');
     } catch (e) {
-      debugPrint('⚠️ Forgot password error: $e');
-      // Don't throw - always show success message to user
+      debugPrint('⚠️ Forgot password request: $e');
+      // Don't throw — always show success message to user
     }
   }
   
-  /// Reset password with 6-digit verification code
+  /// Reset password with verification
   Future<void> resetPassword({
     required String email,
-    required String code,
     required String newPassword,
   }) async {
-    debugPrint('\n' + '='*80);
-    debugPrint('🔐 [AUTH SERVICE] Resetting password with code');
-    debugPrint('📧 Email: $email');
-    debugPrint('🔢 Code: ${code.substring(0, 2)}****');
-    debugPrint('='*80);
+    debugPrint('🔐 [AUTH SERVICE] Resetting password for: $email');
     
     try {
-      final response = await _api.post('/auth/reset-password', data: {
+      await _api.post('/auth/reset-password', data: {
         'email': email,
-        'confirmation_code': code,
         'new_password': newPassword,
       });
-      
       debugPrint('✅ Password reset successful');
-      debugPrint('📋 Response: ${response.data}');
     } on DioException catch (e) {
-      debugPrint('❌ Password reset failed: ${e.response?.statusCode}');
-      debugPrint('📋 Response: ${e.response?.data}');
-      
-      final responseData = e.response?.data;
-      String errorMsg = 'Password reset failed';
-      if (responseData is Map) {
-        errorMsg = responseData['detail'] ?? responseData['message'] ?? errorMsg;
-      }
-      throw AuthException(errorMsg);
-    } catch (e) {
-      debugPrint('❌ Password reset error: $e');
-      if (e is AuthException) rethrow;
-      throw AuthException('Password reset failed: $e');
+      throw _extractError(e, fallback: 'Password reset failed');
     }
   }
   
-  /// Change password while logged in (requires current password)
+  /// Change password while logged in
   Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
-    debugPrint('\n' + '='*80);
     debugPrint('🔑 [AUTH SERVICE] Changing password');
-    debugPrint('='*80);
     
     try {
-      final response = await _api.post('/auth/change-password', data: {
+      await _api.post('/auth/change-password', data: {
         'old_password': oldPassword,
         'new_password': newPassword,
       });
-      
       debugPrint('✅ Password changed successfully');
-      debugPrint('📋 Response: ${response.data}');
     } on DioException catch (e) {
-      debugPrint('❌ Password change failed: ${e.response?.statusCode}');
-      debugPrint('📋 Response: ${e.response?.data}');
-      
-      final responseData = e.response?.data;
-      String errorMsg = 'Password change failed';
-      if (responseData is Map) {
-        errorMsg = responseData['detail'] ?? responseData['message'] ?? errorMsg;
-      }
-      throw AuthException(errorMsg);
-    } catch (e) {
-      debugPrint('❌ Password change error: $e');
-      if (e is AuthException) rethrow;
-      throw AuthException('Password change failed: $e');
+      throw _extractError(e, fallback: 'Password change failed');
+    }
+  }
+  
+  /// Soft-delete the user account
+  Future<void> deleteAccount() async {
+    debugPrint('🗑️ [AUTH SERVICE] Deleting account');
+    
+    try {
+      await _api.delete('/auth/delete-account');
+      debugPrint('✅ Account deleted');
+    } on DioException catch (e) {
+      throw _extractError(e, fallback: 'Account deletion failed');
+    } finally {
+      _currentUser = null;
+      _api.setAccessToken(null);
+      await _tokenStorage.clearAll();
     }
   }
   
@@ -404,6 +378,45 @@ class AuthService {
     final contentTierIndex = tierOrder.indexOf(contentTier);
     
     return userTierIndex >= contentTierIndex;
+  }
+  
+  // ============================================
+  // Private: Error Extraction
+  // ============================================
+  
+  /// Extract structured error from DioException
+  /// Supports: {error: {code, message, hint}} and legacy {detail}
+  AuthException _extractError(DioException e, {String fallback = 'Operation failed'}) {
+    final statusCode = e.response?.statusCode;
+    final responseData = e.response?.data;
+    
+    // Handle rate limiting
+    if (statusCode == 429) {
+      return AuthException(
+        'Too many attempts. Please wait a minute.',
+        statusCode: 429,
+        code: 'TOO_MANY_ATTEMPTS',
+      );
+    }
+    
+    if (responseData is Map) {
+      // New structured format: {error: {code, message, hint}}
+      if (responseData['error'] is Map) {
+        final error = responseData['error'] as Map;
+        return AuthException(
+          error['message'] ?? fallback,
+          statusCode: statusCode,
+          code: error['code'],
+          hint: error['hint'],
+        );
+      }
+      
+      // Legacy format: {detail} or {message}
+      final errorMsg = responseData['detail'] ?? responseData['message'] ?? fallback;
+      return AuthException(errorMsg, statusCode: statusCode);
+    }
+    
+    return AuthException(fallback, statusCode: statusCode);
   }
 }
 
@@ -429,14 +442,11 @@ class RateLimitException implements Exception {
   String toString() => 'Rate limited. Please try again in $retryAfterSeconds seconds.';
 }
 
-/// Helper to extract structured error from API response
-/// Supports both legacy format: {"detail": "..."}
-/// And new structured format: {"error": {"code": "...", "message": "...", "hint": "..."}}
+/// Helper to extract structured error from API response (for use outside AuthService)
 AuthException extractAuthError(DioException e, {String fallbackMessage = 'Operation failed'}) {
   final statusCode = e.response?.statusCode;
   final responseData = e.response?.data;
   
-  // Handle rate limiting (429)
   if (statusCode == 429) {
     final retryAfter = int.tryParse(
       e.response?.headers.value('Retry-After') ?? '60'
@@ -445,7 +455,6 @@ AuthException extractAuthError(DioException e, {String fallbackMessage = 'Operat
   }
   
   if (responseData is Map) {
-    // New structured error format: {"error": {"code": "...", "message": "..."}}
     if (responseData['error'] is Map) {
       final error = responseData['error'] as Map;
       return AuthException(
@@ -455,7 +464,6 @@ AuthException extractAuthError(DioException e, {String fallbackMessage = 'Operat
       );
     }
     
-    // Legacy format: {"detail": "..."} or {"message": "..."}
     final errorMsg = responseData['detail'] ?? responseData['message'] ?? fallbackMessage;
     return AuthException(errorMsg);
   }

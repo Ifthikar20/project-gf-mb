@@ -201,33 +201,32 @@ class _ExplorePageState extends State<ExplorePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Theme-aware avatar frame
+                // Avatar without border ring
                 Container(
-                  padding: const EdgeInsets.all(3),
+                  width: 70,
+                  height: 70,
                   decoration: BoxDecoration(
                     borderRadius: isVintage ? BorderRadius.circular(8) : null,
                     shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
-                    border: Border.all(color: primaryColor.withOpacity(0.6), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      borderRadius: isVintage ? BorderRadius.circular(6) : null,
-                      shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: isVintage ? BorderRadius.circular(6) : BorderRadius.circular(32),
-                      child: CachedNetworkImage(
-                        imageUrl: speaker['imageUrl']!,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: surfaceColor,
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: surfaceColor,
-                          child: Icon(Icons.person, color: textSecondary),
-                        ),
+                  child: ClipRRect(
+                    borderRadius: isVintage ? BorderRadius.circular(8) : BorderRadius.circular(35),
+                    child: CachedNetworkImage(
+                      imageUrl: speaker['imageUrl']!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: surfaceColor,
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: surfaceColor,
+                        child: Icon(Icons.person, color: textSecondary),
                       ),
                     ),
                   ),

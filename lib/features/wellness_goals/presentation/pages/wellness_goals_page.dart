@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -25,6 +26,26 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String? _selectedMoodId;
+  VideoPlayerController? _backdropController;
+  bool _isVideoInitialized = false;
+
+  // Base URL for mood backdrop videos (public R2 bucket)
+  static const String _backdropBaseUrl = 'https://pub-aab30380758e431a9c177896a92abeca.r2.dev';
+
+  // Map moods to their backdrop video filenames
+  static const Map<String, String> _moodBackdrops = {
+    'anxious': 'anxious.mp4',
+    'sad': 'sad.mp4',
+    'tired': 'Tired.mp4',
+    'stressed': 'stressed.mp4',
+    'calm': 'calm.mp4',
+    'happy': 'happy.mp4',
+    'focused': 'focused.mp4',
+    'energetic': 'energetic.mp4',
+  };
+
+  // Default backdrop when no mood is selected
+  static const String _defaultBackdrop = 'calm.mp4';
 
   @override
   void initState() {
@@ -44,11 +65,19 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  @override
+  void dispose() {
+    _backdropController?.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadSavedMood() async {
     final prefs = await SharedPreferences.getInstance();
+    final savedMood = prefs.getString('current_mood');
     setState(() {
-      _selectedMoodId = prefs.getString('current_mood');
+      _selectedMoodId = savedMood;
     });
+    _initBackdropVideo(savedMood);
   }
 
   Future<void> _saveMood(MoodOption mood) async {
@@ -57,6 +86,65 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _selectedMoodId = mood.id;
     });
+    _initBackdropVideo(mood.id);
+  }
+
+  void _initBackdropVideo(String? moodId) {
+    // Dispose previous controller
+    _backdropController?.dispose();
+    
+    // Get backdrop filename for mood
+    final filename = _moodBackdrops[moodId] ?? _defaultBackdrop;
+    final videoUrl = '$_backdropBaseUrl/$filename';
+    
+    setState(() {
+      _isVideoInitialized = false;
+    });
+
+    _backdropController = VideoPlayerController.networkUrl(Uri.parse(videoUrl))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          _backdropController?.setLooping(true);
+          _backdropController?.setVolume(0); // Silent backdrop
+          _backdropController?.play();
+        }
+      }).catchError((error) {
+        debugPrint('Backdrop video error: $error');
+      });
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  // Get mood-specific message
+  String _getMoodMessage(String? moodId) {
+    switch (moodId) {
+      case 'anxious':
+        return 'Take a deep breath. Let\'s find your calm.';
+      case 'sad':
+        return 'We\'re here for you. Brighter moments await.';
+      case 'tired':
+        return 'Time to rest and recharge.';
+      case 'stressed':
+        return 'Release the tension. You\'ve got this.';
+      case 'calm':
+        return 'Maintain your peace and balance.';
+      case 'happy':
+        return 'Keep spreading those good vibes!';
+      case 'focused':
+        return 'Stay in the zone. Clarity awaits.';
+      case 'energetic':
+        return 'Channel that energy wisely!';
+      default:
+        return 'Welcome back to your wellness journey.';
+    }
   }
 
   @override
@@ -71,89 +159,67 @@ class _HomePageState extends State<HomePage> {
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
 
+        final selectedMood = _selectedMoodId != null 
+            ? Moods.getById(_selectedMoodId!) 
+            : null;
+
         return Scaffold(
           backgroundColor: bgColor,
-          body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Header with greeting
-              SliverToBoxAdapter(
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getGreeting(),
-                          style: TextStyle(
-                            color: textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Great Feel',
-                          style: isVintage
-                              ? GoogleFonts.playfairDisplay(
-                                  color: textColor,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                )
-                              : TextStyle(
-                                  color: textColor,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                        ),
-                      ],
+          body: Stack(
+            children: [
+              // Main scrollable content
+              CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // Hero section with backdrop video
+                  SliverToBoxAdapter(
+                    child: _buildHeroSection(context, isVintage, primaryColor, surfaceColor, textColor, textSecondary, bgColor, selectedMood),
+                  ),
+
+                  // Mood Selector Widget
+                  SliverToBoxAdapter(
+                    child: MoodSelectorWidget(
+                      selectedMoodId: _selectedMoodId,
+                      onMoodSelected: _saveMood,
                     ),
                   ),
-                ),
-              ),
 
-              // Mood Selector Widget
-              SliverToBoxAdapter(
-                child: MoodSelectorWidget(
-                  selectedMoodId: _selectedMoodId,
-                  onMoodSelected: _saveMood,
-                ),
-              ),
+                  // Featured Content Section
+                  _buildSectionHeader('Featured', Icons.star, textColor, primaryColor, isVintage),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 200,
+                      child: _buildFeaturedSection(context, isVintage, primaryColor, surfaceColor, textColor, textSecondary, bgColor),
+                    ),
+                  ),
 
-              // Featured Content Section
-              _buildSectionHeader('Featured', Icons.star, textColor, primaryColor, isVintage),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 200,
-                  child: _buildFeaturedSection(context, isVintage, primaryColor, surfaceColor, textColor, textSecondary, bgColor),
-                ),
-              ),
+                  // Continue Watching Section
+                  _buildSectionHeader('Continue Watching', Icons.play_circle_outline, textColor, primaryColor, isVintage),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 160,
+                      child: _buildContinueWatchingSection(context, isVintage, primaryColor, surfaceColor, textColor, textSecondary),
+                    ),
+                  ),
 
-              // Continue Watching Section
-              _buildSectionHeader('Continue Watching', Icons.play_circle_outline, textColor, primaryColor, isVintage),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 160,
-                  child: _buildContinueWatchingSection(context, isVintage, primaryColor, surfaceColor, textColor, textSecondary),
-                ),
-              ),
+                  // Recommended Meditations
+                  _buildSectionHeader('Recommended for You', Icons.self_improvement, textColor, primaryColor, isVintage),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 200,
+                      child: _buildMeditationSection(context, isVintage, primaryColor, surfaceColor, textColor, textSecondary),
+                    ),
+                  ),
 
-              // Recommended Meditations
-              _buildSectionHeader('Recommended for You', Icons.self_improvement, textColor, primaryColor, isVintage),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 200,
-                  child: _buildMeditationSection(context, isVintage, primaryColor, surfaceColor, textColor, textSecondary),
-                ),
-              ),
+                  // My Goals Section (at bottom)
+                  const SliverToBoxAdapter(
+                    child: GoalsSection(),
+                  ),
 
-              // My Goals Section (at bottom)
-              const SliverToBoxAdapter(
-                child: GoalsSection(),
+                  // Bottom spacing for nav bar
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
               ),
-
-              // Bottom spacing for nav bar
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
         );
@@ -161,11 +227,123 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  Widget _buildHeroSection(BuildContext context, bool isVintage, Color primaryColor, Color surfaceColor, Color textColor, Color textSecondary, Color bgColor, MoodOption? selectedMood) {
+    return SizedBox(
+      height: 280,
+      child: Stack(
+        children: [
+          // Backdrop video
+          Positioned.fill(
+            child: _isVideoInitialized && _backdropController != null
+                ? ClipRRect(
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: _backdropController!.value.size.width,
+                        height: _backdropController!.value.size.height,
+                        child: VideoPlayer(_backdropController!),
+                      ),
+                    ),
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          (selectedMood?.color ?? primaryColor).withOpacity(0.3),
+                          bgColor,
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+
+          // Gradient overlay at bottom for smooth "clouded" transition
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 180, // Larger height for smoother cloud effect
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    bgColor.withOpacity(0),
+                    bgColor.withOpacity(0.1),
+                    bgColor.withOpacity(0.3),
+                    bgColor.withOpacity(0.6),
+                    bgColor.withOpacity(0.85),
+                    bgColor.withOpacity(0.95),
+                    bgColor,
+                  ],
+                  stops: const [0.0, 0.15, 0.3, 0.5, 0.7, 0.85, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          // Dark overlay for text readability
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.1),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Content overlay
+          Positioned.fill(
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Greeting
+                    Text(
+                      _getGreeting(),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // App name
+                    Text(
+                      'Great Feel',
+                      style: isVintage
+                          ? GoogleFonts.playfairDisplay(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            )
+                          : const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSectionHeader(String title, IconData icon, Color textColor, Color primaryColor, bool isVintage) {

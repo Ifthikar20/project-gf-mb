@@ -149,7 +149,7 @@ class _SpeakerPageState extends State<SpeakerPage> {
                   isVintage: isVintage,
                 ),
                 
-                // Stats section
+                // Stats section - inline and minimal
                 if (_expert != null)
                   _buildStatsSection(
                     surfaceColor: surfaceColor,
@@ -159,15 +159,24 @@ class _SpeakerPageState extends State<SpeakerPage> {
                     isVintage: isVintage,
                   ),
                 
-                // Social links
-                if (_expert?.hasSocialLinks ?? false)
-                  _buildSocialLinksSection(
+                // Talks About section (specialties/topics)
+                if (_expert?.specialties.isNotEmpty ?? false)
+                  _buildTalksAboutSection(
                     surfaceColor: surfaceColor,
                     primaryColor: primaryColor,
                     textColor: textColor,
                     textSecondary: textSecondary,
                     isVintage: isVintage,
                   ),
+                
+                // Links section
+                _buildLinksSection(
+                  surfaceColor: surfaceColor,
+                  primaryColor: primaryColor,
+                  textColor: textColor,
+                  textSecondary: textSecondary,
+                  isVintage: isVintage,
+                ),
                 
                 // Videos section
                 if (_expert?.videos.isNotEmpty ?? false)
@@ -225,7 +234,19 @@ class _SpeakerPageState extends State<SpeakerPage> {
     required Color textSecondary,
     required bool isVintage,
   }) {
-    final backgroundImageUrl = _expert?.backgroundImageUrl;
+    // Fallback backdrop images from R2 bucket
+    const backdropBaseUrl = 'https://pub-aab30380758e431a9c177896a92abeca.r2.dev/profile-backdrop';
+    final backdropImages = [
+      '$backdropBaseUrl/backdrop-profile-1.jpg',
+      '$backdropBaseUrl/backdrop-profile-2.jpg',
+      '$backdropBaseUrl/backdrop-profile-3.jpg',
+    ];
+    
+    // Use expert's background image if available, otherwise pick a fallback based on speaker ID hash
+    final backgroundImageUrl = _expert?.backgroundImageUrl?.isNotEmpty == true 
+        ? _expert!.backgroundImageUrl!
+        : backdropImages[widget.speakerId.hashCode.abs() % backdropImages.length];
+    
     final imageUrl = _expert?.imageUrl ?? widget.speakerImageUrl;
     final name = _expert?.name ?? widget.speakerName;
     final specialization = _expert?.specialization ?? _expert?.title;
@@ -265,43 +286,29 @@ class _SpeakerPageState extends State<SpeakerPage> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            // Background image or gradient
-            if (backgroundImageUrl != null && backgroundImageUrl.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: backgroundImageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [primaryColor.withAlpha(102), bgColor],
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [primaryColor.withAlpha(102), bgColor],
-                    ),
-                  ),
-                ),
-              )
-            else
-              Container(
+            // Background image - always use backdrop now
+            CachedNetworkImage(
+              imageUrl: backgroundImageUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      (isVintage ? ThemeColors.vintageBrass : primaryColor).withAlpha(102),
-                      bgColor,
-                    ],
+                    colors: [primaryColor.withAlpha(102), bgColor],
                   ),
                 ),
               ),
+              errorWidget: (context, url, error) => Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [primaryColor.withAlpha(102), bgColor],
+                  ),
+                ),
+              ),
+            ),
             
             // Gradient overlay for readability
             Container(
@@ -325,27 +332,25 @@ class _SpeakerPageState extends State<SpeakerPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 40),
-                  // Avatar
+                  // Avatar - without ring
                   Container(
-                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
                       borderRadius: isVintage ? BorderRadius.circular(12) : null,
-                      border: Border.all(color: primaryColor, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withAlpha(102),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: isVintage ? BorderRadius.circular(8) : BorderRadius.circular(60),
+                      borderRadius: isVintage ? BorderRadius.circular(12) : BorderRadius.circular(55),
                       child: CachedNetworkImage(
                         imageUrl: imageUrl,
-                        width: 120,
-                        height: 120,
+                        width: 110,
+                        height: 110,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
                           color: surfaceColor,
@@ -368,72 +373,33 @@ class _SpeakerPageState extends State<SpeakerPage> {
                         style: isVintage
                             ? GoogleFonts.playfairDisplay(
                                 color: textColor,
-                                fontSize: 28,
+                                fontSize: 26,
                                 fontWeight: FontWeight.bold,
                               )
                             : TextStyle(
                                 color: textColor,
-                                fontSize: 28,
+                                fontSize: 26,
                                 fontWeight: FontWeight.bold,
                               ),
                       ),
                       if (isVerified) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.verified, color: primaryColor, size: 20),
+                        Icon(Icons.verified, color: Colors.blue, size: 18),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  // Specialization & experience
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (specialization != null && specialization.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: surfaceColor.withAlpha(153),
-                            borderRadius: BorderRadius.circular(isVintage ? 4 : 16),
-                            border: isVintage ? Border.all(color: primaryColor.withAlpha(77)) : null,
-                          ),
-                          child: Text(
-                            specialization,
-                            style: TextStyle(color: textSecondary, fontSize: 14),
-                          ),
-                        ),
-                      ],
-                      if (primaryCategory != null && primaryCategory.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withAlpha(26),
-                            borderRadius: BorderRadius.circular(isVintage ? 4 : 16),
-                            border: Border.all(color: primaryColor.withAlpha(51)),
-                          ),
-                          child: Text(
-                            primaryCategory,
-                            style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ],
-                      if (_expert?.yearsExperience != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withAlpha(51),
-                            borderRadius: BorderRadius.circular(isVintage ? 4 : 16),
-                          ),
-                          child: Text(
-                            '${_expert!.yearsExperience}+ years',
-                            style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                  const SizedBox(height: 4),
+                  // Credentials - shown right below name
+                  if (specialization != null && specialization.isNotEmpty)
+                    Text(
+                      specialization,
+                      style: TextStyle(
+                        color: textSecondary,
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                 ],
               ),
             ),
@@ -459,39 +425,28 @@ class _SpeakerPageState extends State<SpeakerPage> {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: surfaceColor.withAlpha(128),
-          borderRadius: BorderRadius.circular(isVintage ? 8 : 16),
-          border: isVintage ? Border.all(color: primaryColor.withAlpha(51)) : null,
+          color: surfaceColor.withAlpha(80),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.info_outline, color: primaryColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'About',
-                  style: isVintage
-                      ? GoogleFonts.playfairDisplay(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        )
-                      : TextStyle(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                ),
-              ],
+            Text(
+              'About',
+              style: GoogleFonts.caveat(
+                color: textColor,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
               bio,
-              style: isVintage
-                  ? GoogleFonts.lora(color: textSecondary, fontSize: 15, height: 1.5)
-                  : TextStyle(color: textSecondary, fontSize: 15, height: 1.5),
+              style: GoogleFonts.caveat(
+                color: textSecondary,
+                fontSize: 18,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -562,31 +517,21 @@ class _SpeakerPageState extends State<SpeakerPage> {
     required bool isVintage,
   }) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: surfaceColor.withAlpha(128),
-          borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
-          border: isVintage ? Border.all(color: primaryColor.withAlpha(51)) : null,
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: primaryColor, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
-            Text(
-              label,
-              style: TextStyle(color: textSecondary, fontSize: 12),
-            ),
-          ],
-        ),
+          ),
+          Text(
+            label,
+            style: TextStyle(color: textSecondary, fontSize: 10),
+          ),
+        ],
       ),
     );
   }
@@ -683,6 +628,163 @@ class _SpeakerPageState extends State<SpeakerPage> {
       ),
     );
   }
+
+  Widget _buildTalksAboutSection({
+    required Color surfaceColor,
+    required Color primaryColor,
+    required Color textColor,
+    required Color textSecondary,
+    required bool isVintage,
+  }) {
+    // Use expert specialties or provide default topics
+    final topics = _expert?.specialties ?? [];
+    if (topics.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Talks about',
+              style: GoogleFonts.caveat(
+                color: textColor,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: topics.map((topic) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: surfaceColor.withAlpha(80),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: textSecondary.withOpacity(0.2)),
+                ),
+                child: Text(
+                  '#${_formatTopicTag(topic)}',
+                  style: TextStyle(
+                    color: textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              )).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTopicTag(String topic) {
+    // Convert topic to hashtag format: "managing depression" -> "ManagingDepression"
+    return topic.split(r'[\s\-_]+')
+        .map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1).toLowerCase() : '')
+        .join('');
+  }
+
+  Widget _buildLinksSection({
+    required Color surfaceColor,
+    required Color primaryColor,
+    required Color textColor,
+    required Color textSecondary,
+    required bool isVintage,
+  }) {
+    // Check if there are any links to show
+    final hasLinkedIn = _expert?.linkedinUrl != null;
+    final hasInstagram = _expert?.instagramUrl != null;
+    final hasWebsite = _expert?.websiteUrl != null;
+    
+    if (!hasLinkedIn && !hasInstagram && !hasWebsite) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Links',
+              style: GoogleFonts.caveat(
+                color: textColor,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (hasLinkedIn)
+                  _buildLinkChip(
+                    icon: Icons.work_outline,
+                    label: 'LinkedIn',
+                    url: _expert!.linkedinUrl!,
+                    color: const Color(0xFF0A66C2),
+                  ),
+                if (hasInstagram)
+                  _buildLinkChip(
+                    icon: Icons.camera_alt_outlined,
+                    label: 'Instagram',
+                    url: _expert!.instagramUrl!,
+                    color: const Color(0xFFE4405F),
+                  ),
+                if (hasWebsite)
+                  _buildLinkChip(
+                    icon: Icons.link,
+                    label: 'Linktree',
+                    url: _expert!.websiteUrl!,
+                    color: const Color(0xFF43E660),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinkChip({
+    required IconData icon,
+    required String label,
+    required String url,
+    required Color color,
+  }) {
+    return GestureDetector(
+      onTap: () => _launchUrl(url),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildContentSection({
     required String title,

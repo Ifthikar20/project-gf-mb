@@ -41,7 +41,7 @@ class Moods {
   }
 }
 
-/// Animated mood check button with popup selector
+/// News-flash style collapsible mood selector
 class MoodSelectorWidget extends StatefulWidget {
   final String? selectedMoodId;
   final ValueChanged<MoodOption> onMoodSelected;
@@ -57,9 +57,10 @@ class MoodSelectorWidget extends StatefulWidget {
 }
 
 class _MoodSelectorWidgetState extends State<MoodSelectorWidget> 
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  bool _isExpanded = false;
   
   @override
   void initState() {
@@ -69,7 +70,7 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
     
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
@@ -78,6 +79,12 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
   void dispose() {
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
   }
 
   void _showMoodPopup() {
@@ -90,6 +97,10 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
         onMoodSelected: (mood) {
           Navigator.pop(context);
           widget.onMoodSelected(mood);
+          // Collapse after selection
+          setState(() {
+            _isExpanded = false;
+          });
         },
       ),
     );
@@ -105,120 +116,167 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
       builder: (context, themeState) {
         final isVintage = themeState.isVintage;
         final mode = themeState.mode;
-        final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final primaryColor = ThemeColors.primary(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
         
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: isVintage
-                ? LinearGradient(
-                    colors: selectedMood != null
-                        ? [selectedMood.color.withOpacity(0.15), surfaceColor]
-                        : [surfaceColor, ThemeColors.creamLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : LinearGradient(
-                    colors: selectedMood != null
-                        ? [selectedMood.color.withOpacity(0.2), selectedMood.color.withOpacity(0.1)]
-                        : [const Color(0xFF1A1A1A), const Color(0xFF151515)],
+        final accentColor = selectedMood?.color ?? primaryColor;
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: GestureDetector(
+              onTap: _isExpanded ? null : _toggleExpanded,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutCubic,
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isExpanded ? 16 : 12,
+                  vertical: _isExpanded ? 14 : 12,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isVintage
+                        ? [accentColor.withOpacity(0.9), accentColor.withOpacity(0.7)]
+                        : [accentColor, accentColor.withOpacity(0.8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-            borderRadius: BorderRadius.circular(isVintage ? 16 : 20),
-            border: Border.all(
-              color: isVintage 
-                  ? primaryColor.withOpacity(0.3)
-                  : (selectedMood?.color.withOpacity(0.3) ?? Colors.white.withOpacity(0.1)),
-              width: isVintage ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              // Left side - question
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'How are you feeling?',
-                      style: isVintage
-                          ? GoogleFonts.playfairDisplay(
-                              color: textColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            )
-                          : TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      selectedMood != null 
-                          ? "You're feeling ${selectedMood.label.toLowerCase()}"
-                          : 'Tap to check in with yourself',
-                      style: TextStyle(
-                        color: isVintage ? textSecondary : Colors.white.withOpacity(0.6),
-                        fontSize: 13,
-                        fontStyle: isVintage ? FontStyle.italic : FontStyle.normal,
-                      ),
+                  borderRadius: BorderRadius.circular(_isExpanded ? 16 : 28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0.4),
+                      blurRadius: _isExpanded ? 16 : 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.centerLeft,
+                  child: _isExpanded 
+                      ? _buildExpandedContent(isVintage, textColor, textSecondary, selectedMood)
+                      : _buildCollapsedContent(selectedMood),
+                ),
               ),
-              // Animated button
-              GestureDetector(
-                onTap: _showMoodPopup,
-                child: AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: selectedMood == null ? _pulseAnimation.value : 1.0,
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: isVintage
-                                ? (selectedMood != null
-                                    ? [selectedMood.color, selectedMood.color.withOpacity(0.7)]
-                                    : [primaryColor, ThemeColors.vintageBrass])
-                                : (selectedMood != null
-                                    ? [selectedMood.color, selectedMood.color.withOpacity(0.7)]
-                                    : [const Color(0xFF1DB954), const Color(0xFF1ED760)]),
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isVintage ? primaryColor : (selectedMood?.color ?? const Color(0xFF1DB954))).withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          selectedMood?.icon ?? Icons.add_reaction_outlined,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    );
-                  },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCollapsedContent(MoodOption? selectedMood) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: selectedMood == null ? _pulseAnimation.value : 1.0,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                selectedMood?.icon ?? Icons.add_reaction_outlined,
+                color: Colors.white,
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                selectedMood != null ? selectedMood.label : 'Mood',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildExpandedContent(bool isVintage, Color textColor, Color textSecondary, MoodOption? selectedMood) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Icon
+        Icon(
+          selectedMood?.icon ?? Icons.add_reaction_outlined,
+          color: Colors.white,
+          size: 24,
+        ),
+        const SizedBox(width: 12),
+        // Text content
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'How are you feeling?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              selectedMood != null 
+                  ? "Currently: ${selectedMood.label}"
+                  : 'Tap to check in',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 16),
+        // Change mood button
+        GestureDetector(
+          onTap: _showMoodPopup,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              selectedMood != null ? 'Change' : 'Select',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Close button
+        GestureDetector(
+          onTap: _toggleExpanded,
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.close,
+              color: Colors.white.withOpacity(0.8),
+              size: 16,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

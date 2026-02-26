@@ -2,6 +2,7 @@ import 'app_config.dart';
 
 /// Centralized API endpoints configuration
 /// All API paths are defined here for easy maintenance and consistency
+/// Aligned with the betterbliss-auth Django backend
 class ApiEndpoints {
   static final AppConfig _config = AppConfig.instance;
   
@@ -18,78 +19,81 @@ class ApiEndpoints {
   static String get bannerVideo => '$r2Url/banner-video-1.mp4';
   
   // ============================================
-  // Authentication Endpoints
+  // Authentication Endpoints (/auth/)
   // ============================================
   static String get authBase => '$baseUrl/auth';
   static String get login => '$authBase/login';
   static String get register => '$authBase/register';
   static String get logout => '$authBase/logout';
-  static String get refreshToken => '$authBase/refresh';
   static String get forgotPassword => '$authBase/forgot-password';
   static String get resetPassword => '$authBase/reset-password';
-  static String get verifyEmail => '$authBase/verify-email';
+  static String get changePassword => '$authBase/change-password';
+  
+  // User profile (via auth)
+  static String get me => '$authBase/me';
+  static String get profile => '$authBase/profile';
+  static String get deleteAccount => '$authBase/delete-account';
+  
+  // OAuth
+  static String get googleAuth => '$authBase/google';
+  static String get appleAuth => '$authBase/apple';
+  static String get authCallback => '$authBase/callback';
   
   // ============================================
-  // User Endpoints
+  // Content Endpoints (/api/)
   // ============================================
-  static String get usersBase => '$baseUrl/users';
-  static String get profile => '$usersBase/me';
-  static String get updateProfile => '$usersBase/me';
-  static String get deleteAccount => '$usersBase/me';
-  static String userById(String id) => '$usersBase/$id';
+  static String get apiBase => '$baseUrl/api';
   
-  // ============================================
-  // Content Endpoints
-  // ============================================
-  static String get contentBase => '$baseUrl/content';
-  
-  // Videos
-  static String get videos => '$contentBase/videos';
-  static String videoById(String id) => '$videos/$id';
-  static String videoStream(String id) => '$cdnUrl/videos/$id/stream.m3u8';
-  static String videoThumbnail(String id) => '$cdnUrl/videos/$id/thumbnail.jpg';
-  
-  // Meditations / Audio
-  static String get meditations => '$contentBase/meditations';
-  static String meditationById(String id) => '$meditations/$id';
-  static String audioById(String id) => '$contentBase/audio/$id';
-  
-  // Audio Content Browse
-  static String get audioBrowse => '$baseUrl/content/browse?content_type=audio';
-  
-  // Streaming Endpoints (secure URLs from backend)
-  static String get streamingBase => '$baseUrl/api/streaming';
-  static String contentStream(String id) => '$streamingBase/content/$id/stream';
+  // Content browsing & detail
+  static String get contentBrowse => '$apiBase/content/browse';
+  static String contentDetail(String id) => '$apiBase/content/$id';
   
   // Categories
-  static String get categories => '$baseUrl/categories';
-  static String categoryById(String id) => '$categories/$id';
+  static String get categories => '$apiBase/categories';
+  static String categoryById(String id) => '$apiBase/categories/$id';
+  
+  // Experts
+  static String get experts => '$apiBase/experts';
+  static String get expertsSearch => '$apiBase/experts/search';
+  static String expertProfile(String slug) => '$apiBase/experts/$slug';
   
   // ============================================
-  // Library / Saved Items
+  // Analytics / Tracking (/api/track/)
   // ============================================
-  static String get libraryBase => '$baseUrl/library';
-  static String get savedItems => '$libraryBase/items';
-  static String savedItem(String id) => '$savedItems/$id';
-  static String get favorites => '$libraryBase/favorites';
-  static String get history => '$libraryBase/history';
-  static String get downloads => '$libraryBase/downloads';
+  static String trackView(String id) => '$apiBase/track/view/$id';
+  static String trackPlay(String id) => '$apiBase/track/play/$id';
+  static String get trackSearch => '$apiBase/track/search';
   
   // ============================================
-  // Series (CMS API)
+  // Personalization (/api/personalization/)
+  // ============================================
+  static String get personalizationBase => '$apiBase/personalization';
+  static String get onboarding => '$personalizationBase/onboarding';
+  static String get onboardingOptions => '$personalizationBase/onboarding/options';
+  static String get preferences => '$personalizationBase/preferences';
+  static String get recommendations => '$personalizationBase/recommendations';
+  
+  // ============================================
+  // Streaming
+  // ============================================
+  static String contentStream(String id) => '$baseUrl/$id/stream';
+  
+  // Legacy streaming (secure URLs from backend)
+  static String get streamingBase => '$baseUrl/api/streaming';
+  static String secureStream(String id) => '$streamingBase/content/$id/stream';
+  
+  // ============================================
+  // Series (CMS API — used internally)
   // ============================================
   static String get cmsBase => '$baseUrl/v1/cms';
   static String get seriesBase => '$cmsBase/series';
   static String seriesById(String id) => '$seriesBase/$id';
-  
-  /// Get published series for browse pages
-  /// Supports: show_on_explore=true, show_on_meditate=true
   static String get publishedSeries => '$seriesBase?status=published';
   static String seriesForExplore() => '$seriesBase?status=published&show_on_explore=true';
   static String seriesForMeditate() => '$seriesBase?status=published&show_on_meditate=true';
   
   // ============================================
-  // Wellness Goals
+  // Wellness Goals (local — may use backend later)
   // ============================================
   static String get goalsBase => '$baseUrl/goals';
   static String get allGoals => goalsBase;
@@ -106,28 +110,6 @@ class ApiEndpoints {
   static String get createSubscription => '$subscriptionBase/create';
   static String get cancelSubscription => '$subscriptionBase/cancel';
   static String get restorePurchases => '$subscriptionBase/restore';
-  
-  // ============================================
-  // Search
-  // ============================================
-  static String get searchBase => '$baseUrl/search';
-  static String search(String query) => '$searchBase?q=${Uri.encodeComponent(query)}';
-  static String get searchSuggestions => '$searchBase/suggestions';
-  
-  // ============================================
-  // Analytics / Tracking
-  // ============================================
-  static String get analyticsBase => '$baseUrl/analytics';
-  static String get trackEvent => '$analyticsBase/event';
-  static String get trackSession => '$analyticsBase/session';
-  
-  // ============================================
-  // Notifications
-  // ============================================
-  static String get notificationsBase => '$baseUrl/notifications';
-  static String get registerDevice => '$notificationsBase/register';
-  static String get unregisterDevice => '$notificationsBase/unregister';
-  static String get notificationPreferences => '$notificationsBase/preferences';
   
   // ============================================
   // Utility

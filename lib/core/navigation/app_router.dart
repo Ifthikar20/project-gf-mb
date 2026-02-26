@@ -6,6 +6,7 @@ import '../auth/login_page.dart';
 import '../auth/register_page.dart';
 import '../auth/forgot_password_page.dart';
 import '../auth/reset_password_page.dart';
+import '../auth/onboarding_page.dart';
 import '../auth/auth_bloc.dart';
 
 import '../../features/videos/presentation/pages/video_player_page.dart';
@@ -24,6 +25,7 @@ class AppRouter {
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
   static const String wellnessGoals = '/wellness-goals';
+  static const String onboarding = '/onboarding';
 
   static const String videos = '/videos';
   static const String videoPlayer = '/video-player';
@@ -42,6 +44,7 @@ class AppRouter {
     register,
     forgotPassword,
     resetPassword,
+    onboarding,
   ];
 
   /// Creates a GoRouter with auth-aware redirect
@@ -52,11 +55,17 @@ class AppRouter {
       redirect: (context, state) {
         final authState = authBloc.state;
         final isAuthenticated = authState is AuthAuthenticated;
+        final needsOnboarding = authState is AuthNeedsOnboarding;
         final currentPath = state.uri.path;
         final isPublicRoute = _publicRoutes.contains(currentPath);
         
-        // If not authenticated and trying to access a protected route
-        if (!isAuthenticated && !isPublicRoute) {
+        // User needs onboarding — redirect to onboarding
+        if (needsOnboarding && currentPath != onboarding) {
+          return onboarding;
+        }
+        
+        // If not authenticated and not needs-onboarding, and trying a protected route
+        if (!isAuthenticated && !needsOnboarding && !isPublicRoute) {
           // Allow OAuth callbacks to pass through
           if (currentPath.contains('/auth/callback')) {
             return null;
@@ -65,8 +74,8 @@ class AppRouter {
           return landing;
         }
         
-        // If authenticated, don't allow access to landing/login/register
-        if (isAuthenticated && (currentPath == landing || currentPath == login || currentPath == register)) {
+        // If fully authenticated, don't allow access to landing/login/register/onboarding
+        if (isAuthenticated && (currentPath == landing || currentPath == login || currentPath == register || currentPath == onboarding)) {
           return home;
         }
         
@@ -134,6 +143,17 @@ class AppRouter {
           },
         ),
 
+        GoRoute(
+          path: onboarding,
+          pageBuilder: (context, state) => CustomTransitionPage(
+            key: state.pageKey,
+            child: const OnboardingPage(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 200),
+          ),
+        ),
         GoRoute(
           path: videoPlayer,
           pageBuilder: (context, state) {

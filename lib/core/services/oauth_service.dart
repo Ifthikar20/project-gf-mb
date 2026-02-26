@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:app_links/app_links.dart';
+import '../config/environment_config.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
 import 'token_storage.dart';
 
 /// OAuth Service for handling social login (Google, Apple)
-/// Handles launching OAuth URLs and processing deep link callbacks
+/// Deep link callback now returns `token` (DRF Token) instead of `session_id`
 class OAuthService {
   static OAuthService? _instance;
   final ApiClient _api;
@@ -27,9 +28,8 @@ class OAuthService {
   OAuthService._(this._api);
   
   /// Initialize deep link listening
-  /// Call this in main.dart or app initialization
   Future<void> initialize() async {
-    // Handle cold start - app was launched by a link
+    // Handle cold start — app was launched by a link
     try {
       final initialUri = await _appLinks.getInitialAppLink();
       if (initialUri != null) {
@@ -59,7 +59,7 @@ class OAuthService {
     
     // Check if this is an auth callback
     if (uri.scheme == 'betterbliss' && uri.host == 'auth') {
-      final sessionId = uri.queryParameters['session_id'];
+      final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
       
       if (error != null) {
@@ -68,31 +68,31 @@ class OAuthService {
         return;
       }
       
-      if (sessionId != null) {
-        debugPrint('✅ OAuth session received');
-        await _completeOAuthLogin(sessionId);
+      if (token != null) {
+        debugPrint('✅ OAuth token received');
+        await _completeOAuthLogin(token);
       }
     }
   }
   
-  /// Complete OAuth login with session ID
-  Future<void> _completeOAuthLogin(String sessionId) async {
+  /// Complete OAuth login with DRF token
+  Future<void> _completeOAuthLogin(String token) async {
     try {
-      // Store the session token in memory
-      _api.setAccessToken(sessionId);
+      // Store the DRF token
+      _api.setAccessToken(token);
       
-      // Persist the token to secure storage
       final tokenStorage = TokenStorage.instance;
-      await tokenStorage.saveAccessToken(sessionId);
-      debugPrint('🔐 OAuth session saved to secure storage');
+      await tokenStorage.saveAccessToken(token);
+      debugPrint('🔐 OAuth DRF token saved');
       
-      // Fetch user info
+      // Fetch user info from /auth/me
       final response = await _api.get('/auth/me');
       
       if (response.data != null) {
-        final user = User.fromJson(response.data);
+        final userData = response.data['user'] ?? response.data;
+        final user = User.fromJson(userData);
         
-        // Save user data to storage for session persistence
+        // Save user data for session persistence
         await tokenStorage.saveUserData(jsonEncode(user.toJson()));
         debugPrint('✅ OAuth login complete: ${user.email}');
         
@@ -104,34 +104,30 @@ class OAuthService {
     }
   }
 
+  /// Get the API base URL from environment config
+  String get _baseUrl => EnvironmentConfig.instance.apiBaseUrl;
   
-  /// Launch Google Sign In using native ASWebAuthenticationSession
+  /// Launch Google Sign In
   Future<void> signInWithGoogle() async {
-    const baseUrl = 'https://api.betterandbliss.com';
     const callbackScheme = 'betterbliss';
     
-    // Add prompt=select_account to force Google to show account picker every time
-    final authUrl = '$baseUrl/auth/google?redirect=$callbackScheme://auth/callback&prompt=select_account';
+    final authUrl = '$_baseUrl/auth/google?redirect=$callbackScheme://auth/callback&prompt=select_account';
     
-    debugPrint('🔐 Launching Google OAuth (native): $authUrl');
+    debugPrint('🔐 Launching Google OAuth: $authUrl');
     
     try {
-      // This opens ASWebAuthenticationSession on iOS (in-app secure browser)
-      // preferEphemeral: true creates isolated session (no shared cookies)
-      // This ensures the account picker ALWAYS shows
       final resultUrl = await FlutterWebAuth2.authenticate(
         url: authUrl,
         callbackUrlScheme: callbackScheme,
         options: const FlutterWebAuth2Options(
-          preferEphemeral: false, // Share cookies - shows account picker!
+          preferEphemeral: false,
         ),
       );
       
       debugPrint('📱 OAuth callback received: $resultUrl');
       
-      // Parse the callback URL
       final uri = Uri.parse(resultUrl);
-      final sessionId = uri.queryParameters['session_id'];
+      final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
       
       if (error != null) {
@@ -140,15 +136,14 @@ class OAuthService {
         return;
       }
       
-      if (sessionId != null) {
-        debugPrint('✅ OAuth session received');
-        await _completeOAuthLogin(sessionId);
+      if (token != null) {
+        debugPrint('✅ OAuth token received');
+        await _completeOAuthLogin(token);
       } else {
-        onAuthError?.call('No session received from sign in');
+        onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
       debugPrint('❌ Google OAuth cancelled or failed: $e');
-      // User likely cancelled - don't show an error for cancellation
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');
       } else {
@@ -157,32 +152,27 @@ class OAuthService {
     }
   }
   
-  /// Launch Apple Sign In using native ASWebAuthenticationSession
+  /// Launch Apple Sign In
   Future<void> signInWithApple() async {
-    const baseUrl = 'https://api.betterandbliss.com';
     const callbackScheme = 'betterbliss';
     
-    final authUrl = '$baseUrl/auth/apple?redirect=$callbackScheme://auth/callback';
+    final authUrl = '$_baseUrl/auth/apple?redirect=$callbackScheme://auth/callback';
     
-    debugPrint('🔐 Launching Apple OAuth (native): $authUrl');
+    debugPrint('🔐 Launching Apple OAuth: $authUrl');
     
     try {
-      // This opens ASWebAuthenticationSession on iOS (in-app secure browser)
-      // preferEphemeral: true creates isolated session (no shared cookies)
-      // This ensures the account picker ALWAYS shows
       final resultUrl = await FlutterWebAuth2.authenticate(
         url: authUrl,
         callbackUrlScheme: callbackScheme,
         options: const FlutterWebAuth2Options(
-          preferEphemeral: false, // Share cookies - shows account picker!
+          preferEphemeral: false,
         ),
       );
       
       debugPrint('📱 OAuth callback received: $resultUrl');
       
-      // Parse the callback URL
       final uri = Uri.parse(resultUrl);
-      final sessionId = uri.queryParameters['session_id'];
+      final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
       
       if (error != null) {
@@ -191,15 +181,14 @@ class OAuthService {
         return;
       }
       
-      if (sessionId != null) {
-        debugPrint('✅ OAuth session received');
-        await _completeOAuthLogin(sessionId);
+      if (token != null) {
+        debugPrint('✅ OAuth token received');
+        await _completeOAuthLogin(token);
       } else {
-        onAuthError?.call('No session received from sign in');
+        onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
       debugPrint('❌ Apple OAuth cancelled or failed: $e');
-      // User likely cancelled - don't show an error for cancellation
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');
       } else {
