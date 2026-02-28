@@ -23,6 +23,7 @@ import 'features/meditation/presentation/bloc/meditation_bloc.dart';
 import 'features/meditation/presentation/bloc/meditation_event.dart';
 import 'features/library/presentation/bloc/library_bloc.dart';
 import 'core/services/goal_tracking_service.dart';
+import 'features/workouts/presentation/bloc/workout_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -118,6 +119,9 @@ class WellnessApp extends StatelessWidget {
           ),
           BlocProvider(
             create: (context) => LibraryBloc(),
+          ),
+          BlocProvider(
+            create: (context) => WorkoutBloc(),
           ),
         ],
         // Use Builder to access AuthBloc and create auth-aware router

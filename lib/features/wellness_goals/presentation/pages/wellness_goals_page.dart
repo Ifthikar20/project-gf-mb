@@ -16,6 +16,7 @@ import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
 import '../widgets/goals_section.dart';
 import '../../../../core/presentation/widgets/mood_selector_widget.dart';
+import '../../../workouts/presentation/widgets/activity_summary_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -182,6 +183,11 @@ class _HomePageState extends State<HomePage> {
                       selectedMoodId: _selectedMoodId,
                       onMoodSelected: _saveMood,
                     ),
+                  ),
+
+                  // Activity Summary Card (workout stats)
+                  const SliverToBoxAdapter(
+                    child: ActivitySummaryCard(),
                   ),
 
                   // Featured Content Section

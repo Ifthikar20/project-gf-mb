@@ -639,9 +639,9 @@ class ProfilePage extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                  child: _buildSection('Account', [
-                    _MenuItem(Icons.person_outline, 'Personal Information', 'Name, email, phone'),
-                    _MenuItem(Icons.lock_outline, 'Password & Security', 'Password, 2FA'),
+                  child: _buildSection(context, 'Account', [
+                    _MenuItem(Icons.person_outline, 'Personal Information', 'Name, email, phone', route: '/account-settings'),
+                    _MenuItem(Icons.lock_outline, 'Password & Security', 'Password, 2FA', route: '/change-password'),
                     _MenuItem(Icons.payment_outlined, 'Payment Methods', 'Cards, subscriptions'),
                   ], surfaceColor, textColor, textSecondary, primaryColor, isVintage),
                 ),
@@ -651,7 +651,7 @@ class ProfilePage extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                  child: _buildSection('Preferences', [
+                  child: _buildSection(context, 'Preferences', [
                     _MenuItem(Icons.notifications_outlined, 'Notifications', 'Push, email alerts'),
                     _MenuItem(Icons.language_outlined, 'Language', 'English (US)'),
                     _MenuItem(Icons.download_outlined, 'Downloads', 'Offline content'),
@@ -659,11 +659,72 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
+              // Wellness Setup Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: GestureDetector(
+                    onTap: () => context.push(AppRouter.onboarding),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
+                        border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
+                            ),
+                            child: const Icon(Icons.tune, color: Color(0xFF8B5CF6), size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Redo Wellness Setup',
+                                  style: isVintage
+                                      ? GoogleFonts.playfairDisplay(
+                                          color: textColor,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        )
+                                      : TextStyle(
+                                          color: textColor,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Update your goals and preferences',
+                                  style: TextStyle(
+                                    color: textSecondary.withOpacity(0.7),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: textSecondary.withOpacity(0.5), size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
               // Support Section
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                  child: _buildSection('Support', [
+                  child: _buildSection(context, 'Support', [
                     _MenuItem(Icons.help_outline, 'Help Center', 'FAQs, tutorials'),
                     _MenuItem(Icons.chat_bubble_outline, 'Contact Us', 'Get in touch'),
                     _MenuItem(Icons.bug_report_outlined, 'Report a Problem', 'Send feedback'),
@@ -677,7 +738,7 @@ class ProfilePage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: GestureDetector(
-                    onTap: () {},
+                    onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -813,7 +874,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(String title, List<_MenuItem> items, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, bool isVintage) {
+  Widget _buildSection(BuildContext context, String title, List<_MenuItem> items, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, bool isVintage) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -834,7 +895,7 @@ class ProfilePage extends StatelessWidget {
               return Column(
                 children: [
                   GestureDetector(
-                    onTap: () {},
+                    onTap: item.route != null ? () => context.push(item.route!) : null,
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1092,6 +1153,7 @@ class _MenuItem {
   final IconData icon;
   final String title;
   final String subtitle;
+  final String? route;
   
-  const _MenuItem(this.icon, this.title, this.subtitle);
+  const _MenuItem(this.icon, this.title, this.subtitle, {this.route});
 }

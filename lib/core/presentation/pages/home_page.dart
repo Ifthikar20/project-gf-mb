@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../features/wellness_goals/presentation/pages/wellness_goals_page.dart' as home;
 import '../../../features/explore/presentation/pages/explore_page.dart';
 import '../../../features/meditation/presentation/pages/meditation_page.dart';
+import '../../../features/workouts/presentation/pages/workout_hub_page.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 import '../../theme/theme_bloc.dart';
 import '../../theme/app_theme.dart';
@@ -22,6 +23,7 @@ class _MainShellState extends State<MainShell> {
     home.HomePage(),
     MeditationPage(),
     ExplorePage(),
+    WorkoutHubPage(),
     ProfilePage(),
   ];
 
@@ -94,9 +96,17 @@ class _MainShellState extends State<MainShell> {
                           textSecondary: textSecondary,
                         ),
                         _buildNavItem(
+                          icon: Icons.fitness_center_rounded,
+                          label: 'Workouts',
+                          index: 3,
+                          isVintage: isVintage,
+                          primaryColor: primaryColor,
+                          textSecondary: textSecondary,
+                        ),
+                        _buildNavItem(
                           icon: Icons.person_rounded,
                           label: 'Profile',
-                          index: 3,
+                          index: 4,
                           isVintage: isVintage,
                           primaryColor: primaryColor,
                           textSecondary: textSecondary,

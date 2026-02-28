@@ -72,6 +72,7 @@ class ApiEndpoints {
   static String get onboardingOptions => '$personalizationBase/onboarding/options';
   static String get preferences => '$personalizationBase/preferences';
   static String get recommendations => '$personalizationBase/recommendations';
+  static String get homeFeed => '$personalizationBase/home-feed';
   
   // ============================================
   // Streaming
@@ -100,6 +101,32 @@ class ApiEndpoints {
   static String goalById(String id) => '$goalsBase/$id';
   static String get goalProgress => '$goalsBase/progress';
   static String get goalStats => '$goalsBase/stats';
+  
+  // ============================================
+  // Workouts & Calorie Tracking
+  // ============================================
+  static String get workoutsBase => '$baseUrl/api/workouts';
+  static String get workoutTypes => '$workoutsBase/types';
+  static String get bodyProfile => '$workoutsBase/body-profile';
+  static String get calorieEstimate => '$workoutsBase/estimate';
+  static String get logManual => '$workoutsBase/log/manual';
+  static String get logAppleHealth => '$workoutsBase/log/apple-health';
+  static String get logAppleHealthBatch => '$workoutsBase/log/apple-health/batch';
+  static String get workoutHistory => '$workoutsBase/history';
+  static String get workoutStats => '$workoutsBase/stats';
+  static String get workoutGoals => '$workoutsBase/goals';
+  static String get workoutGoalSet => '$workoutsBase/goals/set';
+  static String workoutGoalDelete(String type) => '$workoutsBase/goals/$type';
+  
+  // ============================================
+  // Engagement
+  // ============================================
+  static String get engagementBase => '$baseUrl/api/engagement';
+  static String get logWatch => '$engagementBase/watch';
+  static String get watchHistory => '$engagementBase/history';
+  static String get streak => '$engagementBase/streak';
+  static String favoriteToggle(String id) => '$engagementBase/favorite/$id';
+  static String get favorites => '$engagementBase/favorites';
   
   // ============================================
   // Subscriptions / Premium

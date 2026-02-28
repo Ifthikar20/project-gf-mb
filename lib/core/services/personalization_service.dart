@@ -115,4 +115,15 @@ class PersonalizationService {
     );
     return response.data as Map<String, dynamic>;
   }
+
+  // ============================================
+  // Home Feed
+  // ============================================
+
+  /// Get personalized home feed content
+  /// Returns sections based on user's onboarding answers and viewing history
+  Future<Map<String, dynamic>> getHomeFeed() async {
+    final response = await _api.get('/api/personalization/home-feed');
+    return response.data as Map<String, dynamic>;
+  }
 }

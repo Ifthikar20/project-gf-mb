@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../presentation/pages/home_page.dart';
 import '../auth/landing_page.dart';
@@ -7,9 +8,15 @@ import '../auth/register_page.dart';
 import '../auth/forgot_password_page.dart';
 import '../auth/reset_password_page.dart';
 import '../auth/onboarding_page.dart';
+import '../auth/change_password_page.dart';
+import '../auth/account_settings_page.dart';
 import '../auth/auth_bloc.dart';
 
 import '../../features/videos/presentation/pages/video_player_page.dart';
+import '../../features/workouts/presentation/pages/workout_summary_page.dart';
+import '../../features/workouts/presentation/pages/body_profile_page.dart';
+import '../../features/workouts/presentation/pages/goals_setup_page.dart';
+import '../../features/workouts/presentation/bloc/workout_bloc.dart';
 import '../../features/meditation/presentation/pages/meditation_category_page.dart';
 import '../../features/meditation/presentation/pages/audio_player_page.dart';
 import '../../features/library/presentation/pages/library_page.dart';
@@ -26,6 +33,11 @@ class AppRouter {
   static const String resetPassword = '/reset-password';
   static const String wellnessGoals = '/wellness-goals';
   static const String onboarding = '/onboarding';
+  static const String changePassword = '/change-password';
+  static const String accountSettings = '/account-settings';
+  static const String workoutSummary = '/workout-summary';
+  static const String bodyProfile = '/body-profile';
+  static const String goalsSetup = '/goals-setup';
 
   static const String videos = '/videos';
   static const String videoPlayer = '/video-player';
@@ -155,6 +167,28 @@ class AppRouter {
           ),
         ),
         GoRoute(
+          path: changePassword,
+          builder: (context, state) => const ChangePasswordPage(),
+        ),
+        GoRoute(
+          path: accountSettings,
+          builder: (context, state) => const AccountSettingsPage(),
+        ),
+        GoRoute(
+          path: bodyProfile,
+          builder: (context, state) => BlocProvider.value(
+            value: context.read<WorkoutBloc>(),
+            child: const BodyProfilePage(),
+          ),
+        ),
+        GoRoute(
+          path: goalsSetup,
+          builder: (context, state) => BlocProvider.value(
+            value: context.read<WorkoutBloc>(),
+            child: const GoalsSetupPage(),
+          ),
+        ),
+        GoRoute(
           path: videoPlayer,
           pageBuilder: (context, state) {
             final videoId = state.uri.queryParameters['id'] ?? '';
@@ -280,6 +314,14 @@ class AppRouter {
         },
       ),
 
+      GoRoute(
+        path: changePassword,
+        builder: (context, state) => const ChangePasswordPage(),
+      ),
+      GoRoute(
+        path: accountSettings,
+        builder: (context, state) => const AccountSettingsPage(),
+      ),
       GoRoute(
         path: videoPlayer,
         pageBuilder: (context, state) {
