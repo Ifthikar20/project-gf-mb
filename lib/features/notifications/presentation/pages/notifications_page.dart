@@ -32,7 +32,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     _NotificationItem(
       icon: Icons.self_improvement_rounded,
       iconColor: Color(0xFF8B5CF6),
-      title: 'Time to meditate 🧘',
+      title: 'Time to meditate ',
       body: 'Your daily 10-minute calm session is waiting for you.',
       time: '2 min ago',
       isRead: false,
@@ -41,7 +41,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     _NotificationItem(
       icon: Icons.local_fire_department_rounded,
       iconColor: Color(0xFFFF6B35),
-      title: '3-day streak! 🔥',
+      title: '3-day streak! ',
       body: 'Keep it up! You\'ve meditated 3 days in a row.',
       time: '1 hr ago',
       isRead: false,
@@ -59,7 +59,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     _NotificationItem(
       icon: Icons.star_rounded,
       iconColor: Color(0xFFFFB800),
-      title: 'New content available ✨',
+      title: 'New content available ',
       body: 'Check out the new "Deep Sleep" audio series — perfect for tonight.',
       time: 'Yesterday',
       isRead: true,
@@ -86,7 +86,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     _NotificationItem(
       icon: Icons.emoji_events_rounded,
       iconColor: Color(0xFFFFB800),
-      title: 'Goal achieved! 🏆',
+      title: 'Goal achieved! ',
       body: 'You\'ve completed your "Meditate 7 days" challenge.',
       time: '5 days ago',
       isRead: true,

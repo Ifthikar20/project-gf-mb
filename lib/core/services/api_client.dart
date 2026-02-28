@@ -80,10 +80,10 @@ class ApiClient {
 
       // Log error details
       AppLogger.e(
-        '❌ API Error: $path ($statusCode)\n'
-        '📋 Response Body: $responseData\n'
-        '🔍 Error Type: ${error.type}\n'
-        '💬 Error Message: ${error.message}',
+        ' API Error: $path ($statusCode)\n'
+        ' Response Body: $responseData\n'
+        ' Error Type: ${error.type}\n'
+        ' Error Message: ${error.message}',
         error: error,
       );
 

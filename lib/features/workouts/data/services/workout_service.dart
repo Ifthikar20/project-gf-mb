@@ -33,7 +33,7 @@ class WorkoutService {
         .toList();
 
     _cachedTypes = types;
-    debugPrint('✅ Cached ${types.length} workout types');
+    debugPrint(' Cached ${types.length} workout types');
     return types;
   }
 

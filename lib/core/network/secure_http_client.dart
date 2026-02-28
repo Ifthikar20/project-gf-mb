@@ -47,7 +47,7 @@ class SecureHttpClient {
     
     // If no certificates are pinned, allow all (but log warning)
     if (_pinnedCertificates.isEmpty) {
-      debugPrint('⚠️ WARNING: No certificates pinned for $host');
+      debugPrint(' WARNING: No certificates pinned for $host');
       return true;
     }
     
@@ -60,7 +60,7 @@ class SecureHttpClient {
     );
     
     if (!isValid) {
-      debugPrint('❌ Certificate pinning failed for $host');
+      debugPrint(' Certificate pinning failed for $host');
       debugPrint('   Expected: ${_pinnedCertificates.join(", ")}');
       debugPrint('   Got: $certFingerprint');
     }

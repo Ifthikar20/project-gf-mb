@@ -36,7 +36,7 @@ class EngagementService {
       );
       return response.data as Map<String, dynamic>;
     } catch (e) {
-      debugPrint('⚠️ Failed to log watch event: $e');
+      debugPrint(' Failed to log watch event: $e');
       rethrow;
     }
   }

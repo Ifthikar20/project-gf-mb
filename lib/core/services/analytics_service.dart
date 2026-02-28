@@ -63,7 +63,7 @@ class AnalyticsService {
     // Create new session
     _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
     
-    debugPrint('📊 GA4 initialized: $_measurementId');
+    debugPrint(' GA4 initialized: $_measurementId');
     debugPrint('   Client ID: $_clientId');
     debugPrint('   Session #$_sessionNumber');
   }
@@ -71,7 +71,7 @@ class AnalyticsService {
   /// Set user ID (after login)
   void setUserId(String? userId) {
     _userId = userId;
-    debugPrint('📊 GA4: User ID set');
+    debugPrint(' GA4: User ID set');
   }
   
   // ============================================
@@ -127,10 +127,10 @@ class AnalyticsService {
         'session_id': _sessionId,
       });
       
-      debugPrint('📊 Backend: View tracked for $contentId ✓');
+      debugPrint(' Backend: View tracked for $contentId ');
     } catch (e) {
       // Don't fail silently but also don't break the app
-      debugPrint('⚠️ Backend view tracking failed: $e');
+      debugPrint(' Backend view tracking failed: $e');
     }
   }
   
@@ -290,7 +290,7 @@ class AnalyticsService {
   Future<void> _sendEvent(String eventName, Map<String, dynamic> params) async {
     // Skip if not configured
     if (_measurementId.isEmpty || _apiSecret.isEmpty) {
-      debugPrint('📊 [GA4 Disabled] $eventName: $params');
+      debugPrint(' [GA4 Disabled] $eventName: $params');
       return;
     }
     
@@ -324,12 +324,12 @@ class AnalyticsService {
       );
       
       if (response.statusCode == 204 || response.statusCode == 200) {
-        debugPrint('📊 GA4: $eventName sent ✓');
+        debugPrint(' GA4: $eventName sent ');
       } else {
-        debugPrint('⚠️ GA4 error ${response.statusCode}: ${response.body}');
+        debugPrint(' GA4 error ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('⚠️ GA4 send failed: $e');
+      debugPrint(' GA4 send failed: $e');
       // Don't throw - analytics failures shouldn't break the app
     }
   }

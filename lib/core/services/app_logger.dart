@@ -59,26 +59,26 @@ class AppLogger {
 
   /// Log an outgoing API request
   static void request(String method, String path, {dynamic data}) {
-    _logger.i('📤 $method $path${data != null ? '\n$data' : ''}');
+    _logger.i(' $method $path${data != null ? '\n$data' : ''}');
   }
 
   /// Log an incoming API response
   static void response(int? statusCode, String path, {dynamic data}) {
-    _logger.i('📥 $statusCode $path${data != null ? '\n$data' : ''}');
+    _logger.i(' $statusCode $path${data != null ? '\n$data' : ''}');
   }
 
   /// Log an API error
   static void apiError(String path, {int? statusCode, Object? error}) {
-    _logger.e('❌ API Error: $path (${statusCode ?? 'unknown'})', error: error);
+    _logger.e(' API Error: $path (${statusCode ?? 'unknown'})', error: error);
   }
 
   /// Log authentication events
   static void auth(String message) {
-    _logger.i('🔐 $message');
+    _logger.i(' $message');
   }
 
   /// Log navigation events  
   static void nav(String message) {
-    _logger.d('🧭 $message');
+    _logger.d(' $message');
   }
 }

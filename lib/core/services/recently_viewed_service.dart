@@ -74,12 +74,12 @@ class RecentlyViewedService extends ChangeNotifier {
         _items.addAll(
           jsonList.map((json) => RecentlyViewedItem.fromJson(json)).toList()
         );
-        debugPrint('📚 Loaded ${_items.length} recently viewed items');
+        debugPrint(' Loaded ${_items.length} recently viewed items');
       }
       
       _isInitialized = true;
     } catch (e) {
-      debugPrint('❌ Failed to load recently viewed: $e');
+      debugPrint(' Failed to load recently viewed: $e');
     }
   }
   
@@ -112,7 +112,7 @@ class RecentlyViewedService extends ChangeNotifier {
     await _save();
     notifyListeners();
     
-    debugPrint('📚 Added to recently viewed: $title');
+    debugPrint(' Added to recently viewed: $title');
   }
   
   /// Remove item from history
@@ -127,7 +127,7 @@ class RecentlyViewedService extends ChangeNotifier {
     _items.clear();
     await _save();
     notifyListeners();
-    debugPrint('📚 Cleared recently viewed history');
+    debugPrint(' Cleared recently viewed history');
   }
   
   /// Get videos only
@@ -145,7 +145,7 @@ class RecentlyViewedService extends ChangeNotifier {
       final jsonList = _items.map((item) => item.toJson()).toList();
       await prefs.setString(_storageKey, jsonEncode(jsonList));
     } catch (e) {
-      debugPrint('❌ Failed to save recently viewed: $e');
+      debugPrint(' Failed to save recently viewed: $e');
     }
   }
 }

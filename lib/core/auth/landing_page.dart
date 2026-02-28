@@ -186,11 +186,18 @@ If you have any questions about this Privacy Policy, please contact us.''',
                   const Spacer(flex: 2),
                   
                   // Centered Logo
-                  Image.asset(
-                    'assets/images/logo-main.png',
-                    width: 160,
-                    height: 160,
-                    fit: BoxFit.contain,
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: primaryPurple.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.spa_rounded,
+                      size: 60,
+                      color: Colors.white,
+                    ),
                   ),
                   
                   const SizedBox(height: 32),

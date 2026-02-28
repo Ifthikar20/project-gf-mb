@@ -162,19 +162,19 @@ class WorkoutLogModel {
   bool get isAppleHealth => source == 'apple_health';
   bool get hasMood => mood != null && mood!.isNotEmpty;
 
-  /// Mood emoji for display
-  String get moodEmoji {
+  /// Mood label for display
+  String get moodLabel {
     switch (mood) {
       case 'great':
-        return '😄';
+        return 'Great';
       case 'good':
-        return '🙂';
+        return 'Good';
       case 'okay':
-        return '😐';
+        return 'Okay';
       case 'tired':
-        return '😮‍💨';
+        return 'Tired';
       case 'exhausted':
-        return '😩';
+        return 'Exhausted';
       default:
         return '';
     }

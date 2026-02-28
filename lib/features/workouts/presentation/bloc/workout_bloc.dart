@@ -25,7 +25,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     try {
       return await fn();
     } catch (e) {
-      debugPrint('⚠️ WorkoutBloc: endpoint skipped — $e');
+      debugPrint(' WorkoutBloc: endpoint skipped — $e');
       return fallback;
     }
   }
@@ -53,7 +53,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       goals: goals,
       bodyProfile: profile,
     ));
-    debugPrint('✅ WorkoutBloc: Data loaded (${types.length} types, ${history.length} workouts)');
+    debugPrint(' WorkoutBloc: Data loaded (${types.length} types, ${history.length} workouts)');
   }
 
   /// Refresh stats, history, and goals (after logging a workout)
@@ -81,7 +81,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         add(const LoadWorkoutData());
       }
     } catch (e) {
-      debugPrint('❌ WorkoutBloc: Refresh failed - $e');
+      debugPrint(' WorkoutBloc: Refresh failed - $e');
       // Keep current state on refresh failure
     }
   }
@@ -101,7 +101,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       );
       emit(currentState.copyWith(currentEstimate: estimate));
     } catch (e) {
-      debugPrint('⚠️ Estimate failed: $e');
+      debugPrint(' Estimate failed: $e');
       // Don't emit error — just clear estimate silently
       emit(currentState.copyWith(clearEstimate: true));
     }
@@ -131,9 +131,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         workout: workout,
         updatedGoals: goals.cast(),
       ));
-      debugPrint('✅ Workout logged: ${workout.workoutName} (${workout.caloriesBurned} cal)');
+      debugPrint(' Workout logged: ${workout.workoutName} (${workout.caloriesBurned} cal)');
     } catch (e) {
-      debugPrint('❌ Log workout failed: $e');
+      debugPrint(' Log workout failed: $e');
       final errStr = e.toString().toLowerCase();
       if (errStr.contains('body_profile_required') || errStr.contains('weight')) {
         emit(const WorkoutError(
@@ -161,9 +161,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       if (currentState is WorkoutLoaded) {
         emit(currentState.copyWith(bodyProfile: profile));
       }
-      debugPrint('✅ Body profile updated: ${profile.weightKg} kg');
+      debugPrint(' Body profile updated: ${profile.weightKg} kg');
     } catch (e) {
-      debugPrint('❌ Body profile update failed: $e');
+      debugPrint(' Body profile update failed: $e');
       emit(const WorkoutError('Failed to save body profile.'));
     }
   }
@@ -185,7 +185,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         emit(currentState.copyWith(goals: goals));
       }
     } catch (e) {
-      debugPrint('❌ Set goal failed: $e');
+      debugPrint(' Set goal failed: $e');
     }
   }
 
@@ -202,7 +202,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         emit(currentState.copyWith(goals: goals));
       }
     } catch (e) {
-      debugPrint('❌ Delete goal failed: $e');
+      debugPrint(' Delete goal failed: $e');
     }
   }
 }

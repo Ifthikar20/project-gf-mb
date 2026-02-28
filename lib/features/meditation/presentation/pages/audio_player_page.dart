@@ -143,8 +143,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         final isMockContent = !_isValidUuid(audio.id);
         
         if (isMockContent) {
-          debugPrint('⚠️ Mock content detected (ID: ${audio.id}). Audio not available in backend.');
-          debugPrint('💡 To fix: Upload audio content to the backend database.');
+          debugPrint(' Mock content detected (ID: ${audio.id}). Audio not available in backend.');
+          debugPrint(' To fix: Upload audio content to the backend database.');
           setState(() {
             _hasError = true;
             _isLoading = false;
@@ -153,31 +153,31 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         }
 
         // Fetch the streaming URL from the backend API
-        debugPrint('🎵 Fetching streaming URL for audio: ${audio.id}');
+        debugPrint(' Fetching streaming URL for audio: ${audio.id}');
         final audioUrl = await repository.getAudioStreamingUrl(audio.id);
         
         if (audioUrl != null && audioUrl.isNotEmpty) {
-          debugPrint('✅ Got streaming URL: $audioUrl');
+          debugPrint(' Got streaming URL: $audioUrl');
           await _audioPlayer.setUrl(audioUrl);
           setState(() => _isLoading = false);
           await _audioPlayer.play();
         } else {
           // Fallback: If no streaming URL, show error
-          debugPrint('⚠️ No streaming URL available for audio');
+          debugPrint(' No streaming URL available for audio');
           setState(() {
             _hasError = true;
             _isLoading = false;
           });
         }
       } else {
-        debugPrint('❌ Audio not found: ${widget.audioId}');
+        debugPrint(' Audio not found: ${widget.audioId}');
         setState(() {
           _hasError = true;
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('❌ Error loading audio: $e');
+      debugPrint(' Error loading audio: $e');
       setState(() {
         _hasError = true;
         _isLoading = false;

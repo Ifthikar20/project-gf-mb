@@ -15,7 +15,7 @@ class VideosRepository {
   Future<List<VideoEntity>> getVideos({String? category}) async {
     try {
       // Try fetching from backend API
-      debugPrint('📼 Fetching videos from API...');
+      debugPrint(' Fetching videos from API...');
       final response = await _api.get('/content/browse', queryParameters: {
         if (category != null && category != 'All') 'category': category,
         'content_type': 'video',
@@ -43,7 +43,7 @@ class VideosRepository {
         episodeCount: json['episode_count'],
       )).toList();
       
-      debugPrint('✅ Loaded ${videos.length} videos from API');
+      debugPrint(' Loaded ${videos.length} videos from API');
       
       // Fetch view counts for all videos
       videos = await _enrichWithViewCounts(videos);
@@ -51,7 +51,7 @@ class VideosRepository {
       _cachedVideos = videos;
       return videos;
     } catch (e) {
-      debugPrint('⚠️ API fetch failed, using mock data: $e');
+      debugPrint(' API fetch failed, using mock data: $e');
       return _getMockVideos(category);
     }
   }
@@ -69,7 +69,7 @@ class VideosRepository {
     
     try {
       // Fetch specific video from API
-      debugPrint('📼 Fetching video $id from API...');
+      debugPrint(' Fetching video $id from API...');
       final response = await _api.get('/content/detail/$id');
       
       final json = response.data;
@@ -101,7 +101,7 @@ class VideosRepository {
       
       return video;
     } catch (e) {
-      debugPrint('⚠️ Video detail fetch failed: $e');
+      debugPrint(' Video detail fetch failed: $e');
       // Fall back to mock
       final mockVideos = await _getMockVideos(null);
       try {
@@ -115,7 +115,7 @@ class VideosRepository {
   /// Fetch view counts from analytics API and enrich videos
   Future<List<VideoEntity>> _enrichWithViewCounts(List<VideoEntity> videos) async {
     try {
-      debugPrint('📊 Fetching view counts for ${videos.length} videos...');
+      debugPrint(' Fetching view counts for ${videos.length} videos...');
       
       // Fetch view counts for each video (in parallel)
       final futures = videos.map((video) => _getViewCount(video.id));
@@ -131,10 +131,10 @@ class VideosRepository {
         }
       }
       
-      debugPrint('✅ View counts enriched');
+      debugPrint(' View counts enriched');
       return enrichedVideos;
     } catch (e) {
-      debugPrint('⚠️ Failed to fetch view counts: $e');
+      debugPrint(' Failed to fetch view counts: $e');
       return videos; // Return original videos if enrichment fails
     }
   }
@@ -177,14 +177,14 @@ class VideosRepository {
   /// Returns SeriesEntity with full episode list, or null if fetch fails
   Future<SeriesEntity?> getSeriesWithEpisodes(String seriesId) async {
     try {
-      debugPrint('📺 Fetching series $seriesId from CMS API...');
+      debugPrint(' Fetching series $seriesId from CMS API...');
       final response = await _api.get('/v1/cms/series/$seriesId');
       
       final seriesEntity = SeriesEntity.fromJson(response.data);
-      debugPrint('✅ Loaded series with ${seriesEntity.episodes.length} episodes');
+      debugPrint(' Loaded series with ${seriesEntity.episodes.length} episodes');
       return seriesEntity;
     } catch (e) {
-      debugPrint('⚠️ Series fetch failed: $e');
+      debugPrint(' Series fetch failed: $e');
       // Return mock series data for demo/offline mode
       return _getMockSeries(seriesId);
     }
@@ -203,7 +203,7 @@ class VideosRepository {
     bool showOnMeditate = false,
   }) async {
     try {
-      debugPrint('📺 Fetching published series from CMS API...');
+      debugPrint(' Fetching published series from CMS API...');
       
       final queryParams = <String, dynamic>{
         'status': 'published',
@@ -216,10 +216,10 @@ class VideosRepository {
       final List<dynamic> items = response.data['series'] ?? response.data ?? [];
       final series = items.map((json) => SeriesEntity.fromJson(json)).toList();
       
-      debugPrint('✅ Loaded ${series.length} published series');
+      debugPrint(' Loaded ${series.length} published series');
       return series;
     } catch (e) {
-      debugPrint('⚠️ Published series fetch failed: $e');
+      debugPrint(' Published series fetch failed: $e');
       return _getMockPublishedSeries();
     }
   }

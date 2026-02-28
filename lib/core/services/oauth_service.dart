@@ -55,7 +55,7 @@ class OAuthService {
   
   /// Handle incoming deep link
   Future<void> _handleIncomingLink(Uri uri) async {
-    debugPrint('📱 Received deep link: $uri');
+    debugPrint(' Received deep link: $uri');
     
     // Check if this is an auth callback
     if (uri.scheme == 'betterbliss' && uri.host == 'auth') {
@@ -63,13 +63,13 @@ class OAuthService {
       final error = uri.queryParameters['error'];
       
       if (error != null) {
-        debugPrint('❌ OAuth error: $error');
+        debugPrint(' OAuth error: $error');
         onAuthError?.call(error);
         return;
       }
       
       if (token != null) {
-        debugPrint('✅ OAuth token received');
+        debugPrint(' OAuth token received');
         await _completeOAuthLogin(token);
       }
     }
@@ -83,7 +83,7 @@ class OAuthService {
       
       final tokenStorage = TokenStorage.instance;
       await tokenStorage.saveAccessToken(token);
-      debugPrint('🔐 OAuth DRF token saved');
+      debugPrint(' OAuth DRF token saved');
       
       // Fetch user info from /auth/me
       final response = await _api.get('/auth/me');
@@ -94,12 +94,12 @@ class OAuthService {
         
         // Save user data for session persistence
         await tokenStorage.saveUserData(jsonEncode(user.toJson()));
-        debugPrint('✅ OAuth login complete: ${user.email}');
+        debugPrint(' OAuth login complete: ${user.email}');
         
         onAuthSuccess?.call(user);
       }
     } catch (e) {
-      debugPrint('❌ Failed to complete OAuth: $e');
+      debugPrint(' Failed to complete OAuth: $e');
       onAuthError?.call('Failed to complete sign in');
     }
   }
@@ -113,7 +113,7 @@ class OAuthService {
     
     final authUrl = '$_baseUrl/auth/google?redirect=$callbackScheme://auth/callback&prompt=select_account';
     
-    debugPrint('🔐 Launching Google OAuth: $authUrl');
+    debugPrint(' Launching Google OAuth: $authUrl');
     
     try {
       final resultUrl = await FlutterWebAuth2.authenticate(
@@ -124,26 +124,26 @@ class OAuthService {
         ),
       );
       
-      debugPrint('📱 OAuth callback received: $resultUrl');
+      debugPrint(' OAuth callback received: $resultUrl');
       
       final uri = Uri.parse(resultUrl);
       final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
       
       if (error != null) {
-        debugPrint('❌ OAuth error: $error');
+        debugPrint(' OAuth error: $error');
         onAuthError?.call(error);
         return;
       }
       
       if (token != null) {
-        debugPrint('✅ OAuth token received');
+        debugPrint(' OAuth token received');
         await _completeOAuthLogin(token);
       } else {
         onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
-      debugPrint('❌ Google OAuth cancelled or failed: $e');
+      debugPrint(' Google OAuth cancelled or failed: $e');
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');
       } else {
@@ -158,7 +158,7 @@ class OAuthService {
     
     final authUrl = '$_baseUrl/auth/apple?redirect=$callbackScheme://auth/callback';
     
-    debugPrint('🔐 Launching Apple OAuth: $authUrl');
+    debugPrint(' Launching Apple OAuth: $authUrl');
     
     try {
       final resultUrl = await FlutterWebAuth2.authenticate(
@@ -169,26 +169,26 @@ class OAuthService {
         ),
       );
       
-      debugPrint('📱 OAuth callback received: $resultUrl');
+      debugPrint(' OAuth callback received: $resultUrl');
       
       final uri = Uri.parse(resultUrl);
       final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
       
       if (error != null) {
-        debugPrint('❌ OAuth error: $error');
+        debugPrint(' OAuth error: $error');
         onAuthError?.call(error);
         return;
       }
       
       if (token != null) {
-        debugPrint('✅ OAuth token received');
+        debugPrint(' OAuth token received');
         await _completeOAuthLogin(token);
       } else {
         onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
-      debugPrint('❌ Apple OAuth cancelled or failed: $e');
+      debugPrint(' Apple OAuth cancelled or failed: $e');
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');
       } else {

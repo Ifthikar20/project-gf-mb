@@ -88,7 +88,7 @@ class ContentService {
     try {
       await _api.post('/api/track/view/$contentId');
     } catch (e) {
-      debugPrint('⚠️ Track view failed: $e');
+      debugPrint(' Track view failed: $e');
     }
   }
   
@@ -97,7 +97,7 @@ class ContentService {
     try {
       await _api.post('/api/track/play/$contentId');
     } catch (e) {
-      debugPrint('⚠️ Track play failed: $e');
+      debugPrint(' Track play failed: $e');
     }
   }
   
@@ -106,7 +106,7 @@ class ContentService {
     try {
       await _api.post('/api/track/search', data: {'query': query});
     } catch (e) {
-      debugPrint('⚠️ Track search failed: $e');
+      debugPrint(' Track search failed: $e');
     }
   }
   

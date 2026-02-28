@@ -34,7 +34,7 @@ class TokenStorage {
   /// Save access token securely
   Future<void> saveAccessToken(String token) async {
     await _storage.write(key: _accessTokenKey, value: token);
-    debugPrint('🔐 Access token saved to secure storage');
+    debugPrint(' Access token saved to secure storage');
   }
   
   /// Get stored access token
@@ -54,7 +54,7 @@ class TokenStorage {
   /// Save refresh token securely
   Future<void> saveRefreshToken(String token) async {
     await _storage.write(key: _refreshTokenKey, value: token);
-    debugPrint('🔐 Refresh token saved to secure storage');
+    debugPrint(' Refresh token saved to secure storage');
   }
   
   /// Get stored refresh token
@@ -95,7 +95,7 @@ class TokenStorage {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userDataKey);
-    debugPrint('🔐 All tokens cleared from secure storage');
+    debugPrint(' All tokens cleared from secure storage');
   }
   
   /// Check if we have stored credentials

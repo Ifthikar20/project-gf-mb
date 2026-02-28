@@ -19,7 +19,6 @@ dependencies:
   
   # Audio
   just_audio: ^0.9.36
-  audio_service: ^0.18.12
   
   # Video
   video_player: ^2.8.1
@@ -32,7 +31,6 @@ dependencies:
   
   # UI
   google_fonts: ^6.1.0
-  flutter_svg: ^2.0.9
   cached_network_image: ^3.3.0
   
   # Utilities
@@ -42,8 +40,6 @@ dependencies:
   
   # Network & API
   dio: ^5.4.0
-  dio_cookie_manager: ^3.1.1
-  cookie_jar: ^4.0.8
   
   # Icons
   cupertino_icons: ^1.0.6
@@ -68,8 +64,6 @@ flutter:
   
   assets:
     - .env
-    - assets/audio/
-    # Note: Videos removed - now streamed from Cloudflare R2
   
   # Uncomment to add custom fonts
   # fonts:

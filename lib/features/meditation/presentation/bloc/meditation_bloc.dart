@@ -26,7 +26,7 @@ class MeditationBloc extends Bloc<MeditationEvent, MeditationState> {
     emit(MeditationLoading());
     try {
       // Fetch audio content from API
-      debugPrint('🎵 MeditationBloc: Loading audio content...');
+      debugPrint(' MeditationBloc: Loading audio content...');
       final audios = await repository.fetchAllAudios();
       
       // Also fetch categories (or use defaults)
@@ -34,7 +34,7 @@ class MeditationBloc extends Bloc<MeditationEvent, MeditationState> {
       final meditationTypes = repository.getMeditationTypes();
       final moodBasedTypes = repository.getMoodBasedTypes();
       
-      debugPrint('✅ MeditationBloc: Loaded ${audios.length} audios, ${meditationTypes.length} types');
+      debugPrint(' MeditationBloc: Loaded ${audios.length} audios, ${meditationTypes.length} types');
       
       emit(MeditationLoaded(
         audios: audios,
@@ -42,7 +42,7 @@ class MeditationBloc extends Bloc<MeditationEvent, MeditationState> {
         moodBasedTypes: moodBasedTypes,
       ));
     } catch (e) {
-      debugPrint('❌ MeditationBloc: Error loading audios - $e');
+      debugPrint(' MeditationBloc: Error loading audios - $e');
       emit(MeditationError(e.toString()));
     }
   }
@@ -73,7 +73,7 @@ class MeditationBloc extends Bloc<MeditationEvent, MeditationState> {
     final currentState = state;
     
     try {
-      debugPrint('🔄 MeditationBloc: Refreshing audio content...');
+      debugPrint(' MeditationBloc: Refreshing audio content...');
       repository.clearCache();
       final audios = await repository.fetchAllAudios(forceRefresh: true);
       await repository.fetchCategories();
@@ -94,9 +94,9 @@ class MeditationBloc extends Bloc<MeditationEvent, MeditationState> {
         ));
       }
       
-      debugPrint('✅ MeditationBloc: Refreshed ${audios.length} audios');
+      debugPrint(' MeditationBloc: Refreshed ${audios.length} audios');
     } catch (e) {
-      debugPrint('❌ MeditationBloc: Refresh failed - $e');
+      debugPrint(' MeditationBloc: Refresh failed - $e');
       // Keep current state on refresh error
       if (currentState is! MeditationLoaded) {
         emit(MeditationError('Failed to refresh: $e'));
@@ -109,7 +109,7 @@ class MeditationBloc extends Bloc<MeditationEvent, MeditationState> {
       SelectCategory event, Emitter<MeditationState> emit) async {
     final currentState = state;
     if (currentState is MeditationLoaded) {
-      debugPrint('📂 MeditationBloc: Selected category: ${event.category}');
+      debugPrint(' MeditationBloc: Selected category: ${event.category}');
       emit(currentState.copyWith(selectedCategory: event.category));
     }
   }

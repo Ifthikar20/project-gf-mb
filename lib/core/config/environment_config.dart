@@ -26,9 +26,9 @@ class EnvironmentConfig {
     try {
       await dotenv.load(fileName: fileName);
       _isLoaded = true;
-      debugPrint('✅ Environment loaded from $fileName');
+      debugPrint(' Environment loaded from $fileName');
     } catch (e) {
-      debugPrint('⚠️ Failed to load .env file: $e');
+      debugPrint(' Failed to load .env file: $e');
       // In production, you might want to throw or use defaults
       _isLoaded = true; // Allow app to continue with defaults
     }
@@ -151,7 +151,7 @@ class EnvironmentConfig {
     final value = dotenv.env[key] ?? '';
     if (kDebugMode && value.isNotEmpty) {
       final masked = value.length > 3 ? '${value.substring(0, 3)}***' : '***';
-      debugPrint('🔑 $key: $masked');
+      debugPrint(' $key: $masked');
     }
     return value;
   }

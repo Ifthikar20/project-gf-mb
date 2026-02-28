@@ -33,11 +33,11 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
   static const Color _card = Color(0xFF1A1A1A);
 
   final _moods = const [
-    {'key': 'great', 'emoji': '😄', 'label': 'Great'},
-    {'key': 'good', 'emoji': '🙂', 'label': 'Good'},
-    {'key': 'okay', 'emoji': '😐', 'label': 'Okay'},
-    {'key': 'tired', 'emoji': '😮‍💨', 'label': 'Tired'},
-    {'key': 'exhausted', 'emoji': '😩', 'label': 'Exhausted'},
+    {'key': 'great', 'emoji': '', 'label': 'Great'},
+    {'key': 'good', 'emoji': '', 'label': 'Good'},
+    {'key': 'okay', 'emoji': '', 'label': 'Okay'},
+    {'key': 'tired', 'emoji': '', 'label': 'Tired'},
+    {'key': 'exhausted', 'emoji': '', 'label': 'Exhausted'},
   ];
 
   @override
@@ -111,7 +111,7 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                   children: [
                     // Calories
                     Text(
-                      '🔥 ${widget.workout.caloriesBurned}',
+                      ' ${widget.workout.caloriesBurned}',
                       style: GoogleFonts.inter(
                         color: const Color(0xFFFF6B6B),
                         fontSize: 40,
@@ -150,7 +150,7 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                         children: [
                           if (widget.workout.heartRateAvg != null)
                             _buildStatChip(
-                              '❤️ ${widget.workout.heartRateAvg}',
+                              ' ${widget.workout.heartRateAvg}',
                               'avg HR',
                               Icons.favorite,
                             ),

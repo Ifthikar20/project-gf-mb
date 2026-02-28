@@ -57,7 +57,7 @@ class StreamingUrls {
         }
       }
     } catch (e) {
-      debugPrint('⚠️ Could not parse expiration from URL: $e');
+      debugPrint(' Could not parse expiration from URL: $e');
     }
     return null;
   }
@@ -173,20 +173,20 @@ class StreamingService {
       final cached = _urlCache[contentId]!;
       // Return cached if still valid (isExpired includes 5 min safety buffer)
       if (!cached.isExpired) {
-        debugPrint('📼 Using cached streaming URLs for $contentId (expires in ${cached.timeUntilExpiry.inMinutes} min)');
+        debugPrint(' Using cached streaming URLs for $contentId (expires in ${cached.timeUntilExpiry.inMinutes} min)');
         return cached;
       } else {
-        debugPrint('📼 Cached URL expired for $contentId, fetching fresh URL');
+        debugPrint(' Cached URL expired for $contentId, fetching fresh URL');
         _urlCache.remove(contentId);
       }
     }
     
     // Method 1: Call the streaming endpoint for signed URLs (preferred)
     try {
-      debugPrint('🔐 Calling streaming endpoint for signed URL: /api/streaming/content/$contentId/stream');
+      debugPrint(' Calling streaming endpoint for signed URL: /api/streaming/content/$contentId/stream');
       final response = await _api.get('/api/streaming/content/$contentId/stream');
       final data = response.data;
-      debugPrint('🔐 Streaming response: $data');
+      debugPrint(' Streaming response: $data');
       
       // Parse the streaming response with signed URLs
       final hlsPlaylistUrl = data['hls_playlist_url'] as String?;
@@ -197,10 +197,10 @@ class StreamingService {
                          hlsPlaylistUrl.contains('md5=');
         
         if (isSigned) {
-          debugPrint('✅ Got signed streaming URL: $hlsPlaylistUrl');
+          debugPrint(' Got signed streaming URL: $hlsPlaylistUrl');
         } else {
-          debugPrint('⚠️ WARNING: Got UNSIGNED streaming URL from endpoint: $hlsPlaylistUrl');
-          debugPrint('💡 TIP: CloudFront likely requires a signed URL. This may cause a 403 Forbidden error.');
+          debugPrint(' WARNING: Got UNSIGNED streaming URL from endpoint: $hlsPlaylistUrl');
+          debugPrint(' TIP: CloudFront likely requires a signed URL. This may cause a 403 Forbidden error.');
         }
         
         // Parse expiration from URL's e= parameter (most reliable)
@@ -215,7 +215,7 @@ class StreamingService {
           expiresAt = urlExpiry ?? apiExpiry ?? DateTime.now().add(const Duration(hours: 2));
         }
         
-        debugPrint('🕐 URL expires at: $expiresAt (in ${expiresAt.difference(DateTime.now()).inMinutes} min)');
+        debugPrint(' URL expires at: $expiresAt (in ${expiresAt.difference(DateTime.now()).inMinutes} min)');
         
         final urls = StreamingUrls(
           hlsMaster: hlsPlaylistUrl,
@@ -227,10 +227,10 @@ class StreamingService {
         _urlCache[contentId] = urls;
         return urls;
       } else {
-        debugPrint('⚠️ Streaming response missing hls_playlist_url');
+        debugPrint(' Streaming response missing hls_playlist_url');
       }
     } catch (e) {
-      debugPrint('⚠️ Streaming endpoint failed, trying fallback: $e');
+      debugPrint(' Streaming endpoint failed, trying fallback: $e');
     }
     
     // Method 2: Fall back to content detail (unsigned URLs, may fail)
@@ -265,7 +265,7 @@ class StreamingService {
           hls720p = s3Key720p != null ? '$cloudfrontUrl/$s3Key720p' : null;
           hls1080p = s3Key1080p != null ? '$cloudfrontUrl/$s3Key1080p' : null;
           hlsMaster = hls720p ?? hls1080p ?? '';
-          debugPrint('✅ Constructed HLS URLs from s3_keys: $hlsMaster');
+          debugPrint(' Constructed HLS URLs from s3_keys: $hlsMaster');
         }
       }
       
@@ -274,18 +274,18 @@ class StreamingService {
         final hlsPlaylistUrl = data['hls_playlist_url'];
         if (hlsPlaylistUrl != null && hlsPlaylistUrl.toString().isNotEmpty) {
           hlsMaster = hlsPlaylistUrl.toString();
-          debugPrint('✅ Using hls_playlist_url directly: $hlsMaster');
+          debugPrint(' Using hls_playlist_url directly: $hlsMaster');
         }
       }
       
       // Check is_hls_ready flag
       final isHlsReady = data['is_hls_ready'] ?? false;
       if (!isHlsReady && hlsMaster.isNotEmpty) {
-        debugPrint('⚠️ Content has HLS URL but is_hls_ready=false, attempting anyway');
+        debugPrint(' Content has HLS URL but is_hls_ready=false, attempting anyway');
       }
       
       if (hlsMaster.isEmpty) {
-        debugPrint('⚠️ No HLS URLs available in content detail');
+        debugPrint(' No HLS URLs available in content detail');
         return null;
       }
       
@@ -302,7 +302,7 @@ class StreamingService {
       
       return urls;
     } catch (e) {
-      debugPrint('❌ Failed to get HLS URLs from content detail: $e');
+      debugPrint(' Failed to get HLS URLs from content detail: $e');
       return null;
     }
   }

@@ -83,12 +83,12 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           // Diagnostic: Log if URL is likely unsigned
           bool isSigned = videoUrl.contains('Policy=') || videoUrl.contains('Signature=') || videoUrl.contains('md5=');
           if (!isSigned) {
-            debugPrint('⚠️ WARNING: Using unsigned URL which may fail: $videoUrl');
+            debugPrint(' WARNING: Using unsigned URL which may fail: $videoUrl');
           }
           
-          debugPrint('Kit 📼 Using HLS stream: $videoUrl');
+          debugPrint('Kit  Using HLS stream: $videoUrl');
         } catch (e) {
-          debugPrint('⚠️ Streaming failed, using fallback: $e');
+          debugPrint(' Streaming failed, using fallback: $e');
         }
 
         _controller = VideoPlayerController.networkUrl(
@@ -119,14 +119,14 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
               durationSeconds: video.durationInSeconds,
             );
           }).catchError((error) async {
-            debugPrint('❌ Video initialization failed: $error');
+            debugPrint(' Video initialization failed: $error');
             String errorMsg = error.toString();
             bool is403 = errorMsg.contains('403') || errorMsg.contains('Forbidden');
             
             // Auto-retry on 403 by clearing cache and getting fresh URL
             if (is403 && _retryCount < _maxRetries) {
               _retryCount++;
-              debugPrint('🔄 403 detected - auto-retrying with fresh URL (attempt $_retryCount/$_maxRetries)');
+              debugPrint(' 403 detected - auto-retrying with fresh URL (attempt $_retryCount/$_maxRetries)');
               
               // Clear the cached URL for this video and force fresh fetch
               StreamingService.instance.refreshStreamingUrls(widget.videoId);
@@ -158,7 +158,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Video loading failed: $e');
+      debugPrint(' Video loading failed: $e');
       setState(() { 
         _hasError = true; 
         _isLoading = false; 
@@ -177,9 +177,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         _episodes = episodes;
         _isLoadingEpisodes = false;
       });
-      debugPrint('📺 Loaded ${episodes.length} episodes for series');
+      debugPrint(' Loaded ${episodes.length} episodes for series');
     } catch (e) {
-      debugPrint('⚠️ Failed to load series episodes: $e');
+      debugPrint(' Failed to load series episodes: $e');
       setState(() => _isLoadingEpisodes = false);
     }
   }
@@ -215,7 +215,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           durationSeconds: episode.durationSeconds,
         );
       }).catchError((error) {
-        debugPrint('❌ Episode initialization failed: $error');
+        debugPrint(' Episode initialization failed: $error');
         setState(() { _hasError = true; _isLoading = false; });
       });
   }

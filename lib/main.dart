@@ -21,6 +21,8 @@ import 'features/videos/presentation/bloc/videos_event.dart';
 import 'features/meditation/data/repositories/meditation_repository.dart';
 import 'features/meditation/presentation/bloc/meditation_bloc.dart';
 import 'features/meditation/presentation/bloc/meditation_event.dart';
+import 'features/wellness_goals/data/models/wellness_checkin_model.dart';
+import 'features/wellness_goals/data/models/fitness_profile_model.dart';
 import 'features/library/presentation/bloc/library_bloc.dart';
 import 'core/services/goal_tracking_service.dart';
 import 'features/workouts/presentation/bloc/workout_bloc.dart';
@@ -37,20 +39,37 @@ void main() async {
   // Initialize GA4 Analytics (Measurement Protocol - no Firebase SDK needed)
   try {
     await AnalyticsService.instance.initialize();
-    debugPrint('✅ GA4 Analytics initialized');
+    debugPrint(' GA4 Analytics initialized');
   } catch (e) {
-    debugPrint('⚠️ GA4 init failed (analytics disabled): $e');
+    debugPrint(' GA4 init failed (analytics disabled): $e');
   }
 
   // Initialize Hive for local storage
   await Hive.initFlutter();
+
+  // Register Hive adapters for wellness system
+  if (!Hive.isAdapterRegistered(20)) {
+    Hive.registerAdapter(WellnessCheckInModelAdapter());
+  }
+  if (!Hive.isAdapterRegistered(21)) {
+    Hive.registerAdapter(FitnessProfileModelAdapter());
+  }
+  if (!Hive.isAdapterRegistered(22)) {
+    Hive.registerAdapter(BodyTypeAdapter());
+  }
+  if (!Hive.isAdapterRegistered(23)) {
+    Hive.registerAdapter(FitnessGoalAdapter());
+  }
+  if (!Hive.isAdapterRegistered(24)) {
+    Hive.registerAdapter(WorkoutIntensityAdapter());
+  }
 
   // Initialize recently viewed service
   await RecentlyViewedService.instance.init();
 
   // Initialize OAuth deep link handling
   await OAuthService.instance.initialize();
-  debugPrint('✅ OAuth service initialized');
+  debugPrint(' OAuth service initialized');
 
   // Initialize goal tracking service with the local data source
   final goalsDataSource = GoalsLocalDataSource();
@@ -58,7 +77,7 @@ void main() async {
   
   // Track daily app usage for streak goals
   GoalTrackingService.instance.trackDailyUsage();
-  debugPrint('✅ Goal tracking service initialized');
+  debugPrint(' Goal tracking service initialized');
 
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(

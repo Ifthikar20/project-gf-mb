@@ -163,8 +163,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    print('\n📱 [AUTH BLOC] Login event received');
-    print('📧 Email: ${event.email}');
+    print('\n [AUTH BLOC] Login event received');
+    print(' Email: ${event.email}');
     
     emit(AuthLoading());
     
@@ -174,7 +174,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
       
-      print('✅ [AUTH BLOC] Login successful, checking onboarding...');
+      print(' [AUTH BLOC] Login successful, checking onboarding...');
       await _emitAuthenticatedOrOnboarding(user, emit);
     } on AuthException catch (e) {
       final friendlyMessage = ErrorMessages.formatAuthError(
@@ -237,7 +237,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       // If check fails, let them through (don't block on optional onboarding)
-      print('⚠️ Onboarding check failed, proceeding: $e');
+      print(' Onboarding check failed, proceeding: $e');
       emit(AuthAuthenticated(user));
     }
   }

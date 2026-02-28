@@ -40,27 +40,27 @@ class MeditationRepository {
   Future<List<MeditationAudio>> fetchAllAudios({bool forceRefresh = false}) async {
     // Return cached if valid and not forcing refresh
     if (!forceRefresh && _isCacheValid && _cachedAudios != null) {
-      debugPrint('📦 Using cached audio content (${_cachedAudios!.length} items)');
+      debugPrint(' Using cached audio content (${_cachedAudios!.length} items)');
       return _cachedAudios!;
     }
     
     try {
-      debugPrint('🎵 Fetching audio content from API...');
+      debugPrint(' Fetching audio content from API...');
       final response = await _api.get('/content/browse', queryParameters: {
         'content_type': 'audio',
         'limit': 100,
       });
       
       // Debug: Log the full response to understand structure
-      debugPrint('📋 API Response status: ${response.statusCode}');
-      debugPrint('📋 API Response keys: ${response.data?.keys?.toList()}');
+      debugPrint(' API Response status: ${response.statusCode}');
+      debugPrint(' API Response keys: ${response.data?.keys?.toList()}');
       
       final List<dynamic> items = response.data['content'] ?? [];
-      debugPrint('📋 Found ${items.length} audio items in response');
+      debugPrint(' Found ${items.length} audio items in response');
       
       if (items.isEmpty) {
-        debugPrint('⚠️ No audio content returned from API. Backend may not have audio content_type items.');
-        debugPrint('💡 To fix: Add content with content_type="audio" to the backend database.');
+        debugPrint(' No audio content returned from API. Backend may not have audio content_type items.');
+        debugPrint(' To fix: Add content with content_type="audio" to the backend database.');
         // Return fallback mock data
         return _getFallbackAudios();
       }
@@ -71,17 +71,17 @@ class MeditationRepository {
       _cachedAudios = audios;
       _lastFetch = DateTime.now();
       
-      debugPrint('✅ Fetched ${audios.length} audio items from API');
+      debugPrint(' Fetched ${audios.length} audio items from API');
       return audios;
     } catch (e) {
-      debugPrint('❌ Failed to fetch audio content: $e');
+      debugPrint(' Failed to fetch audio content: $e');
       // Return cached if available, otherwise empty list
       if (_cachedAudios != null) {
-        debugPrint('📦 Returning stale cache due to error');
+        debugPrint(' Returning stale cache due to error');
         return _cachedAudios!;
       }
       // Return mock data as absolute fallback
-      debugPrint('⚠️ Using fallback mock data');
+      debugPrint(' Using fallback mock data');
       return _getFallbackAudios();
     }
   }
@@ -90,7 +90,7 @@ class MeditationRepository {
   /// GET /content/browse?content_type=audio&category={slug}
   Future<List<MeditationAudio>> fetchAudiosByCategory(String categorySlug) async {
     try {
-      debugPrint('🎵 Fetching audio for category: $categorySlug');
+      debugPrint(' Fetching audio for category: $categorySlug');
       final response = await _api.get('/content/browse', queryParameters: {
         'content_type': 'audio',
         'category': categorySlug.toLowerCase(),
@@ -100,7 +100,7 @@ class MeditationRepository {
       final List<dynamic> items = response.data['content'] ?? [];
       return items.map((json) => MeditationAudio.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Failed to fetch audio by category: $e');
+      debugPrint(' Failed to fetch audio by category: $e');
       // Filter cached data if available
       if (_cachedAudios != null) {
         return _cachedAudios!
@@ -124,7 +124,7 @@ class MeditationRepository {
       final List<dynamic> items = response.data['content'] ?? [];
       return items.map((json) => MeditationAudio.fromJson(json)).toList();
     } catch (e) {
-      debugPrint('❌ Failed to fetch featured audio: $e');
+      debugPrint(' Failed to fetch featured audio: $e');
       // Return first few from cache
       if (_cachedAudios != null) {
         return _cachedAudios!.where((a) => a.featured).take(limit).toList();
@@ -140,7 +140,7 @@ class MeditationRepository {
       final response = await _api.get('/content/detail/$id');
       return MeditationAudio.fromJson(response.data);
     } catch (e) {
-      debugPrint('❌ Failed to fetch audio detail: $e');
+      debugPrint(' Failed to fetch audio detail: $e');
       // Try cache
       if (_cachedAudios != null) {
         try {
@@ -155,19 +155,19 @@ class MeditationRepository {
   /// GET /api/streaming/content/{id}/stream
   Future<String?> getAudioStreamingUrl(String audioId) async {
     try {
-      debugPrint('📡 Fetching streaming URL for audio: $audioId');
+      debugPrint(' Fetching streaming URL for audio: $audioId');
       final response = await _api.get('/api/streaming/content/$audioId/stream');
       
       final audioUrl = response.data['audio_url'];
       if (audioUrl != null && audioUrl.toString().isNotEmpty) {
-        debugPrint('✅ Got audio URL: $audioUrl');
+        debugPrint(' Got audio URL: $audioUrl');
         return audioUrl.toString();
       }
       
-      debugPrint('⚠️ No audio_url in response');
+      debugPrint(' No audio_url in response');
       return null;
     } catch (e) {
-      debugPrint('❌ Failed to get streaming URL: $e');
+      debugPrint(' Failed to get streaming URL: $e');
       return null;
     }
   }
@@ -194,7 +194,7 @@ class MeditationRepository {
       _cachedCategories = categories;
       return categories;
     } catch (e) {
-      debugPrint('⚠️ Categories API not available, using defaults');
+      debugPrint(' Categories API not available, using defaults');
       return MeditationType.defaultCategories;
     }
   }

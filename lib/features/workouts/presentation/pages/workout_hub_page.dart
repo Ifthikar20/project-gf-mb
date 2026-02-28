@@ -511,7 +511,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
                     ),
                     if (workout.hasMood) ...[
                       Text(' · ', style: TextStyle(color: textSecondary)),
-                      Text(workout.moodEmoji, style: const TextStyle(fontSize: 12)),
+                      Text(workout.moodLabel, style: TextStyle(fontSize: 12, color: textSecondary)),
                     ],
                   ],
                 ),

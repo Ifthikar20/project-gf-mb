@@ -102,7 +102,7 @@ class AuthService {
     required String fullName,
   }) async {
     debugPrint('\n${'=' * 60}');
-    debugPrint('📝 [AUTH SERVICE] Registering: $email');
+    debugPrint(' [AUTH SERVICE] Registering: $email');
     debugPrint('=' * 60);
     
     try {
@@ -118,14 +118,14 @@ class AuthService {
         if (token != null) {
           _api.setAccessToken(token);
           await _tokenStorage.saveAccessToken(token);
-          debugPrint('🔑 DRF token saved');
+          debugPrint(' DRF token saved');
         }
         
         // Parse user data
         _currentUser = User.fromJson(response.data['user']);
         await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
         
-        debugPrint('✅ Registered as: ${_currentUser!.email}');
+        debugPrint(' Registered as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
         throw AuthException(response.data['message'] ?? 'Registration failed');
@@ -145,7 +145,7 @@ class AuthService {
     required String password,
   }) async {
     debugPrint('\n${'=' * 60}');
-    debugPrint('🔐 [AUTH SERVICE] Logging in: $email');
+    debugPrint(' [AUTH SERVICE] Logging in: $email');
     debugPrint('=' * 60);
     
     try {
@@ -160,14 +160,14 @@ class AuthService {
         if (token != null) {
           _api.setAccessToken(token);
           await _tokenStorage.saveAccessToken(token);
-          debugPrint('🔑 DRF token saved');
+          debugPrint(' DRF token saved');
         }
         
         // Parse user data
         _currentUser = User.fromJson(response.data['user']);
         await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
         
-        debugPrint('✅ Logged in as: ${_currentUser!.email}');
+        debugPrint(' Logged in as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
         throw AuthException(response.data['message'] ?? 'Login failed');
@@ -194,9 +194,9 @@ class AuthService {
       // Clear streaming URL cache
       try {
         StreamingService.instance.clearCache();
-        debugPrint('📼 Streaming URL cache cleared on logout');
+        debugPrint(' Streaming URL cache cleared on logout');
       } catch (e) {
-        debugPrint('⚠️ Could not clear streaming cache: $e');
+        debugPrint(' Could not clear streaming cache: $e');
       }
     }
   }
@@ -227,7 +227,7 @@ class AuthService {
     try {
       final hasCredentials = await _tokenStorage.hasStoredCredentials();
       if (!hasCredentials) {
-        debugPrint('📱 No stored credentials found');
+        debugPrint(' No stored credentials found');
         return null;
       }
       
@@ -235,20 +235,20 @@ class AuthService {
       final accessToken = await _tokenStorage.getAccessToken();
       if (accessToken != null && accessToken.isNotEmpty) {
         _api.setAccessToken(accessToken);
-        debugPrint('🔑 Access token restored from storage');
+        debugPrint(' Access token restored from storage');
         
         // Restore cached user data for offline display
         final userJson = await _tokenStorage.getUserData();
         if (userJson != null) {
           _currentUser = User.fromJson(jsonDecode(userJson));
-          debugPrint('👤 User data restored: ${_currentUser!.email}');
+          debugPrint(' User data restored: ${_currentUser!.email}');
         }
         
         // Verify with server
         try {
           final user = await getCurrentUser();
           if (user != null) {
-            debugPrint('✅ Session verified with server');
+            debugPrint(' Session verified with server');
             return user;
           }
         } on DioException catch (e) {
@@ -260,9 +260,9 @@ class AuthService {
             await _tokenStorage.clearAll();
             return null;
           }
-          debugPrint('⚠️ Server verification failed, using cached user: $e');
+          debugPrint(' Server verification failed, using cached user: $e');
         } catch (e) {
-          debugPrint('⚠️ Server verification failed, using cached user: $e');
+          debugPrint(' Server verification failed, using cached user: $e');
         }
         
         // Return cached user if server check failed (offline mode)
@@ -271,7 +271,7 @@ class AuthService {
       
       return null;
     } catch (e) {
-      debugPrint('❌ Session restore failed: $e');
+      debugPrint(' Session restore failed: $e');
       await _tokenStorage.clearAll();
       return null;
     }
@@ -292,7 +292,7 @@ class AuthService {
       _currentUser = User.fromJson(userData);
       await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
       
-      debugPrint('✅ Profile updated');
+      debugPrint(' Profile updated');
       return _currentUser!;
     } on DioException catch (e) {
       throw _extractError(e, fallback: 'Profile update failed');
@@ -302,15 +302,15 @@ class AuthService {
   /// Request password reset — sends email
   /// Always succeeds from API perspective (security: don't reveal if email exists)
   Future<void> forgotPassword(String email) async {
-    debugPrint('📧 [AUTH SERVICE] Requesting password reset for: $email');
+    debugPrint(' [AUTH SERVICE] Requesting password reset for: $email');
     
     try {
       await _api.post('/auth/forgot-password', data: {
         'email': email,
       });
-      debugPrint('✅ Password reset requested');
+      debugPrint(' Password reset requested');
     } catch (e) {
-      debugPrint('⚠️ Forgot password request: $e');
+      debugPrint(' Forgot password request: $e');
       // Don't throw — always show success message to user
     }
   }
@@ -320,14 +320,14 @@ class AuthService {
     required String email,
     required String newPassword,
   }) async {
-    debugPrint('🔐 [AUTH SERVICE] Resetting password for: $email');
+    debugPrint(' [AUTH SERVICE] Resetting password for: $email');
     
     try {
       await _api.post('/auth/reset-password', data: {
         'email': email,
         'new_password': newPassword,
       });
-      debugPrint('✅ Password reset successful');
+      debugPrint(' Password reset successful');
     } on DioException catch (e) {
       throw _extractError(e, fallback: 'Password reset failed');
     }
@@ -338,14 +338,14 @@ class AuthService {
     required String oldPassword,
     required String newPassword,
   }) async {
-    debugPrint('🔑 [AUTH SERVICE] Changing password');
+    debugPrint(' [AUTH SERVICE] Changing password');
     
     try {
       await _api.post('/auth/change-password', data: {
         'old_password': oldPassword,
         'new_password': newPassword,
       });
-      debugPrint('✅ Password changed successfully');
+      debugPrint(' Password changed successfully');
     } on DioException catch (e) {
       throw _extractError(e, fallback: 'Password change failed');
     }
@@ -353,11 +353,11 @@ class AuthService {
   
   /// Soft-delete the user account
   Future<void> deleteAccount() async {
-    debugPrint('🗑️ [AUTH SERVICE] Deleting account');
+    debugPrint(' [AUTH SERVICE] Deleting account');
     
     try {
       await _api.delete('/auth/delete-account');
-      debugPrint('✅ Account deleted');
+      debugPrint(' Account deleted');
     } on DioException catch (e) {
       throw _extractError(e, fallback: 'Account deletion failed');
     } finally {

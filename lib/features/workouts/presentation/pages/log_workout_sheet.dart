@@ -7,6 +7,7 @@ import '../bloc/workout_event.dart';
 import '../bloc/workout_state.dart';
 import '../../data/models/workout_models.dart';
 import 'workout_summary_page.dart';
+import '../../../../features/wellness_goals/presentation/pages/post_workout_feedback_page.dart';
 
 /// Bottom sheet for logging a manual workout
 class LogWorkoutSheet extends StatefulWidget {
@@ -65,6 +66,39 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
       durationMinutes: _durationMinutes,
       startedAt: _startedAt,
     ));
+
+    // Find workout type details for feedback page
+    final state = context.read<WorkoutBloc>().state;
+    String workoutName = 'Workout';
+    String workoutCategory = 'cardio';
+    int estimatedCalories = 0;
+
+    if (state is WorkoutLoaded) {
+      final type = state.workoutTypes.firstWhere(
+        (t) => t.id == _selectedTypeId,
+        orElse: () => const WorkoutTypeModel(
+          id: '', name: 'Workout', slug: '', metValue: 5, iconName: 'fitness_center', category: 'cardio',
+        ),
+      );
+      workoutName = type.name;
+      workoutCategory = type.category;
+      // Rough calorie estimate: MET * weight(kg) * hours
+      final hours = _durationMinutes / 60.0;
+      estimatedCalories = (type.metValue * 70 * hours).round();
+    }
+
+    // Close the sheet and open post-workout feedback
+    Navigator.of(context).pop();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PostWorkoutFeedbackPage(
+          workoutName: workoutName,
+          workoutCategory: workoutCategory,
+          caloriesBurned: estimatedCalories,
+          durationMinutes: _durationMinutes,
+        ),
+      ),
+    );
   }
 
   @override
