@@ -10,6 +10,8 @@ import '../../data/models/workout_models.dart';
 import 'log_workout_sheet.dart';
 import 'body_profile_page.dart';
 import 'goals_setup_page.dart';
+import '../widgets/workout_stats_graphs.dart';
+import '../widgets/heart_rate_monitor_card.dart';
 
 /// Workout Hub — main tab page showing weekly stats, daily chart, and recent workouts
 class WorkoutHubPage extends StatefulWidget {
@@ -198,6 +200,22 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
               child: _buildBodyProfilePrompt(surfaceColor, textColor, textSecondary),
             ),
           ),
+
+        // ── Weekly Performance Graphs ──
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: WorkoutStatsGraphs(),
+          ),
+        ),
+
+        // ── Heart Rate Monitor ──
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: HeartRateMonitorCard(),
+          ),
+        ),
 
         // Recent Workouts header
         SliverToBoxAdapter(

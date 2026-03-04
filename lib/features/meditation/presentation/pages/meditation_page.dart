@@ -11,6 +11,10 @@ import '../bloc/meditation_state.dart';
 import '../widgets/meditation_type_card.dart';
 import '../widgets/horizontal_section.dart';
 import '../../domain/entities/meditation_type.dart';
+import 'breathing_exercise_page.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../data/models/journal_models.dart';
+import '../../../advisor/presentation/widgets/advisor_suggestion_section.dart';
 
 class MeditationPage extends StatefulWidget {
   const MeditationPage({super.key});
@@ -128,6 +132,88 @@ class _MeditationPageState extends State<MeditationPage> {
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // AI mindfulness suggestions
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: 8),
+                          child: AdvisorSuggestionSection(tabFilter: 'meditate'),
+                        ),
+                      ),
+
+                      // Breathe quick-action card
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const BreathingExercisePage(),
+                                  fullscreenDialog: true,
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF6366F1).withOpacity(0.20),
+                                    const Color(0xFF8B5CF6).withOpacity(0.08),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFF6366F1).withOpacity(0.25),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF6366F1).withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.air_rounded,
+                                        color: Color(0xFF6366F1), size: 24),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Breathing Exercise',
+                                          style: isVintage
+                                              ? GoogleFonts.playfairDisplay(
+                                                  color: textColor,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold)
+                                              : TextStyle(
+                                                  color: textColor,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          'Guided breathwork for calm & focus',
+                                          style: TextStyle(
+                                              color: textSecondary, fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(Icons.chevron_right_rounded,
+                                      color: textSecondary, size: 20),
+                                ],
+                              ),
                             ),
                           ),
                         ),

@@ -1,7 +1,10 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// Manual Hive adapter for WellnessCheckInModel
 
 part of 'wellness_checkin_model.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
 
 class WellnessCheckInModelAdapter extends TypeAdapter<WellnessCheckInModel> {
   @override

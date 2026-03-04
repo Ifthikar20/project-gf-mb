@@ -26,6 +26,12 @@ import 'features/wellness_goals/data/models/fitness_profile_model.dart';
 import 'features/library/presentation/bloc/library_bloc.dart';
 import 'core/services/goal_tracking_service.dart';
 import 'features/workouts/presentation/bloc/workout_bloc.dart';
+import 'features/diet/presentation/bloc/diet_bloc.dart';
+import 'features/diet/data/models/diet_models.dart';
+import 'features/knowledge/presentation/bloc/knowledge_bloc.dart';
+import 'features/meditation/data/models/journal_models.dart';
+import 'features/advisor/presentation/bloc/advisor_bloc.dart';
+import 'features/advisor/presentation/bloc/advisor_event.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +68,17 @@ void main() async {
   }
   if (!Hive.isAdapterRegistered(24)) {
     Hive.registerAdapter(WorkoutIntensityAdapter());
+  }
+  // Diet models
+  if (!Hive.isAdapterRegistered(30)) {
+    Hive.registerAdapter(MealTypeAdapter());
+  }
+  if (!Hive.isAdapterRegistered(31)) {
+    Hive.registerAdapter(MealLogAdapter());
+  }
+  // Meditation journal
+  if (!Hive.isAdapterRegistered(32)) {
+    Hive.registerAdapter(MeditationJournalEntryAdapter());
   }
 
   // Initialize recently viewed service
@@ -141,6 +158,15 @@ class WellnessApp extends StatelessWidget {
           ),
           BlocProvider(
             create: (context) => WorkoutBloc(),
+          ),
+          BlocProvider(
+            create: (context) => DietBloc(),
+          ),
+          BlocProvider(
+            create: (context) => KnowledgeBloc(),
+          ),
+          BlocProvider(
+            create: (context) => AdvisorBloc()..add(LoadSuggestions()),
           ),
         ],
         // Use Builder to access AuthBloc and create auth-aware router

@@ -1,7 +1,10 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// Manual Hive adapters for FitnessProfileModel + enums
 
 part of 'fitness_profile_model.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
 
 class FitnessProfileModelAdapter extends TypeAdapter<FitnessProfileModel> {
   @override
@@ -19,7 +22,7 @@ class FitnessProfileModelAdapter extends TypeAdapter<FitnessProfileModel> {
       intensityIndex: fields[2] as int,
       preferredWorkoutIds: (fields[3] as List).cast<String>(),
       isSetUp: fields[4] as bool,
-      updatedAt: fields[5] as DateTime,
+      updatedAt: fields[5] as DateTime?,
     );
   }
 
@@ -66,7 +69,7 @@ class BodyTypeAdapter extends TypeAdapter<BodyType> {
       case 2:
         return BodyType.stocky;
       default:
-        return BodyType.athletic;
+        return BodyType.lean;
     }
   }
 
@@ -112,7 +115,7 @@ class FitnessGoalAdapter extends TypeAdapter<FitnessGoal> {
       case 3:
         return FitnessGoal.improveFlexibility;
       default:
-        return FitnessGoal.stayActive;
+        return FitnessGoal.loseWeight;
     }
   }
 
@@ -159,7 +162,7 @@ class WorkoutIntensityAdapter extends TypeAdapter<WorkoutIntensity> {
       case 2:
         return WorkoutIntensity.aggressive;
       default:
-        return WorkoutIntensity.moderate;
+        return WorkoutIntensity.calm;
     }
   }
 

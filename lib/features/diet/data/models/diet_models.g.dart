@@ -1,0 +1,111 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'diet_models.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
+class MealLogAdapter extends TypeAdapter<MealLog> {
+  @override
+  final int typeId = 31;
+
+  @override
+  MealLog read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return MealLog(
+      name: fields[0] as String,
+      calories: fields[1] as int,
+      proteinGrams: fields[2] as int,
+      carbsGrams: fields[3] as int,
+      fatGrams: fields[4] as int,
+      mealType: fields[5] as MealType,
+      timestamp: fields[6] as DateTime,
+      notes: fields[7] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, MealLog obj) {
+    writer
+      ..writeByte(8)
+      ..writeByte(0)
+      ..write(obj.name)
+      ..writeByte(1)
+      ..write(obj.calories)
+      ..writeByte(2)
+      ..write(obj.proteinGrams)
+      ..writeByte(3)
+      ..write(obj.carbsGrams)
+      ..writeByte(4)
+      ..write(obj.fatGrams)
+      ..writeByte(5)
+      ..write(obj.mealType)
+      ..writeByte(6)
+      ..write(obj.timestamp)
+      ..writeByte(7)
+      ..write(obj.notes);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MealLogAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class MealTypeAdapter extends TypeAdapter<MealType> {
+  @override
+  final int typeId = 30;
+
+  @override
+  MealType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return MealType.breakfast;
+      case 1:
+        return MealType.lunch;
+      case 2:
+        return MealType.dinner;
+      case 3:
+        return MealType.snack;
+      default:
+        return MealType.breakfast;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, MealType obj) {
+    switch (obj) {
+      case MealType.breakfast:
+        writer.writeByte(0);
+        break;
+      case MealType.lunch:
+        writer.writeByte(1);
+        break;
+      case MealType.dinner:
+        writer.writeByte(2);
+        break;
+      case MealType.snack:
+        writer.writeByte(3);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MealTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}

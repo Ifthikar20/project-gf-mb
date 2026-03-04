@@ -4,11 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../features/wellness_goals/presentation/pages/wellness_goals_page.dart'
     as home;
-import '../../../features/explore/presentation/pages/explore_page.dart';
-import '../../../features/wellness_goals/presentation/pages/goal_management_page.dart';
-import '../../../features/wellness_goals/presentation/pages/wellness_checkin_page.dart';
-import '../../../features/workouts/presentation/bloc/workout_bloc.dart';
-import '../../../features/workouts/presentation/bloc/workout_state.dart';
+import '../../../features/diet/presentation/pages/nourish_page.dart';
+import '../../../features/meditation/presentation/pages/meditation_page.dart';
+import '../../../features/knowledge/presentation/pages/learn_page.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 import '../../theme/theme_bloc.dart';
 import '../../theme/app_theme.dart';
@@ -24,21 +22,12 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = const [
-    home.HomePage(),           // 0 -- Home
-    GoalManagementPage(),      // 1 -- Goals (was Progress)
-    ExplorePage(),             // 2 -- Groups / Explore
-    ProfilePage(),             // 3 -- Profile
+    home.HomePage(),      // 0 -- Home
+    NourishPage(),        // 1 -- Nourish (Diet)
+    MeditationPage(),     // 2 -- Meditate
+    LearnPage(),          // 3 -- Learn (Knowledge)
+    ProfilePage(),        // 4 -- Profile
   ];
-
-  void _onFabTap() {
-    // Quick-action: open wellness check-in
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const WellnessCheckInPage(),
-        fullscreenDialog: true,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,11 +70,10 @@ class _MainShellState extends State<MainShell> {
                   top: false,
                   child: Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        // Home
                         _buildNavItem(
                           icon: Icons.home_rounded,
                           label: 'Home',
@@ -93,29 +81,29 @@ class _MainShellState extends State<MainShell> {
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
                         ),
-                        // Goals (was Progress)
                         _buildNavItem(
-                          icon: Icons.flag_rounded,
-                          label: 'Goals',
+                          icon: Icons.restaurant_menu_rounded,
+                          label: 'Nourish',
                           index: 1,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
                         ),
-
-                        // Center FAB
-                        _buildCenterFab(isVintage),
-
-                        // Groups
                         _buildNavItem(
-                          icon: Icons.people_rounded,
-                          label: 'Groups',
+                          icon: Icons.self_improvement_rounded,
+                          label: 'Meditate',
                           index: 2,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
                         ),
-                        // Profile — uses avatar circle
-                        _buildProfileItem(
+                        _buildNavItem(
+                          icon: Icons.auto_stories_rounded,
+                          label: 'Learn',
                           index: 3,
+                          activeColor: activeColor,
+                          inactiveColor: inactiveColor,
+                        ),
+                        _buildProfileItem(
+                          index: 4,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
                           isVintage: isVintage,
@@ -144,54 +132,27 @@ class _MainShellState extends State<MainShell> {
       onTap: () => setState(() => _currentIndex = index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 56,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
               color: isActive ? activeColor : inactiveColor,
-              size: 26,
+              size: 24,
             ),
             const SizedBox(height: 3),
             Text(
               label,
               style: GoogleFonts.inter(
                 color: isActive ? activeColor : inactiveColor,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCenterFab(bool isVintage) {
-    return GestureDetector(
-      onTap: _onFabTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: isVintage ? Colors.black : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: (isVintage ? Colors.black : Colors.white)
-                  .withOpacity(0.25),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(
-          Icons.add_rounded,
-          color: isVintage ? Colors.white : Colors.black,
-          size: 28,
         ),
       ),
     );
@@ -208,14 +169,13 @@ class _MainShellState extends State<MainShell> {
       onTap: () => setState(() => _currentIndex = index),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 56,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Avatar circle
             Container(
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isActive
@@ -234,7 +194,7 @@ class _MainShellState extends State<MainShell> {
                 child: Text(
                   'JD',
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.w700,
                     color: isActive
                         ? (isVintage ? Colors.white : Colors.black)
@@ -248,7 +208,7 @@ class _MainShellState extends State<MainShell> {
               'Profile',
               style: GoogleFonts.inter(
                 color: isActive ? activeColor : inactiveColor,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
               textAlign: TextAlign.center,

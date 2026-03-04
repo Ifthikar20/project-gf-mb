@@ -23,6 +23,10 @@ import '../../features/library/presentation/pages/library_page.dart';
 import '../../features/library/presentation/pages/watch_history_page.dart';
 import '../../features/speakers/presentation/pages/speaker_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
+import '../../features/meditation/presentation/pages/breathing_exercise_page.dart';
+import '../../features/knowledge/presentation/pages/article_detail_page.dart';
+import '../../features/knowledge/data/models/knowledge_models.dart';
+import '../../features/workouts/presentation/pages/workout_check_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -38,6 +42,7 @@ class AppRouter {
   static const String workoutSummary = '/workout-summary';
   static const String bodyProfile = '/body-profile';
   static const String goalsSetup = '/goals-setup';
+  static const String workoutCheck = '/workout-check';
 
   static const String videos = '/videos';
   static const String videoPlayer = '/video-player';
@@ -48,6 +53,8 @@ class AppRouter {
   static const String watchHistory = '/watch-history';
   static const String speakerProfile = '/speaker';
   static const String search = '/search';
+  static const String breathingExercise = '/breathing-exercise';
+  static const String articleDetail = '/article-detail';
 
   // Public routes that don't require authentication
   static const List<String> _publicRoutes = [
@@ -189,6 +196,10 @@ class AppRouter {
           ),
         ),
         GoRoute(
+          path: workoutCheck,
+          builder: (context, state) => const WorkoutCheckPage(),
+        ),
+        GoRoute(
           path: videoPlayer,
           pageBuilder: (context, state) {
             final videoId = state.uri.queryParameters['id'] ?? '';
@@ -248,6 +259,10 @@ class AppRouter {
         GoRoute(
           path: search,
           builder: (context, state) => const SearchPage(),
+        ),
+        GoRoute(
+          path: breathingExercise,
+          builder: (context, state) => const BreathingExercisePage(),
         ),
       ],
     );

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../bloc/workout_bloc.dart';
 import '../bloc/workout_event.dart';
 import '../../data/models/workout_models.dart';
+import '../widgets/workout_stats_graphs.dart';
 
 /// Post-workout summary screen
 /// Shows calories burned, duration, type, mood selector, note, and weekly progress
@@ -290,6 +291,12 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                 ),
                 const SizedBox(height: 24),
               ],
+
+              // Workout performance graphs
+              const Padding(
+                padding: EdgeInsets.only(bottom: 24),
+                child: WorkoutStatsGraphs(),
+              ),
 
               // Done button
               SizedBox(

@@ -21,6 +21,13 @@ import '../widgets/suggestions_feed.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/wellness_checkin_model.dart';
 import 'wellness_checkin_page.dart';
+import '../../../advisor/presentation/bloc/advisor_bloc.dart';
+import '../../../advisor/presentation/bloc/advisor_event.dart';
+import '../../../advisor/presentation/bloc/advisor_state.dart';
+import '../../../advisor/presentation/widgets/advisor_suggestion_section.dart';
+import '../widgets/water_reminder_card.dart';
+import '../widgets/quick_access_bar.dart';
+import '../widgets/content_recommendations.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -56,6 +63,12 @@ class _HomePageState extends State<HomePage> {
 
     // Auto-trigger wellness check-in if not done today
     _checkDailyCheckIn();
+
+    // Load AI suggestions
+    final advisorState = context.read<AdvisorBloc>().state;
+    if (advisorState is AdvisorInitial) {
+      context.read<AdvisorBloc>().add(LoadSuggestions());
+    }
   }
 
   Future<void> _checkDailyCheckIn() async {
@@ -159,6 +172,14 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
+              // ── Quick Access Shortcuts ──
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: QuickAccessBar(),
+                ),
+              ),
+
               // ── Weekly Day Selector ──
               SliverToBoxAdapter(
                 child: Padding(
@@ -169,6 +190,14 @@ class _HomePageState extends State<HomePage> {
                       setState(() => _selectedDayIndex = index);
                     },
                   ),
+                ),
+              ),
+
+              // ── Water Reminder ──
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: WaterReminderCard(),
                 ),
               ),
 
@@ -203,10 +232,26 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
+              // -- AI Suggestions ("For You") --
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 24),
+                  child: AdvisorSuggestionSection(tabFilter: 'home'),
+                ),
+              ),
+
+              // -- Content Recommendations (Videos & Audio) --
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: ContentRecommendations(),
+                ),
+              ),
+
               // -- Suggestions Feed (recovery/nutrition) --
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
                   child: SuggestionsFeed(),
                 ),
               ),
