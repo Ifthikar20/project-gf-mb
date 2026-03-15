@@ -1,11 +1,71 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/services/healthkit_service.dart';
 
 /// Workout performance graphs: weekly bar chart, effort ring, and HR line.
-/// Uses simulated data — replace with real data from wearable SDK later.
-class WorkoutStatsGraphs extends StatelessWidget {
+/// Reads real data from HealthKit when available, falls back to simulated data.
+class WorkoutStatsGraphs extends StatefulWidget {
   const WorkoutStatsGraphs({super.key});
+
+  @override
+  State<WorkoutStatsGraphs> createState() => _WorkoutStatsGraphsState();
+}
+
+class _WorkoutStatsGraphsState extends State<WorkoutStatsGraphs> {
+  List<DailyWorkoutSummary> _weeklyData = [];
+  List<HeartRatePoint> _hrData = [];
+  double _effortScore = 0.0;
+  bool _isLoading = true;
+  bool _usingRealData = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final hk = HealthKitService.instance;
+
+    // Check if we have HealthKit permission
+    final hasPerm = await hk.checkCachedPermission();
+
+    if (hasPerm) {
+      try {
+        final weekly = await hk.getWorkoutSummaries(days: 7);
+        final hr = await hk.getHeartRateData(days: 2);
+        final effort = await hk.getEffortScore(days: 7);
+
+        // Only use real data if we actually got some
+        if (weekly.isNotEmpty || hr.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _weeklyData = weekly;
+              _hrData = hr;
+              _effortScore = effort;
+              _usingRealData = true;
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+      } catch (_) {
+        // Fall through to simulated data
+      }
+    }
+
+    // Fallback to simulated data
+    if (mounted) {
+      setState(() {
+        _weeklyData = HealthKitService.simulatedWeekly;
+        _hrData = HealthKitService.simulatedHeartRate;
+        _effortScore = 0.72;
+        _usingRealData = false;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,9 +74,45 @@ class WorkoutStatsGraphs extends StatelessWidget {
     final textSecondary = isDark ? Colors.white54 : Colors.black54;
     final surfaceColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF5F5F5);
 
+    if (_isLoading) {
+      return Container(
+        height: 200,
+        alignment: Alignment.center,
+        child: CircularProgressIndicator(
+          color: isDark ? Colors.white24 : Colors.black12,
+          strokeWidth: 2,
+        ),
+      );
+    }
+
+    // Extract data for painters
+    final weeklyMinutes = _weeklyData.map((d) => d.totalMinutes).toList();
+    final hrValues = _hrData.map((p) => p.bpm.round()).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Source badge
+        if (_usingRealData)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.favorite_rounded,
+                    color: Color(0xFF22C55E), size: 14),
+                const SizedBox(width: 5),
+                Text(
+                  'Live from Apple Health',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF22C55E),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Weekly Performance Bar Chart
         _buildSectionCard(
           title: 'Weekly Performance',
@@ -28,7 +124,12 @@ class WorkoutStatsGraphs extends StatelessWidget {
             height: 160,
             child: CustomPaint(
               size: const Size(double.infinity, 160),
-              painter: _WeeklyBarPainter(isDark: isDark),
+              painter: _WeeklyBarPainter(
+                data: weeklyMinutes.isNotEmpty
+                    ? weeklyMinutes
+                    : [45, 0, 30, 60, 20, 90, 0],
+                isDark: isDark,
+              ),
             ),
           ),
         ),
@@ -48,7 +149,7 @@ class WorkoutStatsGraphs extends StatelessWidget {
                   child: CustomPaint(
                     size: const Size(double.infinity, 130),
                     painter: _EffortRingPainter(
-                      progress: 0.72,
+                      progress: _effortScore,
                       isDark: isDark,
                     ),
                   ),
@@ -67,7 +168,12 @@ class WorkoutStatsGraphs extends StatelessWidget {
                   height: 130,
                   child: CustomPaint(
                     size: const Size(double.infinity, 130),
-                    painter: _HeartRateLinePainter(isDark: isDark),
+                    painter: _HeartRateLinePainter(
+                      hrData: hrValues.isNotEmpty
+                          ? hrValues
+                          : [72, 85, 110, 135, 152, 148, 138, 120, 95, 78],
+                      isDark: isDark,
+                    ),
                   ),
                 ),
               ),
@@ -93,8 +199,8 @@ class WorkoutStatsGraphs extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.06)
-              : Colors.black.withOpacity(0.05),
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.05),
         ),
       ),
       child: Column(
@@ -120,16 +226,19 @@ class WorkoutStatsGraphs extends StatelessWidget {
 // Weekly Bar Chart Painter
 // ──────────────────────────────────
 class _WeeklyBarPainter extends CustomPainter {
+  final List<int> data;
   final bool isDark;
-  _WeeklyBarPainter({required this.isDark});
+  _WeeklyBarPainter({required this.data, required this.isDark});
 
-  // Simulated minutes per day (Mon-Sun)
-  static const _data = [45, 0, 30, 60, 20, 90, 0];
   static const _days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   @override
   void paint(Canvas canvas, Size size) {
-    final maxVal = _data.reduce(max).toDouble();
+    // Pad to 7 days if needed
+    final paddedData = List<int>.from(data);
+    while (paddedData.length < 7) paddedData.add(0);
+
+    final maxVal = paddedData.reduce(max).toDouble();
     final barWidth = (size.width - 60) / 7;
     final chartHeight = size.height - 30;
 
@@ -139,9 +248,9 @@ class _WeeklyBarPainter extends CustomPainter {
       fontFamily: 'Inter',
     );
 
-    for (var i = 0; i < _data.length; i++) {
+    for (var i = 0; i < 7; i++) {
       final x = 8 + i * barWidth + (barWidth - 20) / 2;
-      final val = _data[i];
+      final val = paddedData[i];
       final ratio = maxVal > 0 ? val / maxVal : 0.0;
       final barH = ratio * (chartHeight - 10);
 
@@ -174,7 +283,8 @@ class _WeeklyBarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _WeeklyBarPainter old) =>
+      old.data != data;
 }
 
 // ──────────────────────────────────
@@ -266,26 +376,24 @@ class _EffortRingPainter extends CustomPainter {
 // Heart Rate Line Painter
 // ──────────────────────────────────
 class _HeartRateLinePainter extends CustomPainter {
+  final List<int> hrData;
   final bool isDark;
-  _HeartRateLinePainter({required this.isDark});
-
-  // Simulated HR data points over a session
-  static const _hrData = [72, 85, 110, 135, 152, 148, 138, 120, 95, 78];
+  _HeartRateLinePainter({required this.hrData, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (_hrData.isEmpty) return;
-    final minHR = _hrData.reduce(min).toDouble();
-    final maxHR = _hrData.reduce(max).toDouble();
+    if (hrData.isEmpty) return;
+    final minHR = hrData.reduce(min).toDouble();
+    final maxHR = hrData.reduce(max).toDouble();
     final range = maxHR - minHR;
 
     final path = Path();
     final points = <Offset>[];
 
-    for (var i = 0; i < _hrData.length; i++) {
-      final x = i * size.width / (_hrData.length - 1);
+    for (var i = 0; i < hrData.length; i++) {
+      final x = i * size.width / (hrData.length - 1);
       final y = size.height -
-          ((_hrData[i] - minHR) / (range == 0 ? 1 : range)) * (size.height - 20) -
+          ((hrData[i] - minHR) / (range == 0 ? 1 : range)) * (size.height - 20) -
           10;
       points.add(Offset(x, y));
     }
@@ -327,8 +435,8 @@ class _HeartRateLinePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          const Color(0xFFEF4444).withOpacity(0.15),
-          const Color(0xFFEF4444).withOpacity(0.0),
+          const Color(0xFFEF4444).withValues(alpha: 0.15),
+          const Color(0xFFEF4444).withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
@@ -337,7 +445,7 @@ class _HeartRateLinePainter extends CustomPainter {
     // BPM label
     final tp = TextPainter(
       text: TextSpan(
-        text: '${_hrData.last} bpm',
+        text: '${hrData.last} bpm',
         style: TextStyle(
           color: isDark ? Colors.white70 : Colors.black54,
           fontSize: 11,
@@ -350,5 +458,6 @@ class _HeartRateLinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _HeartRateLinePainter old) =>
+      old.hrData != hrData;
 }

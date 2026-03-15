@@ -111,14 +111,14 @@ class _NotificationsPageState extends State<NotificationsPage>
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
         final primaryColor = ThemeColors.primary(mode);
-        final borderColor = isVintage
-            ? ThemeColors.vintageBorder
+        final borderColor = isLight
+            ? ThemeColors.lightBorder
             : Colors.white.withOpacity(0.08);
 
         return Scaffold(
@@ -137,8 +137,8 @@ class _NotificationsPageState extends State<NotificationsPage>
                 ),
                 title: Text(
                   'Notifications',
-                  style: isVintage
-                      ? GoogleFonts.playfairDisplay(
+                  style: isLight
+                      ? GoogleFonts.inter(
                           color: textColor,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)
@@ -158,7 +158,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                     },
                     child: Text(
                       'Mark all read',
-                      style: GoogleFonts.lora(
+                      style: GoogleFonts.inter(
                           color: primaryColor,
                           fontSize: 13,
                           fontWeight: FontWeight.w500),
@@ -167,14 +167,14 @@ class _NotificationsPageState extends State<NotificationsPage>
                 ],
                 bottom: TabBar(
                   controller: _tabController,
-                  labelColor: isVintage ? Colors.black : Colors.white,
+                  labelColor: isLight ? Colors.black : Colors.white,
                   unselectedLabelColor: textSecondary,
                   indicatorColor: primaryColor,
                   indicatorWeight: 2,
-                  labelStyle: GoogleFonts.lora(
+                  labelStyle: GoogleFonts.inter(
                       fontSize: 14, fontWeight: FontWeight.w600),
                   unselectedLabelStyle:
-                      GoogleFonts.lora(fontSize: 14),
+                      GoogleFonts.inter(fontSize: 14),
                   tabs: const [
                     Tab(text: 'Activity'),
                     Tab(text: 'Preferences'),
@@ -187,10 +187,10 @@ class _NotificationsPageState extends State<NotificationsPage>
               children: [
                 _buildActivityTab(
                     bgColor, surfaceColor, textColor, textSecondary,
-                    isVintage, borderColor),
+                    isLight, borderColor),
                 _buildPreferencesTab(
                     bgColor, surfaceColor, textColor, textSecondary,
-                    isVintage, borderColor, primaryColor),
+                    isLight, borderColor, primaryColor),
               ],
             ),
           ),
@@ -204,7 +204,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     Color surfaceColor,
     Color textColor,
     Color textSecondary,
-    bool isVintage,
+    bool isLight,
     Color borderColor,
   ) {
     final unread = _notifications.where((n) => !n.isRead).length;
@@ -217,7 +217,7 @@ class _NotificationsPageState extends State<NotificationsPage>
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
             child: Text(
               'New ($unread)',
-              style: GoogleFonts.lora(
+              style: GoogleFonts.inter(
                   color: textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -226,13 +226,13 @@ class _NotificationsPageState extends State<NotificationsPage>
           ),
         ..._notifications.where((n) => !n.isRead).map((n) =>
             _buildNotificationTile(n, surfaceColor, textColor, textSecondary,
-                isVintage, borderColor)),
+                isLight, borderColor)),
         if (_notifications.any((n) => n.isRead))
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
             child: Text(
               'Earlier',
-              style: GoogleFonts.lora(
+              style: GoogleFonts.inter(
                   color: textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -241,7 +241,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           ),
         ..._notifications.where((n) => n.isRead).map((n) =>
             _buildNotificationTile(n, surfaceColor, textColor, textSecondary,
-                isVintage, borderColor)),
+                isLight, borderColor)),
         const SizedBox(height: 40),
       ],
     );
@@ -252,7 +252,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     Color surfaceColor,
     Color textColor,
     Color textSecondary,
-    bool isVintage,
+    bool isLight,
     Color borderColor,
   ) {
     return GestureDetector(
@@ -264,7 +264,7 @@ class _NotificationsPageState extends State<NotificationsPage>
         decoration: BoxDecoration(
           color: item.isRead
               ? surfaceColor
-              : item.iconColor.withOpacity(isVintage ? 0.05 : 0.08),
+              : item.iconColor.withOpacity(isLight ? 0.05 : 0.08),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: item.isRead
@@ -295,7 +295,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                       Expanded(
                         child: Text(
                           item.title,
-                          style: GoogleFonts.lora(
+                          style: GoogleFonts.inter(
                             color: textColor,
                             fontSize: 14,
                             fontWeight: item.isRead
@@ -318,7 +318,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                   const SizedBox(height: 3),
                   Text(
                     item.body,
-                    style: GoogleFonts.lora(
+                    style: GoogleFonts.inter(
                         color: textSecondary, fontSize: 12.5),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -326,7 +326,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                   const SizedBox(height: 5),
                   Text(
                     item.time,
-                    style: GoogleFonts.lora(
+                    style: GoogleFonts.inter(
                         color: textSecondary.withOpacity(0.6),
                         fontSize: 11),
                   ),
@@ -344,7 +344,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     Color surfaceColor,
     Color textColor,
     Color textSecondary,
-    bool isVintage,
+    bool isLight,
     Color borderColor,
     Color primaryColor,
   ) {
@@ -361,7 +361,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           const Color(0xFFFFB800),
           _morningReminderTime,
           _dailyReminders,
-          surfaceColor, textColor, textSecondary, borderColor, isVintage,
+          surfaceColor, textColor, textSecondary, borderColor, isLight,
           onToggle: (v) => setState(() => _dailyReminders = v),
           onTapTime: () async {
             final t = await showTimePicker(
@@ -377,7 +377,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           const Color(0xFF8B5CF6),
           _eveningReminderTime,
           _meditationReminders,
-          surfaceColor, textColor, textSecondary, borderColor, isVintage,
+          surfaceColor, textColor, textSecondary, borderColor, isLight,
           onToggle: (v) => setState(() => _meditationReminders = v),
           onTapTime: () async {
             final t = await showTimePicker(
@@ -395,7 +395,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           Icons.fitness_center_rounded,
           const Color(0xFF4ECDC4),
           _workoutReminders,
-          surfaceColor, textColor, textSecondary, borderColor, isVintage,
+          surfaceColor, textColor, textSecondary, borderColor, isLight,
           onToggle: (v) => setState(() => _workoutReminders = v),
         ),
         const SizedBox(height: 10),
@@ -405,7 +405,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           Icons.flag_rounded,
           const Color(0xFF059669),
           _goalAlerts,
-          surfaceColor, textColor, textSecondary, borderColor, isVintage,
+          surfaceColor, textColor, textSecondary, borderColor, isLight,
           onToggle: (v) => setState(() => _goalAlerts = v),
         ),
         const SizedBox(height: 24),
@@ -418,7 +418,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           Icons.bar_chart_rounded,
           const Color(0xFFFF6B35),
           _weeklyProgress,
-          surfaceColor, textColor, textSecondary, borderColor, isVintage,
+          surfaceColor, textColor, textSecondary, borderColor, isLight,
           onToggle: (v) => setState(() => _weeklyProgress = v),
         ),
         const SizedBox(height: 10),
@@ -428,7 +428,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           Icons.auto_awesome_rounded,
           const Color(0xFFEC4899),
           _newContent,
-          surfaceColor, textColor, textSecondary, borderColor, isVintage,
+          surfaceColor, textColor, textSecondary, borderColor, isLight,
           onToggle: (v) => setState(() => _newContent = v),
         ),
         const SizedBox(height: 10),
@@ -438,7 +438,7 @@ class _NotificationsPageState extends State<NotificationsPage>
           Icons.people_rounded,
           const Color(0xFF448AFF),
           _communityUpdates,
-          surfaceColor, textColor, textSecondary, borderColor, isVintage,
+          surfaceColor, textColor, textSecondary, borderColor, isLight,
           onToggle: (v) => setState(() => _communityUpdates = v),
         ),
       ],
@@ -448,7 +448,7 @@ class _NotificationsPageState extends State<NotificationsPage>
   Widget _buildSectionHeader(String title, Color textSecondary) {
     return Text(
       title.toUpperCase(),
-      style: GoogleFonts.lora(
+      style: GoogleFonts.inter(
           color: textSecondary,
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -467,7 +467,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     Color textColor,
     Color textSecondary,
     Color borderColor,
-    bool isVintage, {
+    bool isLight, {
     required ValueChanged<bool> onToggle,
     required VoidCallback onTapTime,
   }) {
@@ -497,12 +497,12 @@ class _NotificationsPageState extends State<NotificationsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: GoogleFonts.lora(
+                        style: GoogleFonts.inter(
                             color: textColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w600)),
                     Text(subtitle,
-                        style: GoogleFonts.lora(
+                        style: GoogleFonts.inter(
                             color: textSecondary, fontSize: 12)),
                   ],
                 ),
@@ -529,11 +529,11 @@ class _NotificationsPageState extends State<NotificationsPage>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Reminder time',
-                        style: GoogleFonts.lora(
+                        style: GoogleFonts.inter(
                             color: textSecondary, fontSize: 13)),
                     Text(
                       time.format(context),
-                      style: GoogleFonts.lora(
+                      style: GoogleFonts.inter(
                           color: iconColor,
                           fontSize: 16,
                           fontWeight: FontWeight.bold),
@@ -558,7 +558,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     Color textColor,
     Color textSecondary,
     Color borderColor,
-    bool isVintage, {
+    bool isLight, {
     required ValueChanged<bool> onToggle,
   }) {
     return Container(
@@ -585,12 +585,12 @@ class _NotificationsPageState extends State<NotificationsPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: GoogleFonts.lora(
+                    style: GoogleFonts.inter(
                         color: textColor,
                         fontSize: 14,
                         fontWeight: FontWeight.w600)),
                 Text(subtitle,
-                    style: GoogleFonts.lora(
+                    style: GoogleFonts.inter(
                         color: textSecondary, fontSize: 12)),
               ],
             ),

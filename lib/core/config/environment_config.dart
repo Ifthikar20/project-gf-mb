@@ -44,6 +44,9 @@ class EnvironmentConfig {
   /// Get CDN base URL
   String get cdnBaseUrl => _get('CDN_BASE_URL', 'https://cdn-dev.betterandbliss.app');
   
+  /// Get Cloudflare R2 base URL for video/media assets
+  String get r2BaseUrl => _get('R2_BASE_URL', '');
+  
   /// Get API key (NEVER expose in logs)
   String get apiKey => _getSecret('API_KEY');
   

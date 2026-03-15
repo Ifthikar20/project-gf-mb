@@ -107,7 +107,7 @@ class _HomePageState extends State<HomePage> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final bgColor = ThemeColors.background(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
@@ -148,8 +148,8 @@ class _HomePageState extends State<HomePage> {
                                 const SizedBox(width: 6),
                                 Text(
                                   'Great Feel',
-                                  style: isVintage
-                                      ? GoogleFonts.playfairDisplay(
+                                  style: isLight
+                                      ? GoogleFonts.inter(
                                           fontSize: 24,
                                           fontWeight: FontWeight.bold,
                                           color: textColor,

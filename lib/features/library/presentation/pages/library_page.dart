@@ -21,7 +21,7 @@ class LibraryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final mode = themeState.mode;
         
         final bgColor = ThemeColors.background(mode);
@@ -43,8 +43,8 @@ class LibraryPage extends StatelessWidget {
             ),
             title: Text(
               'My Library',
-              style: isVintage
-                  ? GoogleFonts.playfairDisplay(
+              style: isLight
+                  ? GoogleFonts.inter(
                       color: textColor,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -82,8 +82,8 @@ class LibraryPage extends StatelessWidget {
                         const SizedBox(height: 24),
                         Text(
                           'No Saved Content',
-                          style: isVintage
-                              ? GoogleFonts.playfairDisplay(
+                          style: isLight
+                              ? GoogleFonts.inter(
                                   color: textColor,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -109,12 +109,12 @@ class LibraryPage extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             decoration: BoxDecoration(
                               color: primaryColor,
-                              borderRadius: BorderRadius.circular(isVintage ? 6 : 24),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               'Browse Content',
                               style: TextStyle(
-                                color: isVintage ? bgColor : Colors.white,
+                                color: isLight ? bgColor : Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -169,10 +169,10 @@ class LibraryPage extends StatelessWidget {
                               itemBuilder: (context, index) {
                                 if (index < savedVideos.length) {
                                   final video = savedVideos[index];
-                                  return _buildVideoCard(context, video, isVintage, surfaceColor, textColor, textSecondary, primaryColor, errorColor, bgColor);
+                                  return _buildVideoCard(context, video, isLight, surfaceColor, textColor, textSecondary, primaryColor, errorColor, bgColor);
                                 } else {
                                   final audioId = audioIds[index - savedVideos.length];
-                                  return _buildAudioCard(context, audioId, isVintage, surfaceColor, textColor, textSecondary, primaryColor, bgColor);
+                                  return _buildAudioCard(context, audioId, isLight, surfaceColor, textColor, textSecondary, primaryColor, bgColor);
                                 }
                               },
                             ),
@@ -198,7 +198,7 @@ class LibraryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildVideoCard(BuildContext context, dynamic video, bool isVintage, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, Color errorColor, Color bgColor) {
+  Widget _buildVideoCard(BuildContext context, dynamic video, bool isLight, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, Color errorColor, Color bgColor) {
     return GestureDetector(
       onTap: () {
         context.push('${AppRouter.videoPlayer}?id=${video.id}');
@@ -207,15 +207,15 @@ class LibraryPage extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: surfaceColor,
-          borderRadius: BorderRadius.circular(isVintage ? 8 : 16),
-          border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
         ),
         child: Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isVintage ? 8 : 16),
-                bottomLeft: Radius.circular(isVintage ? 8 : 16),
+                topLeft: Radius.circular(isLight ? 8 : 16),
+                bottomLeft: Radius.circular(isLight ? 8 : 16),
               ),
               child: CachedNetworkImage(
                 imageUrl: video.thumbnailUrl,
@@ -240,8 +240,8 @@ class LibraryPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isVintage ? ThemeColors.dustyRose : ThemeColors.classicBlue,
-                        borderRadius: BorderRadius.circular(isVintage ? 3 : 4),
+                        color: isLight ? ThemeColors.lightSecondary : ThemeColors.darkPrimary,
+                        borderRadius: BorderRadius.circular(isLight ? 3 : 4),
                       ),
                       child: Text(
                         'VIDEO',
@@ -251,8 +251,8 @@ class LibraryPage extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       video.title,
-                      style: isVintage
-                          ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 15, fontWeight: FontWeight.w600)
+                      style: isLight
+                          ? GoogleFonts.inter(color: textColor, fontSize: 15, fontWeight: FontWeight.w600)
                           : TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w600),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -278,7 +278,7 @@ class LibraryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAudioCard(BuildContext context, String contentId, bool isVintage, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, Color bgColor) {
+  Widget _buildAudioCard(BuildContext context, String contentId, bool isLight, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, Color bgColor) {
     final audioId = contentId.replaceFirst('audio_', '');
     
     return GestureDetector(
@@ -289,8 +289,8 @@ class LibraryPage extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: surfaceColor,
-          borderRadius: BorderRadius.circular(isVintage ? 8 : 16),
-          border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -300,12 +300,12 @@ class LibraryPage extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: (isVintage ? ThemeColors.sageGreen : ThemeColors.classicPrimary).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
+                  color: (isLight ? ThemeColors.lightAccent : ThemeColors.darkPrimary).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.headphones,
-                  color: isVintage ? ThemeColors.sageGreen : ThemeColors.classicPrimary,
+                  color: isLight ? ThemeColors.lightAccent : ThemeColors.darkPrimary,
                   size: 28,
                 ),
               ),
@@ -317,8 +317,8 @@ class LibraryPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isVintage ? ThemeColors.sageGreen : ThemeColors.classicPrimary,
-                        borderRadius: BorderRadius.circular(isVintage ? 3 : 4),
+                        color: isLight ? ThemeColors.lightAccent : ThemeColors.darkPrimary,
+                        borderRadius: BorderRadius.circular(isLight ? 3 : 4),
                       ),
                       child: const Text(
                         'AUDIO',
@@ -328,8 +328,8 @@ class LibraryPage extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       'Audio #$audioId',
-                      style: isVintage
-                          ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 15, fontWeight: FontWeight.w600)
+                      style: isLight
+                          ? GoogleFonts.inter(color: textColor, fontSize: 15, fontWeight: FontWeight.w600)
                           : TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 2),

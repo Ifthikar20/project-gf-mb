@@ -54,7 +54,7 @@ class MacroTrackingCards extends StatelessWidget {
               _MetricData(
                 value: activeMinutes,
                 target: activeMinutesTarget,
-                label: 'Active minutes',
+                label: 'Mindfulness minutes',
                 icon: Icons.timer_rounded,
                 color: const Color(0xFFFF6B6B),
                 ringColor: const Color(0xFFFF6B6B),
@@ -131,17 +131,11 @@ class _MacroCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+        color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        border: Border.all(
+          color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E7EB),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

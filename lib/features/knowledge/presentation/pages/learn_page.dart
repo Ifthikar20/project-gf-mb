@@ -43,11 +43,14 @@ class _LearnPageState extends State<LearnPage> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
 
         final bgColor = ThemeColors.background(mode);
-        final textColor = isVintage ? Colors.black : Colors.white;
-        final subtleColor = isVintage ? Colors.black38 : Colors.white38;
+        final surfaceColor = ThemeColors.surface(mode);
+        final textColor = ThemeColors.textPrimary(mode);
+        final subtleColor = ThemeColors.textSecondary(mode);
+        final borderColor = ThemeColors.border(mode);
+        final primaryColor = ThemeColors.primary(mode);
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -66,7 +69,7 @@ class _LearnPageState extends State<LearnPage> {
                           children: [
                             Text(
                               'Learn',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.inter(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
                                 color: textColor,
@@ -131,13 +134,13 @@ class _LearnPageState extends State<LearnPage> {
                                       horizontal: 14, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? Colors.white.withOpacity(0.12)
-                                        : Colors.white.withOpacity(0.04),
+                                        ? (isLight ? Colors.black : Colors.white.withOpacity(0.12))
+                                        : surfaceColor,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
                                       color: isSelected
-                                          ? Colors.white30
-                                          : Colors.white10,
+                                          ? (isLight ? Colors.black : Colors.white30)
+                                          : borderColor,
                                     ),
                                   ),
                                   child: Row(
@@ -147,8 +150,8 @@ class _LearnPageState extends State<LearnPage> {
                                         cat['icon'] as IconData,
                                         size: 14,
                                         color: isSelected
-                                            ? Colors.white
-                                            : Colors.white38,
+                                            ? (isLight ? Colors.white : Colors.white)
+                                            : subtleColor,
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
@@ -160,7 +163,7 @@ class _LearnPageState extends State<LearnPage> {
                                               : FontWeight.w400,
                                           color: isSelected
                                               ? Colors.white
-                                              : Colors.white54,
+                                              : subtleColor,
                                         ),
                                       ),
                                     ],

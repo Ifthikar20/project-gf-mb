@@ -34,7 +34,7 @@ class _GoalPickerSheetState extends State<GoalPickerSheet> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final textColor = ThemeColors.textPrimary(mode);
@@ -71,8 +71,8 @@ class _GoalPickerSheetState extends State<GoalPickerSheet> {
                   children: [
                     Text(
                       'Choose a Goal',
-                      style: isVintage
-                          ? GoogleFonts.playfairDisplay(
+                      style: isLight
+                          ? GoogleFonts.inter(
                               color: textColor,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -112,11 +112,11 @@ class _GoalPickerSheetState extends State<GoalPickerSheet> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? (isVintage ? Colors.black : primaryColor)
-                              : (isVintage ? Colors.white : surfaceColor),
+                              ? (isLight ? Colors.black : primaryColor)
+                              : (isLight ? Colors.white : surfaceColor),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isVintage
+                            color: isLight
                                 ? (isSelected ? Colors.black : Colors.grey.shade300)
                                 : (isSelected ? primaryColor : Colors.white.withOpacity(0.1)),
                           ),
@@ -125,8 +125,8 @@ class _GoalPickerSheetState extends State<GoalPickerSheet> {
                           category,
                           style: TextStyle(
                             color: isSelected
-                                ? (isVintage ? Colors.white : Colors.white)
-                                : (isVintage ? Colors.black : textColor),
+                                ? (isLight ? Colors.white : Colors.white)
+                                : (isLight ? Colors.black : textColor),
                             fontSize: 13,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                           ),
@@ -157,7 +157,7 @@ class _GoalPickerSheetState extends State<GoalPickerSheet> {
                       surfaceColor,
                       textColor,
                       textSecondary,
-                      isVintage,
+                      isLight,
                     );
                   },
                 ),
@@ -193,7 +193,7 @@ class _GoalPickerSheetState extends State<GoalPickerSheet> {
     Color surfaceColor,
     Color textColor,
     Color textSecondary,
-    bool isVintage,
+    bool isLight,
   ) {
     return GestureDetector(
       onTap: () => _addGoal(template),
@@ -203,7 +203,7 @@ class _GoalPickerSheetState extends State<GoalPickerSheet> {
           color: surfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isVintage ? Colors.grey.shade200 : Colors.white.withOpacity(0.1),
+            color: isLight ? Colors.grey.shade200 : Colors.white.withOpacity(0.1),
           ),
         ),
         child: Column(

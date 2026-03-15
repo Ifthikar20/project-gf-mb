@@ -27,6 +27,7 @@ import '../../features/meditation/presentation/pages/breathing_exercise_page.dar
 import '../../features/knowledge/presentation/pages/article_detail_page.dart';
 import '../../features/knowledge/data/models/knowledge_models.dart';
 import '../../features/workouts/presentation/pages/workout_check_page.dart';
+import '../../features/explore/presentation/pages/program_enroll_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -55,6 +56,7 @@ class AppRouter {
   static const String search = '/search';
   static const String breathingExercise = '/breathing-exercise';
   static const String articleDetail = '/article-detail';
+  static const String programEnroll = '/program-enroll';
 
   // Public routes that don't require authentication
   static const List<String> _publicRoutes = [
@@ -263,6 +265,13 @@ class AppRouter {
         GoRoute(
           path: breathingExercise,
           builder: (context, state) => const BreathingExercisePage(),
+        ),
+        GoRoute(
+          path: programEnroll,
+          builder: (context, state) {
+            final seriesId = state.uri.queryParameters['seriesId'] ?? '';
+            return ProgramEnrollPage(seriesId: seriesId);
+          },
         ),
       ],
     );

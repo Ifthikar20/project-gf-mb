@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Theme Mode Enum
-enum AppThemeMode { vintage, classicDark }
+enum AppThemeMode { light, dark }
 
 // Events
 abstract class ThemeEvent extends Equatable {
@@ -27,14 +27,17 @@ class SetTheme extends ThemeEvent {
 class ThemeState extends Equatable {
   final AppThemeMode mode;
   
-  const ThemeState({this.mode = AppThemeMode.vintage});
+  const ThemeState({this.mode = AppThemeMode.light});
   
   ThemeState copyWith({AppThemeMode? mode}) {
     return ThemeState(mode: mode ?? this.mode);
   }
   
-  bool get isVintage => mode == AppThemeMode.vintage;
-  bool get isClassicDark => mode == AppThemeMode.classicDark;
+  bool get isLight => mode == AppThemeMode.light;
+  bool get isDark => mode == AppThemeMode.dark;
+
+  // Backward compatibility alias
+  bool get isVintage => isLight;
   
   @override
   List<Object> get props => [mode];
@@ -54,19 +57,18 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final themeName = prefs.getString(_themeKey);
-      if (themeName == 'classicDark') {
-        emit(state.copyWith(mode: AppThemeMode.classicDark));
+      if (themeName == 'dark' || themeName == 'classicDark') {
+        emit(state.copyWith(mode: AppThemeMode.dark));
       } else {
-        emit(state.copyWith(mode: AppThemeMode.vintage));
+        emit(state.copyWith(mode: AppThemeMode.light));
       }
     } catch (_) {
-      // Default to vintage on error
-      emit(state.copyWith(mode: AppThemeMode.vintage));
+      emit(state.copyWith(mode: AppThemeMode.light));
     }
   }
   
   Future<void> _onToggleTheme(ToggleTheme event, Emitter<ThemeState> emit) async {
-    final newMode = state.isVintage ? AppThemeMode.classicDark : AppThemeMode.vintage;
+    final newMode = state.isLight ? AppThemeMode.dark : AppThemeMode.light;
     await _saveTheme(newMode);
     emit(state.copyWith(mode: newMode));
   }

@@ -16,7 +16,7 @@ class GoalsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final mode = themeState.mode;
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
@@ -44,14 +44,14 @@ class GoalsSection extends StatelessWidget {
                         children: [
                           Text(
                             'My Goals',
-                            style: isVintage
-                                ? GoogleFonts.playfairDisplay(
+                            style: isLight
+                                ? GoogleFonts.inter(
                                     color: textColor,
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                   )
                                 : TextStyle(
-                                    color: isVintage ? textColor : Colors.white,
+                                    color: isLight ? textColor : Colors.white,
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -92,7 +92,7 @@ class GoalsSection extends StatelessWidget {
                 
                 // Goals content
                 if (activeGoals.isEmpty)
-                  _buildEmptyState(context, surfaceColor, textColor, textSecondary, primaryColor, isVintage)
+                  _buildEmptyState(context, surfaceColor, textColor, textSecondary, primaryColor, isLight)
                 else
                   SizedBox(
                     height: 140,
@@ -108,7 +108,7 @@ class GoalsSection extends StatelessWidget {
                           surfaceColor,
                           textColor,
                           textSecondary,
-                          isVintage,
+                          isLight,
                         );
                       },
                     ),
@@ -164,7 +164,7 @@ class GoalsSection extends StatelessWidget {
     Color textColor,
     Color textSecondary,
     Color primaryColor,
-    bool isVintage,
+    bool isLight,
   ) {
     return GestureDetector(
       onTap: () => _showGoalPicker(context),
@@ -175,7 +175,7 @@ class GoalsSection extends StatelessWidget {
           color: surfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isVintage ? primaryColor.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+            color: isLight ? primaryColor.withOpacity(0.2) : Colors.white.withOpacity(0.1),
           ),
         ),
         child: Row(
@@ -227,7 +227,7 @@ class GoalsSection extends StatelessWidget {
     Color surfaceColor,
     Color textColor,
     Color textSecondary,
-    bool isVintage,
+    bool isLight,
   ) {
     final progress = goal.progress;
     final progressColor = _getGoalColor(goal);
@@ -251,7 +251,7 @@ class GoalsSection extends StatelessWidget {
           color: surfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isVintage ? Colors.grey.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+            color: isLight ? Colors.grey.withOpacity(0.2) : Colors.white.withOpacity(0.1),
           ),
         ),
         child: Column(

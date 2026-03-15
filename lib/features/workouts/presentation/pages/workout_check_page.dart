@@ -16,7 +16,7 @@ class WorkoutCheckPage extends StatelessWidget {
         final bgColor = ThemeColors.background(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
-        final isDark = mode == AppThemeMode.classicDark;
+        final isDark = mode == AppThemeMode.dark;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -154,7 +154,7 @@ class _WorkoutTypePage extends StatelessWidget {
         final bgColor = ThemeColors.background(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final surfaceColor = ThemeColors.surface(mode);
-        final isDark = mode == AppThemeMode.classicDark;
+        final isDark = mode == AppThemeMode.dark;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -288,7 +288,7 @@ class _WorkoutQuestionsPageState extends State<_WorkoutQuestionsPage> {
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
         final surfaceColor = ThemeColors.surface(mode);
-        final isDark = mode == AppThemeMode.classicDark;
+        final isDark = mode == AppThemeMode.dark;
         final accent = const Color(0xFF6366F1);
 
         return Scaffold(
@@ -541,7 +541,7 @@ class _ConnectDevicePageState extends State<_ConnectDevicePage> {
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
         final surfaceColor = ThemeColors.surface(mode);
-        final isDark = mode == AppThemeMode.classicDark;
+        final isDark = mode == AppThemeMode.dark;
 
         return Scaffold(
           backgroundColor: bgColor,

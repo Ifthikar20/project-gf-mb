@@ -38,7 +38,7 @@ class _MeditationPageState extends State<MeditationPage> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         
         // Dynamic colors
         final bgColor = ThemeColors.background(mode);
@@ -100,8 +100,8 @@ class _MeditationPageState extends State<MeditationPage> {
                               children: [
                                 Text(
                                   'Meditate',
-                                  style: isVintage
-                                      ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 28, fontWeight: FontWeight.bold)
+                                  style: isLight
+                                      ? GoogleFonts.inter(color: textColor, fontSize: 28, fontWeight: FontWeight.bold)
                                       : TextStyle(color: textColor, fontSize: 28, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 16),
@@ -112,22 +112,22 @@ class _MeditationPageState extends State<MeditationPage> {
                                     children: [
                                       _buildChip('All', state.selectedCategory == 'All', () {
                                         context.read<MeditationBloc>().add(const SelectCategory('All'));
-                                      }, isVintage, primaryColor, textColor, textSecondary, bgColor),
+                                      }, isLight, primaryColor, textColor, textSecondary, bgColor),
                                       _buildChip('Calm', state.selectedCategory == 'Calm', () {
                                         context.read<MeditationBloc>().add(const SelectCategory('Calm'));
-                                      }, isVintage, primaryColor, textColor, textSecondary, bgColor),
+                                      }, isLight, primaryColor, textColor, textSecondary, bgColor),
                                       _buildChip('Focus', state.selectedCategory == 'Focus', () {
                                         context.read<MeditationBloc>().add(const SelectCategory('Focus'));
-                                      }, isVintage, primaryColor, textColor, textSecondary, bgColor),
+                                      }, isLight, primaryColor, textColor, textSecondary, bgColor),
                                       _buildChip('Sleep', state.selectedCategory == 'Sleep', () {
                                         context.read<MeditationBloc>().add(const SelectCategory('Sleep'));
-                                      }, isVintage, primaryColor, textColor, textSecondary, bgColor),
+                                      }, isLight, primaryColor, textColor, textSecondary, bgColor),
                                       _buildChip('Breathe', state.selectedCategory == 'Breathe', () {
                                         context.read<MeditationBloc>().add(const SelectCategory('Breathe'));
-                                      }, isVintage, primaryColor, textColor, textSecondary, bgColor),
+                                      }, isLight, primaryColor, textColor, textSecondary, bgColor),
                                       _buildChip('Anxiety', state.selectedCategory == 'Anxiety', () {
                                         context.read<MeditationBloc>().add(const SelectCategory('Anxiety'));
-                                      }, isVintage, primaryColor, textColor, textSecondary, bgColor),
+                                      }, isLight, primaryColor, textColor, textSecondary, bgColor),
                                     ],
                                   ),
                                 ),
@@ -192,8 +192,8 @@ class _MeditationPageState extends State<MeditationPage> {
                                       children: [
                                         Text(
                                           'Breathing Exercise',
-                                          style: isVintage
-                                              ? GoogleFonts.playfairDisplay(
+                                          style: isLight
+                                              ? GoogleFonts.inter(
                                                   color: textColor,
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.bold)
@@ -229,7 +229,7 @@ class _MeditationPageState extends State<MeditationPage> {
                                   ? 'Featured Meditations'
                                   : '${state.selectedCategory} Meditations',
                               Icons.spa,
-                              isVintage, primaryColor, textColor,
+                              isLight, primaryColor, textColor,
                             ),
                             if (state.filteredAudios.isEmpty)
                               Container(
@@ -237,8 +237,8 @@ class _MeditationPageState extends State<MeditationPage> {
                                 margin: const EdgeInsets.symmetric(horizontal: 16),
                                 decoration: BoxDecoration(
                                   color: surfaceColor,
-                                  borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
-                                  border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
                                 ),
                                 child: Center(
                                   child: Column(
@@ -273,7 +273,7 @@ class _MeditationPageState extends State<MeditationPage> {
                                       onTap: () {
                                         context.push('${AppRouter.audioPlayer}?id=${audio.id}');
                                       },
-                                      isVintage: isVintage,
+                                      isLight: isLight,
                                       primaryColor: primaryColor,
                                       surfaceColor: surfaceColor,
                                       textColor: textColor,
@@ -340,7 +340,7 @@ class _MeditationPageState extends State<MeditationPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, bool isVintage, Color primaryColor, Color textColor) {
+  Widget _buildSectionHeader(String title, IconData icon, bool isLight, Color primaryColor, Color textColor) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
@@ -349,11 +349,11 @@ class _MeditationPageState extends State<MeditationPage> {
           const SizedBox(width: 8),
           Text(
             title,
-            style: isVintage
-                ? GoogleFonts.playfairDisplay(color: primaryColor, fontSize: 22, fontWeight: FontWeight.bold)
+            style: isLight
+                ? GoogleFonts.inter(color: primaryColor, fontSize: 22, fontWeight: FontWeight.bold)
                 : TextStyle(color: primaryColor, fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          if (isVintage) ...[
+          if (isLight) ...[
             const SizedBox(width: 12),
             Expanded(
               child: Container(
@@ -369,7 +369,7 @@ class _MeditationPageState extends State<MeditationPage> {
     );
   }
 
-  Widget _buildChip(String label, bool isSelected, VoidCallback onTap, bool isVintage, Color primaryColor, Color textColor, Color textSecondary, Color bgColor) {
+  Widget _buildChip(String label, bool isSelected, VoidCallback onTap, bool isLight, Color primaryColor, Color textColor, Color textSecondary, Color bgColor) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -379,7 +379,7 @@ class _MeditationPageState extends State<MeditationPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected ? primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(isVintage ? 6 : 20),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? primaryColor : textSecondary.withOpacity(0.5),
               width: 1,
@@ -388,7 +388,7 @@ class _MeditationPageState extends State<MeditationPage> {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? (isVintage ? bgColor : Colors.white) : textColor,
+              color: isSelected ? (isLight ? bgColor : Colors.white) : textColor,
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
@@ -405,7 +405,7 @@ class _MeditationPageState extends State<MeditationPage> {
     required String category,
     required String imageUrl,
     required VoidCallback onTap,
-    required bool isVintage,
+    required bool isLight,
     required Color primaryColor,
     required Color surfaceColor,
     required Color textColor,
@@ -427,8 +427,8 @@ class _MeditationPageState extends State<MeditationPage> {
             const SizedBox(height: 4),
             Text(
               title,
-              style: isVintage
-                  ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)
+              style: isLight
+                  ? GoogleFonts.inter(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)
                   : TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -436,7 +436,7 @@ class _MeditationPageState extends State<MeditationPage> {
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(color: textSecondary.withOpacity(0.7), fontSize: 14, fontStyle: isVintage ? FontStyle.italic : FontStyle.normal),
+              style: TextStyle(color: textSecondary.withOpacity(0.7), fontSize: 14, fontStyle: FontStyle.normal),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -444,12 +444,12 @@ class _MeditationPageState extends State<MeditationPage> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
-                  border: isVintage ? Border.all(color: primaryColor.withOpacity(0.3)) : null,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
                   boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(isVintage ? 7 : 12),
+                  borderRadius: BorderRadius.circular(isLight ? 7 : 12),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -466,10 +466,10 @@ class _MeditationPageState extends State<MeditationPage> {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: isVintage
-                                ? [ThemeColors.vintageBrass.withOpacity(0.1), Colors.transparent, bgColor.withOpacity(0.6)]
+                            colors: isLight
+                                ? [ThemeColors.lightTextSecondary.withOpacity(0.1), Colors.transparent, bgColor.withOpacity(0.6)]
                                 : [Colors.transparent, bgColor.withOpacity(0.6)],
-                            stops: isVintage ? const [0.0, 0.4, 1.0] : const [0.4, 1.0],
+                            stops: isLight ? const [0.0, 0.4, 1.0] : const [0.4, 1.0],
                           ),
                         ),
                       ),
@@ -483,7 +483,7 @@ class _MeditationPageState extends State<MeditationPage> {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: primaryColor,
-                                borderRadius: BorderRadius.circular(isVintage ? 4 : 12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,

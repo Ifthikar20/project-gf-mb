@@ -101,8 +101,8 @@ class _ShortcutItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 68,
-        margin: const EdgeInsets.only(right: 12),
+        width: 62,
+        margin: const EdgeInsets.only(right: 6),
         child: Column(
           children: [
             Container(

@@ -114,7 +114,7 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
     
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final mode = themeState.mode;
         final surfaceColor = ThemeColors.surface(mode);
         final primaryColor = ThemeColors.primary(mode);
@@ -138,7 +138,7 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
                 ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: isVintage
+                    colors: isLight
                         ? [accentColor.withOpacity(0.9), accentColor.withOpacity(0.7)]
                         : [accentColor, accentColor.withOpacity(0.8)],
                     begin: Alignment.topLeft,
@@ -158,7 +158,7 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
                   curve: Curves.easeOutCubic,
                   alignment: Alignment.centerLeft,
                   child: _isExpanded 
-                      ? _buildExpandedContent(isVintage, textColor, textSecondary, selectedMood)
+                      ? _buildExpandedContent(isLight, textColor, textSecondary, selectedMood)
                       : _buildCollapsedContent(selectedMood),
                 ),
               ),
@@ -199,7 +199,7 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
     );
   }
 
-  Widget _buildExpandedContent(bool isVintage, Color textColor, Color textSecondary, MoodOption? selectedMood) {
+  Widget _buildExpandedContent(bool isLight, Color textColor, Color textSecondary, MoodOption? selectedMood) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

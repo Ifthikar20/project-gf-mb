@@ -18,7 +18,7 @@ class ActivitySummaryCard extends StatelessWidget {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final surfaceColor = ThemeColors.surface(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
@@ -54,8 +54,8 @@ class ActivitySummaryCard extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: surfaceColor,
-                    borderRadius: BorderRadius.circular(isVintage ? 12 : 18),
-                    border: isVintage ? Border.all(color: ThemeColors.vintageBorder) : null,
+                    borderRadius: BorderRadius.circular(isLight ? 12 : 18),
+                    border: isLight ? Border.all(color: ThemeColors.lightBorder) : null,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

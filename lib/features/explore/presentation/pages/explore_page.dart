@@ -1,17 +1,21 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../videos/presentation/bloc/videos_bloc.dart';
 import '../../../videos/presentation/bloc/videos_event.dart';
 import '../../../videos/presentation/bloc/videos_state.dart';
+import '../../../videos/domain/entities/video_entity.dart';
 import '../../../meditation/presentation/bloc/meditation_bloc.dart';
 import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
+import '../widgets/breathing_exercise_card.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -21,12 +25,17 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExplorePageState extends State<ExplorePage> {
-  String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'Video', 'Audio', 'Podcasts'];
+  late DateTime _selectedDate;
+  late DateTime _weekStart;
+  late String _currentMonth;
 
   @override
   void initState() {
     super.initState();
+    _selectedDate = DateTime.now();
+    _weekStart = _getWeekStart(_selectedDate);
+    _currentMonth = DateFormat('MMMM yyyy').format(_selectedDate);
+
     final videosState = context.read<VideosBloc>().state;
     if (videosState is VideosInitial) {
       context.read<VideosBloc>().add(const LoadVideos());
@@ -37,83 +46,139 @@ class _ExplorePageState extends State<ExplorePage> {
     }
   }
 
+  DateTime _getWeekStart(DateTime date) {
+    // Start week on the current day (scrollable)
+    return DateTime(date.year, date.month, date.day)
+        .subtract(Duration(days: date.weekday % 7));
+  }
+
+  void _shiftWeek(int direction) {
+    setState(() {
+      _weekStart = _weekStart.add(Duration(days: 7 * direction));
+      _currentMonth = DateFormat('MMMM yyyy').format(_weekStart);
+    });
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  bool _isSelected(DateTime date) {
+    return date.year == _selectedDate.year &&
+        date.month == _selectedDate.month &&
+        date.day == _selectedDate.day;
+  }
+
+  // Generate mock class schedule based on videos
+  List<_ScheduledClass> _generateSchedule(List<VideoEntity> videos) {
+    final rng = Random(_selectedDate.day * 100 + _selectedDate.month);
+    final List<_ScheduledClass> classes = [];
+
+    // Morning classes (6am - 12pm)
+    final morningTimes = ['06:00', '07:30', '09:00', '09:15', '10:30'];
+    // Afternoon classes (12pm - 6pm)
+    final afternoonTimes = ['12:00', '13:30', '14:00', '15:30', '16:00'];
+
+    for (int i = 0; i < videos.length && i < 6; i++) {
+      final video = videos[i];
+      final isMorning = i < 3;
+      final times = isMorning ? morningTimes : afternoonTimes;
+      final timeIndex = rng.nextInt(times.length);
+      final startTime = times[timeIndex];
+      final durationMin =
+          video.durationInSeconds > 0 ? video.durationInSeconds ~/ 60 : 30;
+      final endHour =
+          int.parse(startTime.split(':')[0]) + (durationMin ~/ 60);
+      final endMin =
+          int.parse(startTime.split(':')[1]) + (durationMin % 60);
+      final endTime =
+          '${(endHour + endMin ~/ 60).toString().padLeft(2, '0')}:${(endMin % 60).toString().padLeft(2, '0')}';
+
+      classes.add(_ScheduledClass(
+        time: '$startTime - $endTime',
+        title: video.title,
+        instructor: video.instructor.isNotEmpty ? video.instructor : 'Guest Teacher',
+        durationMin: durationMin,
+        level: 'Level ${rng.nextInt(2) + 1}',
+        category: video.category.isNotEmpty ? video.category : 'Wellness',
+        signedUp: rng.nextInt(25) + 3,
+        avatarUrl: video.expertAvatarUrl,
+        thumbnailUrl: video.thumbnailUrl,
+        isMorning: isMorning,
+        video: video,
+      ));
+    }
+
+    classes.sort((a, b) => a.time.compareTo(b.time));
+    return classes;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
-        
-        // Dynamic colors based on theme
+        final isLight = themeState.isLight;
         final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final primaryColor = ThemeColors.primary(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
-        
+        final borderColor = ThemeColors.border(mode);
+
         return Scaffold(
           backgroundColor: bgColor,
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Header with theme-aware styling
+              // ── Header ──
               SliverToBoxAdapter(
                 child: SafeArea(
+                  bottom: false,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Explore',
-                              style: isVintage
-                                  ? GoogleFonts.playfairDisplay(
-                                      color: textColor,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                    )
-                                  : TextStyle(
-                                      color: textColor,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            Expanded(
+                              child: Text(
+                                'Find Upcoming Classes',
+                                style: GoogleFonts.inter(
+                                  color: textColor,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.2,
+                                ),
+                              ),
                             ),
                             GestureDetector(
-                              onTap: () {
-                                context.push(AppRouter.search);
-                              },
+                              onTap: () => context.push(AppRouter.search),
                               child: Container(
-                                padding: const EdgeInsets.all(10),
+                                width: 40,
+                                height: 40,
                                 decoration: BoxDecoration(
                                   color: surfaceColor,
-                                  borderRadius: BorderRadius.circular(isVintage ? 8 : 25),
-                                  border: isVintage ? Border.all(color: primaryColor.withOpacity(0.3)) : null,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: borderColor),
                                 ),
-                                child: Icon(
-                                  Icons.search,
-                                  color: textColor,
-                                  size: 22,
-                                ),
+                                child: Icon(Icons.search,
+                                    color: textColor, size: 20),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Row(
-                            children: _categories.map((category) {
-                              return _buildChip(
-                                category,
-                                _selectedCategory == category,
-                                () => setState(() => _selectedCategory = category),
-                                primaryColor, textColor, textSecondary, isVintage, bgColor,
-                              );
-                            }).toList(),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Practice with our expert teachers and community.\nChoose from classes that fit your schedule and mood.',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: textSecondary,
+                            height: 1.5,
                           ),
                         ),
                       ],
@@ -122,352 +187,405 @@ class _ExplorePageState extends State<ExplorePage> {
                 ),
               ),
 
-              // Top Trending section
-              _buildSectionHeader('Top Trending', icon: Icons.local_fire_department, textColor: textColor, primaryColor: primaryColor, isVintage: isVintage),
+              // ── Week Calendar ──
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 240,
-                  child: _buildVideosSection(isVintage, primaryColor, surfaceColor, textColor, textSecondary, bgColor),
+                child: _buildWeekCalendar(
+                  isLight: isLight,
+                  textColor: textColor,
+                  textSecondary: textSecondary,
+                  borderColor: borderColor,
+                  primaryColor: primaryColor,
+                  bgColor: bgColor,
                 ),
               ),
 
-              // Top Speakers section
-              _buildSectionHeader('Top Speakers', icon: Icons.people_alt_outlined, textColor: textColor, primaryColor: primaryColor, isVintage: isVintage),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 120,
-                  child: _buildTopSpeakersSection(isVintage, primaryColor, surfaceColor, textColor, textSecondary),
-                ),
+              // ── Class Schedule ──
+              _buildClassSchedule(
+                isLight: isLight,
+                bgColor: bgColor,
+                surfaceColor: surfaceColor,
+                textColor: textColor,
+                textSecondary: textSecondary,
+                borderColor: borderColor,
+                primaryColor: primaryColor,
               ),
 
-              // Top picks in wellness
-              if (_selectedCategory == 'All' || _selectedCategory == 'Audio') ...[
-                _buildSectionHeader('Top picks in wellness', icon: Icons.spa, textColor: textColor, primaryColor: primaryColor, isVintage: isVintage),
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 200,
-                    child: _buildAudioSection(isVintage, primaryColor, surfaceColor, textColor, textSecondary, bgColor),
-                  ),
-                ),
-              ],
-
-              // Discover picks for you
-              _buildSectionHeader('Discover picks for you', icon: Icons.auto_awesome, textColor: textColor, primaryColor: primaryColor, isVintage: isVintage),
+              // ── Breathing Exercise ──
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 200,
-                  child: _buildMadeForYouSection(isVintage, primaryColor, surfaceColor, textColor, textSecondary, bgColor),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: BreathingExerciseCard(isLight: isLight),
                 ),
               ),
 
               // Bottom spacing
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 100),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────
+  // Week calendar strip
+  // ─────────────────────────────────
+  Widget _buildWeekCalendar({
+    required bool isLight,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+    required Color bgColor,
+  }) {
+    final dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final days = List.generate(7, (i) => _weekStart.add(Duration(days: i)));
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(
+        children: [
+          // Month + navigation arrows
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _currentMonth,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
+              ),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => _shiftWeek(-1),
+                    child: Icon(Icons.chevron_left_rounded,
+                        color: textSecondary, size: 26),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _shiftWeek(1),
+                    child: Icon(Icons.chevron_right_rounded,
+                        color: textSecondary, size: 26),
+                  ),
+                ],
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTopSpeakersSection(bool isVintage, Color primaryColor, Color surfaceColor, Color textColor, Color textSecondary) {
-    // Using real expert slugs from the backend
-    final speakers = [
-      {'id': 'dr-sarah-johnson', 'name': 'Dr. Sarah', 'imageUrl': 'https://picsum.photos/seed/sarah/200/200'},
-      {'id': 'dr-michael-chen', 'name': 'Dr. Michael', 'imageUrl': 'https://picsum.photos/seed/michael/200/200'},
-      {'id': 'dr-emily-rodriguez', 'name': 'Dr. Emily', 'imageUrl': 'https://picsum.photos/seed/emily/200/200'},
-      {'id': 'dr-james-wilson', 'name': 'Dr. James', 'imageUrl': 'https://picsum.photos/seed/james/200/200'},
-      {'id': 'dr-lisa-park', 'name': 'Dr. Lisa', 'imageUrl': 'https://picsum.photos/seed/lisa/200/200'},
-      {'id': 'dr-david-brown', 'name': 'Dr. David', 'imageUrl': 'https://picsum.photos/seed/david/200/200'},
-    ];
-
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: speakers.length,
-      itemBuilder: (context, index) {
-        final speaker = speakers[index];
-        return GestureDetector(
-          onTap: () {
-            context.push(
-              '${AppRouter.speakerProfile}?id=${speaker['id']}&name=${Uri.encodeComponent(speaker['name']!)}&imageUrl=${Uri.encodeComponent(speaker['imageUrl']!)}',
-            );
-          },
-          child: Container(
-            width: 85,
-            margin: const EdgeInsets.only(right: 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Avatar without border ring
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    borderRadius: isVintage ? BorderRadius.circular(8) : null,
-                    shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+          const SizedBox(height: 16),
+          // Day labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: days.map((d) {
+              final dayIndex = d.weekday % 7;
+              final today = _isToday(d);
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    today ? 'Today' : dayLabels[dayIndex],
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: textSecondary,
+                    ),
                   ),
-                  child: ClipRRect(
-                    borderRadius: isVintage ? BorderRadius.circular(8) : BorderRadius.circular(35),
-                    child: CachedNetworkImage(
-                      imageUrl: speaker['imageUrl']!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: surfaceColor,
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          // Date numbers
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: days.map((d) {
+              final selected = _isSelected(d);
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedDate = d;
+                    });
+                  },
+                  child: Center(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? (isLight ? Colors.black : Colors.white)
+                            : Colors.transparent,
+                        shape: BoxShape.circle,
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        color: surfaceColor,
-                        child: Icon(Icons.person, color: textSecondary),
+                      child: Center(
+                        child: Text(
+                          '${d.day}',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected
+                                ? (isLight ? Colors.white : Colors.black)
+                                : textColor,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  speaker['name']!,
-                  style: isVintage
-                      ? GoogleFonts.lora(color: textColor, fontSize: 12)
-                      : TextStyle(color: textColor, fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+              );
+            }).toList(),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChip(String label, bool isSelected, VoidCallback onTap, Color primaryColor, Color textColor, Color textSecondary, bool isVintage, Color bgColor) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: isVintage 
-                ? (isSelected ? Colors.black : Colors.white) // Clean black/white for vintage
-                : (isSelected ? primaryColor : Colors.transparent),
-            borderRadius: BorderRadius.circular(20), // Pill shape like reference
-            border: Border.all(
-              color: isVintage 
-                  ? (isSelected ? Colors.black : ThemeColors.vintageBorder)
-                  : (isSelected ? primaryColor : textSecondary.withOpacity(0.5)),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isVintage 
-                  ? (isSelected ? Colors.white : Colors.black)
-                  : (isSelected ? Colors.white : textColor),
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ),
+          const SizedBox(height: 16),
+          Divider(color: borderColor, height: 1),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, {IconData? icon, required Color textColor, required Color primaryColor, required bool isVintage}) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-        child: Row(
-          children: [
-            if (icon != null && !isVintage) ...[ // Hide icons in vintage for cleaner look
-              Icon(icon, color: primaryColor, size: 20),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              title,
-              style: isVintage
-                  ? GoogleFonts.playfairDisplay(
-                      color: Colors.black, // Clean black text
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    )
-                  : TextStyle(
-                      color: textColor,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-            ),
-            // Removed decorative line for cleaner look in vintage mode
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVideosSection(bool isVintage, Color primaryColor, Color surfaceColor, Color textColor, Color textSecondary, Color bgColor) {
+  // ─────────────────────────────────
+  // Class Schedule — grouped by time of day
+  // ─────────────────────────────────
+  Widget _buildClassSchedule({
+    required bool isLight,
+    required Color bgColor,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
     return BlocBuilder<VideosBloc, VideosState>(
       builder: (context, state) {
         if (state is VideosLoaded) {
-          return ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: state.videos.length,
-            itemBuilder: (context, index) {
-              final video = state.videos[index];
-              return _buildTrendingCard(
-                category: video.category.toUpperCase(),
-                title: video.title,
-                authorName: video.instructor.isNotEmpty ? video.instructor : 'Playlist',
-                imageUrl: video.thumbnailUrl,
-                isSeries: video.isSeries,
-                episodeCount: video.episodeCount,
-                onTap: () {
-                  context.push('${AppRouter.videoPlayer}?id=${video.id}');
-                },
-                isVintage: isVintage,
-                primaryColor: primaryColor,
-                surfaceColor: surfaceColor,
-                textColor: textColor,
-                textSecondary: textSecondary,
-                bgColor: bgColor,
-              );
-            },
+          final schedule = _generateSchedule(state.videos);
+          final morning =
+              schedule.where((c) => c.isMorning).toList();
+          final afternoon =
+              schedule.where((c) => !c.isMorning).toList();
+
+          return SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Morning ──
+                  if (morning.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Icon(Icons.wb_sunny_outlined,
+                            size: 18, color: textSecondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Morning',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...morning.map((cls) => _buildClassRow(
+                          cls: cls,
+                          isLight: isLight,
+                          surfaceColor: surfaceColor,
+                          textColor: textColor,
+                          textSecondary: textSecondary,
+                          borderColor: borderColor,
+                          primaryColor: primaryColor,
+                        )),
+                  ],
+                  // ── Afternoon ──
+                  if (afternoon.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Icon(Icons.wb_twilight_outlined,
+                            size: 18, color: textSecondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Afternoon',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...afternoon.map((cls) => _buildClassRow(
+                          cls: cls,
+                          isLight: isLight,
+                          surfaceColor: surfaceColor,
+                          textColor: textColor,
+                          textSecondary: textSecondary,
+                          borderColor: borderColor,
+                          primaryColor: primaryColor,
+                        )),
+                  ],
+                ],
+              ),
+            ),
           );
         }
-        return Center(
-          child: CircularProgressIndicator(color: primaryColor),
+        return SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Center(
+              child: CircularProgressIndicator(
+                  color: primaryColor, strokeWidth: 2),
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildTrendingCard({
-    required String category,
-    required String title,
-    required String authorName,
-    required String imageUrl,
-    required VoidCallback onTap,
-    bool isSeries = false,
-    int? episodeCount,
-    required bool isVintage,
-    required Color primaryColor,
+  /// Individual class row — matches the Glo reference:
+  /// time, avatar, title, instructor, duration, level, category, signed up
+  Widget _buildClassRow({
+    required _ScheduledClass cls,
+    required bool isLight,
     required Color surfaceColor,
     required Color textColor,
     required Color textSecondary,
-    required Color bgColor,
+    required Color borderColor,
+    required Color primaryColor,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        if (cls.video.isSeries && cls.video.seriesId != null) {
+          context.push(
+              '${AppRouter.programEnroll}?seriesId=${cls.video.seriesId}');
+        } else {
+          context.push('${AppRouter.videoPlayer}?id=${cls.video.id}');
+        }
+      },
       child: Container(
-        width: 200,
-        margin: const EdgeInsets.only(right: 16),
-        child: Column(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isLight ? Colors.white : const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isLight ? 0.03 : 0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              category,
-              style: TextStyle(
-                color: textSecondary.withOpacity(0.7),
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: isVintage
-                  ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 15, fontWeight: FontWeight.w600)
-                  : TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              authorName,
-              style: isVintage
-                  ? GoogleFonts.lora(color: textSecondary.withOpacity(0.6), fontSize: 13, fontStyle: FontStyle.italic)
-                  : TextStyle(color: textSecondary.withOpacity(0.6), fontSize: 13),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(isVintage ? 6 : 10),
-                  border: isVintage ? Border.all(color: primaryColor.withOpacity(0.3)) : null,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+            // Video thumbnail
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: cls.thumbnailUrl ?? '',
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      width: 90,
+                      height: 90,
+                      color: isLight
+                          ? const Color(0xFFF3F4F6)
+                          : const Color(0xFF2A2A2A),
+                      child: Icon(Icons.play_circle_outline,
+                          color: textSecondary, size: 28),
                     ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(isVintage ? 5 : 10),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(color: surfaceColor),
-                        errorWidget: (context, url, error) => Container(
-                          color: surfaceColor,
-                          child: Icon(Icons.play_circle_outline, color: textSecondary, size: 48),
-                        ),
-                      ),
-                      Container(
+                    errorWidget: (_, __, ___) => Container(
+                      width: 90,
+                      height: 90,
+                      color: isLight
+                          ? const Color(0xFFF3F4F6)
+                          : const Color(0xFF2A2A2A),
+                      child: Icon(Icons.play_circle_outline,
+                          color: textSecondary, size: 28),
+                    ),
+                  ),
+                  // Play overlay
+                  Positioned.fill(
+                    child: Center(
+                      child: Container(
+                        width: 30,
+                        height: 30,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: isVintage
-                                ? [ThemeColors.vintageBrass.withOpacity(0.1), Colors.transparent, bgColor.withOpacity(0.5)]
-                                : [Colors.transparent, bgColor.withOpacity(0.4)],
-                          ),
+                          color: Colors.black.withOpacity(0.4),
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(Icons.play_arrow_rounded,
+                            color: Colors.white, size: 18),
                       ),
-                      if (isSeries && episodeCount != null)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: surfaceColor.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(isVintage ? 4 : 6),
-                              border: isVintage ? Border.all(color: primaryColor.withOpacity(0.5)) : null,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.playlist_play, color: primaryColor, size: 14),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$episodeCount episodes',
-                                  style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Class info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Time
+                  Text(
+                    cls.time,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  // Title
+                  Text(
+                    cls.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  // Instructor
+                  Text(
+                    'With ${cls.instructor}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
+                  ),
+                  // Duration + level
+                  Text(
+                    '${cls.durationMin} minutes • ${cls.level}',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: textSecondary,
+                    ),
+                  ),
+                  // Category + signed up
+                  Text(
+                    '${cls.category} • ${cls.signedUp} signed up',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -475,189 +593,33 @@ class _ExplorePageState extends State<ExplorePage> {
       ),
     );
   }
+}
 
-  Widget _buildAudioSection(bool isVintage, Color primaryColor, Color surfaceColor, Color textColor, Color textSecondary, Color bgColor) {
-    return BlocBuilder<MeditationBloc, MeditationState>(
-      builder: (context, state) {
-        if (state is MeditationLoaded) {
-          return ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: state.audios.length,
-            itemBuilder: (context, index) {
-              final audio = state.audios[index];
-              return _buildContentCard(
-                title: audio.title,
-                subtitle: audio.description,
-                imageUrl: audio.imageUrl,
-                badge: 'AUDIO',
-                badgeColor: isVintage ? ThemeColors.sageGreen : ThemeColors.classicPrimary,
-                onTap: () {
-                  context.push('${AppRouter.audioPlayer}?id=${audio.id}');
-                },
-                isVintage: isVintage,
-                primaryColor: primaryColor,
-                surfaceColor: surfaceColor,
-                textColor: textColor,
-                textSecondary: textSecondary,
-              );
-            },
-          );
-        }
-        return Center(child: CircularProgressIndicator(color: primaryColor));
-      },
-    );
-  }
+/// Model for a scheduled class
+class _ScheduledClass {
+  final String time;
+  final String title;
+  final String instructor;
+  final int durationMin;
+  final String level;
+  final String category;
+  final int signedUp;
+  final String? avatarUrl;
+  final String? thumbnailUrl;
+  final bool isMorning;
+  final VideoEntity video;
 
-  Widget _buildMadeForYouSection(bool isVintage, Color primaryColor, Color surfaceColor, Color textColor, Color textSecondary, Color bgColor) {
-    return BlocBuilder<MeditationBloc, MeditationState>(
-      builder: (context, state) {
-        if (state is MeditationLoaded) {
-          return ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: state.moodBasedTypes.length,
-            itemBuilder: (context, index) {
-              final type = state.moodBasedTypes[index];
-              return _buildContentCard(
-                title: type.name,
-                subtitle: type.subtitle,
-                imageUrl: type.imageUrl,
-                badge: 'FOR YOU',
-                badgeColor: isVintage ? ThemeColors.dustyRose : ThemeColors.classicSecondary,
-                onTap: () {
-                  context.push(
-                    '${AppRouter.meditationCategory}?id=${type.id}&name=${Uri.encodeComponent(type.name)}',
-                  );
-                },
-                isVintage: isVintage,
-                primaryColor: primaryColor,
-                surfaceColor: surfaceColor,
-                textColor: textColor,
-                textSecondary: textSecondary,
-              );
-            },
-          );
-        }
-        return Center(child: CircularProgressIndicator(color: primaryColor));
-      },
-    );
-  }
-
-  Widget _buildContentCard({
-    required String title,
-    required String subtitle,
-    required String imageUrl,
-    required VoidCallback onTap,
-    String? badge,
-    Color? badgeColor,
-    required bool isVintage,
-    required Color primaryColor,
-    required Color surfaceColor,
-    required Color textColor,
-    required Color textSecondary,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 140,
-        margin: const EdgeInsets.only(right: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              children: [
-                Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(isVintage ? 6 : 8),
-                    border: isVintage ? Border.all(color: primaryColor.withOpacity(0.3)) : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(isVintage ? 5 : 8),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(color: surfaceColor),
-                          errorWidget: (context, url, error) => Container(
-                            color: surfaceColor,
-                            child: Icon(Icons.music_note, color: textSecondary, size: 40),
-                          ),
-                        ),
-                        if (isVintage)
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [ThemeColors.vintageBrass.withOpacity(0.1), Colors.transparent],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (badge != null)
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: badgeColor ?? primaryColor,
-                        borderRadius: BorderRadius.circular(isVintage ? 4 : 12),
-                      ),
-                      child: Text(
-                        badge,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: isVintage
-                  ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)
-                  : TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: textSecondary.withOpacity(0.65),
-                fontSize: 11,
-                fontStyle: isVintage ? FontStyle.italic : FontStyle.normal,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  _ScheduledClass({
+    required this.time,
+    required this.title,
+    required this.instructor,
+    required this.durationMin,
+    required this.level,
+    required this.category,
+    required this.signedUp,
+    this.avatarUrl,
+    this.thumbnailUrl,
+    required this.isMorning,
+    required this.video,
+  });
 }

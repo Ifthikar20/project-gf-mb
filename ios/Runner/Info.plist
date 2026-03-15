@@ -71,6 +71,12 @@
 		<string>http</string>
 	</array>
 
+	<!-- HealthKit -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>Great Feel reads your workout, heart rate, and activity data to show your fitness progress and personalized wellness insights.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Great Feel can save your workout sessions to Apple Health so all your fitness data stays in one place.</string>
+
 	<!-- App Transport Security for media streaming -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

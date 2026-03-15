@@ -10,7 +10,9 @@ import '../../../../core/theme/app_theme.dart';
 import '../../data/expert_service.dart';
 import '../../domain/entities/expert_entity.dart';
 
-/// Enhanced Speaker/Expert Profile Page with rich data from API
+/// Glo-style instructor profile page.
+/// Clean layout: back chevron → large name → specialties → class count →
+/// Follow button → big portrait photo → bio → classes list.
 class SpeakerPage extends StatefulWidget {
   final String speakerId;
   final String speakerName;
@@ -30,8 +32,8 @@ class SpeakerPage extends StatefulWidget {
 class _SpeakerPageState extends State<SpeakerPage> {
   ExpertEntity? _expert;
   bool _isLoading = true;
-  String? _error;
-  bool _useFallback = false; // Show basic info when API fails
+  bool _useFallback = false;
+  bool _isFollowing = false;
 
   @override
   void initState() {
@@ -41,21 +43,18 @@ class _SpeakerPageState extends State<SpeakerPage> {
 
   Future<void> _loadExpertProfile() async {
     try {
-      final expert = await ExpertService.instance.getExpertBySlug(widget.speakerId);
+      final expert =
+          await ExpertService.instance.getExpertBySlug(widget.speakerId);
       if (mounted) {
         setState(() {
           _expert = expert;
           _isLoading = false;
-          if (expert == null) {
-            _error = 'Expert not found';
-          }
+          if (expert == null) _useFallback = true;
         });
       }
-    } catch (e) {
-      // Gracefully fall back to basic info when API fails (e.g., 404)
+    } catch (_) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
           _useFallback = true;
           _isLoading = false;
         });
@@ -63,705 +62,617 @@ class _SpeakerPageState extends State<SpeakerPage> {
     }
   }
 
+  String get _displayName => _expert?.name ?? widget.speakerName;
+  String get _displayImage => _expert?.imageUrl ?? widget.speakerImageUrl;
+
+  String get _specialtiesText {
+    final specialties = _expert?.specialties ?? [];
+    if (specialties.isEmpty) {
+      return _expert?.specialization ?? 'Wellness, Mindfulness';
+    }
+    return specialties.join(', ');
+  }
+
+  int get _totalClasses {
+    if (_expert == null) return 0;
+    return _expert!.stats.videoCount +
+        _expert!.stats.audioCount +
+        _expert!.stats.seriesCount;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
-        
-        // Dynamic colors
+        final isLight = themeState.isLight;
         final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final primaryColor = ThemeColors.primary(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
+        final borderColor = ThemeColors.border(mode);
 
         return Scaffold(
           backgroundColor: bgColor,
-          body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Hero App Bar with background image
-              _buildHeroAppBar(
-                bgColor: bgColor,
-                surfaceColor: surfaceColor,
-                primaryColor: primaryColor,
-                textColor: textColor,
-                textSecondary: textSecondary,
-                isVintage: isVintage,
-              ),
-              
-              // Loading state
-              if (_isLoading)
-                SliverFillRemaining(
-                  child: Center(
-                    child: CircularProgressIndicator(color: primaryColor),
-                  ),
-                ),
-              
-              // Error state  
-              if (_error != null && !_isLoading && !_useFallback)
-                SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline, color: textSecondary, size: 48),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Failed to load profile',
-                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(
-                            _error!,
-                            style: TextStyle(color: textSecondary, fontSize: 13),
-                            textAlign: TextAlign.center,
+          body: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                      color: primaryColor, strokeWidth: 2))
+              : CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    // ── Back button ──
+                    SliverToBoxAdapter(
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: surfaceColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: borderColor),
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    size: 18,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              if (_expert?.shareUrl != null)
+                                GestureDetector(
+                                  onTap: _shareProfile,
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: surfaceColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: borderColor),
+                                    ),
+                                    child: Icon(Icons.share_outlined,
+                                        size: 18, color: textColor),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _isLoading = true;
-                              _error = null;
-                            });
-                            _loadExpertProfile();
-                          },
-                          child: const Text('Try Again'),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+
+                    // ── Name + Specialties + Class Count + Follow ──
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Name — large and bold
+                            Text(
+                              _displayName,
+                              style: GoogleFonts.inter(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                                height: 1.15,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Specialties — comma-separated
+                            Text(
+                              _specialtiesText,
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                color: textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Class count
+                            Text(
+                              '$_totalClasses classes',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Follow button — black pill
+                            GestureDetector(
+                              onTap: () {
+                                setState(
+                                    () => _isFollowing = !_isFollowing);
+                                if (_isFollowing) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Following $_displayName',
+                                        style: GoogleFonts.inter(
+                                            color: Colors.white),
+                                      ),
+                                      backgroundColor:
+                                          const Color(0xFF22C55E),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12)),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: AnimatedContainer(
+                                duration:
+                                    const Duration(milliseconds: 250),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 28, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: _isFollowing
+                                      ? surfaceColor
+                                      : (isLight
+                                          ? Colors.black
+                                          : Colors.white),
+                                  borderRadius:
+                                      BorderRadius.circular(26),
+                                  border: _isFollowing
+                                      ? Border.all(color: borderColor)
+                                      : null,
+                                ),
+                                child: Text(
+                                  _isFollowing
+                                      ? 'Following'
+                                      : 'Follow',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: _isFollowing
+                                        ? textColor
+                                        : (isLight
+                                            ? Colors.white
+                                            : Colors.black),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // ── Big Portrait Photo ──
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 24, 0, 0),
+                        child: AspectRatio(
+                          aspectRatio: 3 / 4,
+                          child: CachedNetworkImage(
+                            imageUrl: _displayImage,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(
+                              color: surfaceColor,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: primaryColor,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (_, __, ___) => Container(
+                              color: surfaceColor,
+                              child: Center(
+                                child: Icon(Icons.person,
+                                    size: 80, color: textSecondary),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // ── Bio ──
+                    if ((_expert?.bio ?? _expert?.shortBio) != null)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'About',
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                (_expert?.bio ?? _expert?.shortBio)!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  color: textSecondary,
+                                  height: 1.6,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // ── Social Links ──
+                    if (_expert?.hasSocialLinks ?? false)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              if (_expert?.linkedinUrl != null)
+                                _buildLinkPill(
+                                  Icons.work_outline,
+                                  'LinkedIn',
+                                  _expert!.linkedinUrl!,
+                                  const Color(0xFF0A66C2),
+                                ),
+                              if (_expert?.instagramUrl != null)
+                                _buildLinkPill(
+                                  Icons.camera_alt_outlined,
+                                  'Instagram',
+                                  _expert!.instagramUrl!,
+                                  const Color(0xFFE4405F),
+                                ),
+                              if (_expert?.websiteUrl != null)
+                                _buildLinkPill(
+                                  Icons.link,
+                                  'Website',
+                                  _expert!.websiteUrl!,
+                                  primaryColor,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // ── Classes by this instructor ──
+                    if (_expert != null &&
+                        (_expert!.videos.isNotEmpty ||
+                            _expert!.audioSessions.isNotEmpty))
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                          child: Text(
+                            'Classes by $_displayName',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // ── Videos ──
+                    if (_expert?.videos.isNotEmpty ?? false)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 220,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20),
+                            itemCount: _expert!.videos.length,
+                            itemBuilder: (context, index) =>
+                                _buildContentCard(
+                              item: _expert!.videos[index],
+                              isLight: isLight,
+                              surfaceColor: surfaceColor,
+                              textColor: textColor,
+                              textSecondary: textSecondary,
+                              borderColor: borderColor,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // ── Series ──
+                    if (_expert?.series.isNotEmpty ?? false) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                          child: Text(
+                            'Series',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _buildSeriesRow(
+                              series: _expert!.series[index],
+                              isLight: isLight,
+                              surfaceColor: surfaceColor,
+                              textColor: textColor,
+                              textSecondary: textSecondary,
+                              borderColor: borderColor,
+                              primaryColor: primaryColor,
+                            ),
+                            childCount: _expert!.series.length,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // ── Audio ──
+                    if (_expert?.audioSessions.isNotEmpty ?? false) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                          child: Text(
+                            'Audio Sessions',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 220,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20),
+                            itemCount: _expert!.audioSessions.length,
+                            itemBuilder: (context, index) =>
+                                _buildContentCard(
+                              item: _expert!.audioSessions[index],
+                              isLight: isLight,
+                              surfaceColor: surfaceColor,
+                              textColor: textColor,
+                              textSecondary: textSecondary,
+                              borderColor: borderColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Bottom padding
+                    const SliverToBoxAdapter(
+                        child: SizedBox(height: 40)),
+                  ],
                 ),
-              
-              // Content (either loaded expert or fallback basic info)
-              if (!_isLoading && (_error == null || _useFallback)) ...[
-                // Bio section
-                _buildBioSection(
-                  surfaceColor: surfaceColor,
-                  primaryColor: primaryColor,
-                  textColor: textColor,
-                  textSecondary: textSecondary,
-                  isVintage: isVintage,
-                ),
-                
-                // Stats section - inline and minimal
-                if (_expert != null)
-                  _buildStatsSection(
-                    surfaceColor: surfaceColor,
-                    primaryColor: primaryColor,
-                    textColor: textColor,
-                    textSecondary: textSecondary,
-                    isVintage: isVintage,
-                  ),
-                
-                // Talks About section (specialties/topics)
-                if (_expert?.specialties.isNotEmpty ?? false)
-                  _buildTalksAboutSection(
-                    surfaceColor: surfaceColor,
-                    primaryColor: primaryColor,
-                    textColor: textColor,
-                    textSecondary: textSecondary,
-                    isVintage: isVintage,
-                  ),
-                
-                // Links section
-                _buildLinksSection(
-                  surfaceColor: surfaceColor,
-                  primaryColor: primaryColor,
-                  textColor: textColor,
-                  textSecondary: textSecondary,
-                  isVintage: isVintage,
-                ),
-                
-                // Videos section
-                if (_expert?.videos.isNotEmpty ?? false)
-                  _buildContentSection(
-                    title: 'Videos',
-                    icon: Icons.play_circle_outline,
-                    items: _expert!.videos,
-                    surfaceColor: surfaceColor,
-                    primaryColor: primaryColor,
-                    textColor: textColor,
-                    textSecondary: textSecondary,
-                    isVintage: isVintage,
-                    badgeColor: Colors.redAccent,
-                  ),
-                
-                // Series section
-                if (_expert?.series.isNotEmpty ?? false)
-                  _buildSeriesSection(
-                    surfaceColor: surfaceColor,
-                    primaryColor: primaryColor,
-                    textColor: textColor,
-                    textSecondary: textSecondary,
-                    isVintage: isVintage,
-                  ),
-                
-                // Audio section
-                if (_expert?.audioSessions.isNotEmpty ?? false)
-                  _buildContentSection(
-                    title: 'Audio Sessions',
-                    icon: Icons.headphones,
-                    items: _expert!.audioSessions,
-                    surfaceColor: surfaceColor,
-                    primaryColor: primaryColor,
-                    textColor: textColor,
-                    textSecondary: textSecondary,
-                    isVintage: isVintage,
-                    badgeColor: Colors.purpleAccent,
-                  ),
-                
-                // Bottom padding
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              ],
-            ],
-          ),
         );
       },
     );
   }
 
-  Widget _buildHeroAppBar({
-    required Color bgColor,
+  // ── Content card (videos / audio) ──
+  Widget _buildContentCard({
+    required ExpertContentItem item,
+    required bool isLight,
     required Color surfaceColor,
-    required Color primaryColor,
     required Color textColor,
     required Color textSecondary,
-    required bool isVintage,
+    required Color borderColor,
   }) {
-    // Fallback backdrop images from R2 bucket
-    const backdropBaseUrl = 'https://pub-aab30380758e431a9c177896a92abeca.r2.dev/profile-backdrop';
-    final backdropImages = [
-      '$backdropBaseUrl/backdrop-profile-1.jpg',
-      '$backdropBaseUrl/backdrop-profile-2.jpg',
-      '$backdropBaseUrl/backdrop-profile-3.jpg',
-    ];
-    
-    // Use expert's background image if available, otherwise pick a fallback based on speaker ID hash
-    final backgroundImageUrl = _expert?.backgroundImageUrl?.isNotEmpty == true 
-        ? _expert!.backgroundImageUrl!
-        : backdropImages[widget.speakerId.hashCode.abs() % backdropImages.length];
-    
-    final imageUrl = _expert?.imageUrl ?? widget.speakerImageUrl;
-    final name = _expert?.name ?? widget.speakerName;
-    final specialization = _expert?.specialization ?? _expert?.title;
-    final primaryCategory = _expert?.primaryCategory;
-    final isVerified = _expert?.verified ?? false;
-
-    return SliverAppBar(
-      backgroundColor: bgColor,
-      expandedHeight: 340,
-      pinned: true,
-      leading: IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(isVintage ? 8 : 20),
-          ),
-          child: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 18),
-        ),
-        onPressed: () => context.pop(),
-      ),
-      actions: [
-        if (_expert?.shareUrl != null)
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(isVintage ? 8 : 20),
-              ),
-              child: const Icon(Icons.share, color: Colors.white, size: 18),
-            ),
-            onPressed: () => _shareProfile(),
-          ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
+    return GestureDetector(
+      onTap: () {
+        if (item.contentType == 'video') {
+          context.push('${AppRouter.videoPlayer}?id=${item.id}');
+        } else {
+          context.push('${AppRouter.audioPlayer}?id=${item.id}');
+        }
+      },
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Background image - always use backdrop now
-            CachedNetworkImage(
-              imageUrl: backgroundImageUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [primaryColor.withAlpha(102), bgColor],
-                  ),
-                ),
-              ),
-              errorWidget: (context, url, error) => Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [primaryColor.withAlpha(102), bgColor],
-                  ),
-                ),
-              ),
-            ),
-            
-            // Gradient overlay for readability
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    bgColor.withAlpha(200),
-                    bgColor,
-                  ],
-                  stops: const [0.0, 0.7, 1.0],
-                ),
-              ),
-            ),
-            
-            // Profile content
-            SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            // Thumbnail
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
                 children: [
-                  const SizedBox(height: 40),
-                  // Avatar - without ring
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: isVintage ? BoxShape.rectangle : BoxShape.circle,
-                      borderRadius: isVintage ? BorderRadius.circular(12) : null,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+                  CachedNetworkImage(
+                    imageUrl: item.thumbnailUrl ?? '',
+                    width: 200,
+                    height: 140,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      width: 200,
+                      height: 140,
+                      color: surfaceColor,
                     ),
-                    child: ClipRRect(
-                      borderRadius: isVintage ? BorderRadius.circular(12) : BorderRadius.circular(55),
-                      child: CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        width: 110,
-                        height: 110,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: surfaceColor,
-                          child: Icon(Icons.person, color: textSecondary, size: 40),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: surfaceColor,
-                          child: Icon(Icons.person, color: textSecondary, size: 40),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Name
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        name,
-                        style: isVintage
-                            ? GoogleFonts.playfairDisplay(
-                                color: textColor,
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                              )
-                            : TextStyle(
-                                color: textColor,
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                              ),
-                      ),
-                      if (isVerified) ...[
-                        const SizedBox(width: 8),
-                        Icon(Icons.verified, color: Colors.blue, size: 18),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // Credentials - shown right below name
-                  if (specialization != null && specialization.isNotEmpty)
-                    Text(
-                      specialization,
-                      style: TextStyle(
+                    errorWidget: (_, __, ___) => Container(
+                      width: 200,
+                      height: 140,
+                      color: surfaceColor,
+                      child: Icon(
+                        item.contentType == 'video'
+                            ? Icons.play_circle_outline
+                            : Icons.headphones_rounded,
                         color: textSecondary,
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
+                        size: 36,
                       ),
-                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  // Duration badge
+                  if (item.formattedDuration != null)
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          item.formattedDuration!,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Lock overlay
+                  if (item.isLocked)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black38,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.lock_outline,
+                              color: Colors.white, size: 28),
+                        ),
+                      ),
                     ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBioSection({
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-  }) {
-    final bio = _expert?.bio ?? _expert?.shortBio;
-    
-    if (bio == null || bio.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-    
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: surfaceColor.withAlpha(80),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+            const SizedBox(height: 8),
             Text(
-              'About',
-              style: GoogleFonts.caveat(
+              item.title,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
                 color: textColor,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 12),
-            Text(
-              bio,
-              style: GoogleFonts.caveat(
-                color: textSecondary,
-                fontSize: 18,
-                height: 1.4,
+            if (item.category != null)
+              Text(
+                item.category!,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: textSecondary,
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatsSection({
+  // ── Series row ──
+  Widget _buildSeriesRow({
+    required ExpertSeries series,
+    required bool isLight,
     required Color surfaceColor,
-    required Color primaryColor,
     required Color textColor,
     required Color textSecondary,
-    required bool isVintage,
+    required Color borderColor,
+    required Color primaryColor,
   }) {
-    final stats = _expert?.stats ?? const ExpertStats();
-    
-    return SliverToBoxAdapter(
+    return GestureDetector(
+      onTap: () =>
+          context.push('${AppRouter.programEnroll}?seriesId=${series.id}'),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isLight ? Colors.white : const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
         child: Row(
           children: [
-            _buildStatCard(
-              icon: Icons.visibility,
-              value: _formatNumber(stats.totalViews),
-              label: 'Views',
-              surfaceColor: surfaceColor,
-              primaryColor: primaryColor,
-              textColor: textColor,
-              textSecondary: textSecondary,
-              isVintage: isVintage,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              icon: Icons.play_circle_filled,
-              value: '${stats.videoCount}',
-              label: 'Videos',
-              surfaceColor: surfaceColor,
-              primaryColor: primaryColor,
-              textColor: textColor,
-              textSecondary: textSecondary,
-              isVintage: isVintage,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              icon: Icons.headphones,
-              value: '${stats.audioCount}',
-              label: 'Audio',
-              surfaceColor: surfaceColor,
-              primaryColor: primaryColor,
-              textColor: textColor,
-              textSecondary: textSecondary,
-              isVintage: isVintage,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-  }) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(color: textSecondary, fontSize: 10),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSocialLinksSection({
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-  }) {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: surfaceColor.withAlpha(128),
-          borderRadius: BorderRadius.circular(isVintage ? 8 : 16),
-          border: isVintage ? Border.all(color: primaryColor.withAlpha(51)) : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Connect',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: CachedNetworkImage(
+                imageUrl: series.thumbnailUrl ?? '',
+                width: 70,
+                height: 50,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  width: 70,
+                  height: 50,
+                  color: surfaceColor,
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  width: 70,
+                  height: 50,
+                  color: surfaceColor,
+                  child: Icon(Icons.playlist_play,
+                      color: textSecondary, size: 24),
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (_expert?.linkedinUrl != null)
-                  _buildSocialButton(
-                    icon: Icons.work_outline,
-                    label: 'LinkedIn',
-                    url: _expert!.linkedinUrl!,
-                    color: const Color(0xFF0A66C2),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    series.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                if (_expert?.instagramUrl != null) ...[
-                  const SizedBox(width: 12),
-                  _buildSocialButton(
-                    icon: Icons.camera_alt_outlined,
-                    label: 'Instagram',
-                    url: _expert!.instagramUrl!,
-                    color: const Color(0xFFE4405F),
-                  ),
-                ],
-                if (_expert?.websiteUrl != null) ...[
-                  const SizedBox(width: 12),
-                  _buildSocialButton(
-                    icon: Icons.language,
-                    label: 'Website',
-                    url: _expert!.websiteUrl!,
-                    color: primaryColor,
+                  const SizedBox(height: 2),
+                  Text(
+                    '${series.episodeCount} episodes',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
                   ),
                 ],
-              ],
+              ),
             ),
+            Icon(Icons.chevron_right_rounded,
+                color: textSecondary, size: 22),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSocialButton({
-    required IconData icon,
-    required String label,
-    required String url,
-    required Color color,
-  }) {
+  // ── Link pill ──
+  Widget _buildLinkPill(
+      IconData icon, String label, String url, Color color) {
     return GestureDetector(
       onTap: () => _launchUrl(url),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withAlpha(26),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withAlpha(77)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTalksAboutSection({
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-  }) {
-    // Use expert specialties or provide default topics
-    final topics = _expert?.specialties ?? [];
-    if (topics.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
-
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Talks about',
-              style: GoogleFonts.caveat(
-                color: textColor,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: topics.map((topic) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: surfaceColor.withAlpha(80),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: textSecondary.withOpacity(0.2)),
-                ),
-                child: Text(
-                  '#${_formatTopicTag(topic)}',
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              )).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatTopicTag(String topic) {
-    // Convert topic to hashtag format: "managing depression" -> "ManagingDepression"
-    return topic.split(r'[\s\-_]+')
-        .map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1).toLowerCase() : '')
-        .join('');
-  }
-
-  Widget _buildLinksSection({
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-  }) {
-    // Check if there are any links to show
-    final hasLinkedIn = _expert?.linkedinUrl != null;
-    final hasInstagram = _expert?.instagramUrl != null;
-    final hasWebsite = _expert?.websiteUrl != null;
-    
-    if (!hasLinkedIn && !hasInstagram && !hasWebsite) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Links',
-              style: GoogleFonts.caveat(
-                color: textColor,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                if (hasLinkedIn)
-                  _buildLinkChip(
-                    icon: Icons.work_outline,
-                    label: 'LinkedIn',
-                    url: _expert!.linkedinUrl!,
-                    color: const Color(0xFF0A66C2),
-                  ),
-                if (hasInstagram)
-                  _buildLinkChip(
-                    icon: Icons.camera_alt_outlined,
-                    label: 'Instagram',
-                    url: _expert!.instagramUrl!,
-                    color: const Color(0xFFE4405F),
-                  ),
-                if (hasWebsite)
-                  _buildLinkChip(
-                    icon: Icons.link,
-                    label: 'Linktree',
-                    url: _expert!.websiteUrl!,
-                    color: const Color(0xFF43E660),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLinkChip({
-    required IconData icon,
-    required String label,
-    required String url,
-    required Color color,
-  }) {
-    return GestureDetector(
-      onTap: () => _launchUrl(url),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
@@ -773,373 +684,22 @@ class _SpeakerPageState extends State<SpeakerPage> {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
                 color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-
-  Widget _buildContentSection({
-    required String title,
-    required IconData icon,
-    required List<ExpertContentItem> items,
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-    required Color badgeColor,
-  }) {
-    return SliverToBoxAdapter(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-            child: Row(
-              children: [
-                Icon(icon, color: primaryColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: isVintage
-                      ? GoogleFonts.playfairDisplay(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        )
-                      : TextStyle(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withAlpha(51),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${items.length}',
-                    style: TextStyle(color: primaryColor, fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 160,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return _buildContentCard(
-                  item: item,
-                  surfaceColor: surfaceColor,
-                  primaryColor: primaryColor,
-                  textColor: textColor,
-                  textSecondary: textSecondary,
-                  isVintage: isVintage,
-                  badgeColor: badgeColor,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContentCard({
-    required ExpertContentItem item,
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-    required Color badgeColor,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        if (item.contentType == 'video') {
-          context.push('${AppRouter.videoPlayer}?id=${item.id}');
-        } else {
-          context.push('${AppRouter.audioPlayer}?id=${item.id}');
-        }
-      },
-      child: Container(
-        width: 140,
-        margin: const EdgeInsets.only(right: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
-                  child: CachedNetworkImage(
-                    imageUrl: item.thumbnailUrl ?? '',
-                    width: 140,
-                    height: 100,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      width: 140,
-                      height: 100,
-                      color: surfaceColor,
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      width: 140,
-                      height: 100,
-                      color: surfaceColor,
-                      child: Icon(
-                        item.contentType == 'video' ? Icons.play_circle : Icons.headphones,
-                        color: textSecondary,
-                        size: 32,
-                      ),
-                    ),
-                  ),
-                ),
-                // Duration badge
-                if (item.formattedDuration != null)
-                  Positioned(
-                    bottom: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black87,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        item.formattedDuration!,
-                        style: const TextStyle(color: Colors.white, fontSize: 11),
-                      ),
-                    ),
-                  ),
-                // Lock overlay
-                if (item.isLocked)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.lock, color: Colors.white, size: 24),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Title
-            Text(
-              item.title,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSeriesSection({
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-  }) {
-    return SliverToBoxAdapter(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-            child: Row(
-              children: [
-                Icon(Icons.playlist_play, color: primaryColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Series',
-                  style: isVintage
-                      ? GoogleFonts.playfairDisplay(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        )
-                      : TextStyle(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(51),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${_expert?.series.length ?? 0}',
-                    style: const TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ..._expert!.series.map((series) => _buildSeriesCard(
-            series: series,
-            surfaceColor: surfaceColor,
-            primaryColor: primaryColor,
-            textColor: textColor,
-            textSecondary: textSecondary,
-            isVintage: isVintage,
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSeriesCard({
-    required ExpertSeries series,
-    required Color surfaceColor,
-    required Color primaryColor,
-    required Color textColor,
-    required Color textSecondary,
-    required bool isVintage,
-  }) {
-    return GestureDetector(
-      onTap: () => context.push('${AppRouter.videoPlayer}?id=${series.id}'),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: surfaceColor.withAlpha(128),
-          borderRadius: BorderRadius.circular(isVintage ? 8 : 12),
-          border: isVintage ? Border.all(color: primaryColor.withAlpha(51)) : null,
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: series.thumbnailUrl ?? '',
-                width: 80,
-                height: 60,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  width: 80,
-                  height: 60,
-                  color: surfaceColor,
-                ),
-                errorWidget: (context, url, error) => Container(
-                  width: 80,
-                  height: 60,
-                  color: surfaceColor,
-                  child: const Icon(Icons.playlist_play, color: Colors.white24),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withAlpha(51),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'SERIES',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    series.title,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        '${series.episodeCount} episodes',
-                        style: TextStyle(color: textSecondary, fontSize: 12),
-                      ),
-                      if (series.isLocked) ...[
-                        const SizedBox(width: 8),
-                        Icon(Icons.lock, color: primaryColor, size: 14),
-                      ],
-                    ],
-                  ),
-                  if (series.isLocked && series.lockMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        series.lockMessage!,
-                        style: TextStyle(color: primaryColor.withAlpha(204), fontSize: 10),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: textSecondary, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatNumber(int number) {
-    if (number >= 1000000) {
-      return '${(number / 1000000).toStringAsFixed(1)}M';
-    } else if (number >= 1000) {
-      return '${(number / 1000).toStringAsFixed(1)}K';
-    }
-    return number.toString();
   }
 
   Future<void> _shareProfile() async {
     final expert = _expert;
-    if (expert == null || expert.shareUrl == null) return;
-    
-    // For now, we'll just launch the URL as a placeholder for sharing
-    // Ideally, we'd use a share package like share_plus
-    _launchUrl(expert.shareUrl!);
+    if (expert?.shareUrl == null) return;
+    _launchUrl(expert!.shareUrl!);
   }
 
   Future<void> _launchUrl(String url) async {
@@ -1148,8 +708,6 @@ class _SpeakerPageState extends State<SpeakerPage> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
-    } catch (e) {
-      // Silently fail
-    }
+    } catch (_) {}
   }
 }

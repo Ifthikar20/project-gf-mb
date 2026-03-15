@@ -33,7 +33,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final textColor = ThemeColors.textPrimary(mode);
@@ -56,7 +56,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
 
               if (state is WorkoutLoaded) {
                 return _buildLoadedState(
-                  state, bgColor, surfaceColor, textColor, textSecondary, primaryColor, isVintage,
+                  state, bgColor, surfaceColor, textColor, textSecondary, primaryColor, isLight,
                 );
               }
 
@@ -140,7 +140,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
     Color textColor,
     Color textSecondary,
     Color primaryColor,
-    bool isVintage,
+    bool isLight,
   ) {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -156,8 +156,8 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
                 children: [
                   Text(
                     'Workouts',
-                    style: isVintage
-                        ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 28, fontWeight: FontWeight.bold)
+                    style: isLight
+                        ? GoogleFonts.inter(color: textColor, fontSize: 28, fontWeight: FontWeight.bold)
                         : GoogleFonts.poppins(color: textColor, fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -179,7 +179,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: _buildWeeklySummary(state, surfaceColor, textColor, textSecondary, isVintage),
+            child: _buildWeeklySummary(state, surfaceColor, textColor, textSecondary, isLight),
           ),
         ),
 
@@ -188,7 +188,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _buildDailyChart(state.stats!, surfaceColor, textColor, textSecondary, isVintage),
+              child: _buildDailyChart(state.stats!, surfaceColor, textColor, textSecondary, isLight),
             ),
           ),
 
@@ -223,8 +223,8 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
             child: Text(
               'Recent Workouts',
-              style: isVintage
-                  ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 18, fontWeight: FontWeight.w600)
+              style: isLight
+                  ? GoogleFonts.inter(color: textColor, fontSize: 18, fontWeight: FontWeight.w600)
                   : GoogleFonts.poppins(color: textColor, fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
@@ -243,7 +243,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
             delegate: SliverChildBuilderDelegate(
               (context, index) => Padding(
                 padding: EdgeInsets.fromLTRB(20, index == 0 ? 0 : 8, 20, 0),
-                child: _buildWorkoutCard(state.recentWorkouts[index], surfaceColor, textColor, textSecondary, isVintage),
+                child: _buildWorkoutCard(state.recentWorkouts[index], surfaceColor, textColor, textSecondary, isLight),
               ),
               childCount: state.recentWorkouts.length,
             ),
@@ -255,7 +255,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
     );
   }
 
-  Widget _buildWeeklySummary(WorkoutLoaded state, Color surfaceColor, Color textColor, Color textSecondary, bool isVintage) {
+  Widget _buildWeeklySummary(WorkoutLoaded state, Color surfaceColor, Color textColor, Color textSecondary, bool isLight) {
     final stats = state.stats;
     final goals = state.goals;
 
@@ -263,8 +263,8 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(isVintage ? 12 : 20),
-        border: isVintage ? Border.all(color: Colors.white10) : null,
+        borderRadius: BorderRadius.circular(16),
+        border: isLight ? Border.all(color: Colors.white10) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,14 +367,14 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
     );
   }
 
-  Widget _buildDailyChart(WorkoutStats stats, Color surfaceColor, Color textColor, Color textSecondary, bool isVintage) {
+  Widget _buildDailyChart(WorkoutStats stats, Color surfaceColor, Color textColor, Color textSecondary, bool isLight) {
     final maxCal = stats.maxDailyCalories;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(isVintage ? 12 : 16),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -482,12 +482,12 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
     );
   }
 
-  Widget _buildWorkoutCard(WorkoutLogModel workout, Color surfaceColor, Color textColor, Color textSecondary, bool isVintage) {
+  Widget _buildWorkoutCard(WorkoutLogModel workout, Color surfaceColor, Color textColor, Color textSecondary, bool isLight) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: surfaceColor,
-        borderRadius: BorderRadius.circular(isVintage ? 10 : 14),
+        borderRadius: BorderRadius.circular(isLight ? 10 : 14),
       ),
       child: Row(
         children: [

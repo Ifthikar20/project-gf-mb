@@ -177,7 +177,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final textColor = ThemeColors.textPrimary(mode);
@@ -199,8 +199,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 ),
                 title: Text(
                   'Account',
-                  style: isVintage
-                      ? GoogleFonts.playfairDisplay(
+                  style: isLight
+                      ? GoogleFonts.inter(
                           color: textColor,
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -345,7 +345,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                           const SizedBox(height: 32),
 
                           // ─── Display Name Section ───────────────
-                          _buildSectionHeader('Display Name', textColor, isVintage),
+                          _buildSectionHeader('Display Name', textColor, isLight),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -497,7 +497,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                           const SizedBox(height: 24),
 
                           // ─── Email Section ─────────────────────
-                          _buildSectionHeader('Email', textColor, isVintage),
+                          _buildSectionHeader('Email', textColor, isLight),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -530,7 +530,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
                           // ─── Account Info ──────────────────────
                           _buildSectionHeader(
-                              'Account Info', textColor, isVintage),
+                              'Account Info', textColor, isLight),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -578,7 +578,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
                           // ─── Danger Zone ───────────────────────
                           _buildSectionHeader(
-                              'Danger Zone', errorColor, isVintage),
+                              'Danger Zone', errorColor, isLight),
                           const SizedBox(height: 8),
                           GestureDetector(
                             onTap:
@@ -654,11 +654,11 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title, Color color, bool isVintage) {
+  Widget _buildSectionHeader(String title, Color color, bool isLight) {
     return Text(
       title,
-      style: isVintage
-          ? GoogleFonts.playfairDisplay(
+      style: isLight
+          ? GoogleFonts.inter(
               color: color,
               fontSize: 16,
               fontWeight: FontWeight.w600,

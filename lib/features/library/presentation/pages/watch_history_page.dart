@@ -16,7 +16,7 @@ class WatchHistoryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
         final mode = themeState.mode;
         
         final bgColor = ThemeColors.background(mode);
@@ -37,8 +37,8 @@ class WatchHistoryPage extends StatelessWidget {
             ),
             title: Text(
               'Watch History',
-              style: isVintage
-                  ? GoogleFonts.playfairDisplay(
+              style: isLight
+                  ? GoogleFonts.inter(
                       color: textColor,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -76,8 +76,8 @@ class WatchHistoryPage extends StatelessWidget {
                       const SizedBox(height: 24),
                       Text(
                         'No Watch History',
-                        style: isVintage
-                            ? GoogleFonts.playfairDisplay(
+                        style: isLight
+                            ? GoogleFonts.inter(
                                 color: textColor,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -103,12 +103,12 @@ class WatchHistoryPage extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                           decoration: BoxDecoration(
                             color: primaryColor,
-                            borderRadius: BorderRadius.circular(isVintage ? 6 : 24),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             'Start Watching',
                             style: TextStyle(
-                              color: isVintage ? bgColor : Colors.white,
+                              color: isLight ? bgColor : Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -138,7 +138,7 @@ class WatchHistoryPage extends StatelessWidget {
                           ],
                         ),
                         GestureDetector(
-                          onTap: () => _showClearAllDialog(context, bgColor, textColor, textSecondary, errorColor, isVintage),
+                          onTap: () => _showClearAllDialog(context, bgColor, textColor, textSecondary, errorColor, isLight),
                           child: Text(
                             'Clear All',
                             style: TextStyle(
@@ -157,7 +157,7 @@ class WatchHistoryPage extends StatelessWidget {
                       itemCount: items.length,
                       itemBuilder: (context, index) {
                         final item = items[index];
-                        return _buildRecentlyViewedCard(context, item, isVintage, surfaceColor, textColor, textSecondary, primaryColor, bgColor);
+                        return _buildRecentlyViewedCard(context, item, isLight, surfaceColor, textColor, textSecondary, primaryColor, bgColor);
                       },
                     ),
                   ),
@@ -170,7 +170,7 @@ class WatchHistoryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentlyViewedCard(BuildContext context, RecentlyViewedItem item, bool isVintage, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, Color bgColor) {
+  Widget _buildRecentlyViewedCard(BuildContext context, RecentlyViewedItem item, bool isLight, Color surfaceColor, Color textColor, Color textSecondary, Color primaryColor, Color bgColor) {
     return GestureDetector(
       onTap: () {
         if (item.contentType == 'video') {
@@ -183,16 +183,16 @@ class WatchHistoryPage extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: surfaceColor,
-          borderRadius: BorderRadius.circular(isVintage ? 8 : 16),
-          border: isVintage ? Border.all(color: primaryColor.withOpacity(0.2)) : null,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
         ),
         child: Row(
           children: [
             // Thumbnail
             ClipRRect(
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isVintage ? 8 : 16),
-                bottomLeft: Radius.circular(isVintage ? 8 : 16),
+                topLeft: Radius.circular(isLight ? 8 : 16),
+                bottomLeft: Radius.circular(isLight ? 8 : 16),
               ),
               child: item.thumbnailUrl != null
                   ? CachedNetworkImage(
@@ -217,9 +217,9 @@ class WatchHistoryPage extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: item.contentType == 'video' 
-                            ? (isVintage ? ThemeColors.dustyRose : ThemeColors.classicBlue)
-                            : (isVintage ? ThemeColors.sageGreen : ThemeColors.classicPrimary),
-                        borderRadius: BorderRadius.circular(isVintage ? 3 : 4),
+                            ? (isLight ? ThemeColors.lightSecondary : ThemeColors.darkPrimary)
+                            : (isLight ? ThemeColors.lightAccent : ThemeColors.darkPrimary),
+                        borderRadius: BorderRadius.circular(isLight ? 3 : 4),
                       ),
                       child: Text(
                         item.contentType.toUpperCase(),
@@ -233,8 +233,8 @@ class WatchHistoryPage extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       item.title,
-                      style: isVintage
-                          ? GoogleFonts.playfairDisplay(color: textColor, fontSize: 14, fontWeight: FontWeight.w600)
+                      style: isLight
+                          ? GoogleFonts.inter(color: textColor, fontSize: 14, fontWeight: FontWeight.w600)
                           : TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -245,7 +245,7 @@ class WatchHistoryPage extends StatelessWidget {
                       style: TextStyle(
                         color: textSecondary.withOpacity(0.6),
                         fontSize: 11,
-                        fontStyle: isVintage ? FontStyle.italic : FontStyle.normal,
+                        fontStyle: FontStyle.normal,
                       ),
                     ),
                   ],
@@ -302,16 +302,16 @@ class WatchHistoryPage extends StatelessWidget {
     }
   }
 
-  void _showClearAllDialog(BuildContext context, Color bgColor, Color textColor, Color textSecondary, Color errorColor, bool isVintage) {
+  void _showClearAllDialog(BuildContext context, Color bgColor, Color textColor, Color textSecondary, Color errorColor, bool isLight) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: bgColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isVintage ? 8 : 16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Clear History?',
-          style: isVintage
-              ? GoogleFonts.playfairDisplay(color: textColor, fontWeight: FontWeight.bold)
+          style: isLight
+              ? GoogleFonts.inter(color: textColor, fontWeight: FontWeight.bold)
               : TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
         content: Text(

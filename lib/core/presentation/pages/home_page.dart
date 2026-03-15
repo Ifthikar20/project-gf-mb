@@ -5,8 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../features/wellness_goals/presentation/pages/wellness_goals_page.dart'
     as home;
 import '../../../features/diet/presentation/pages/nourish_page.dart';
-import '../../../features/meditation/presentation/pages/meditation_page.dart';
-import '../../../features/knowledge/presentation/pages/learn_page.dart';
+import '../../../features/explore/presentation/pages/explore_for_you_page.dart';
+import '../../../features/explore/presentation/pages/explore_page.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 import '../../theme/theme_bloc.dart';
 import '../../theme/app_theme.dart';
@@ -22,11 +22,11 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = const [
-    home.HomePage(),      // 0 -- Home
-    NourishPage(),        // 1 -- Nourish (Diet)
-    MeditationPage(),     // 2 -- Meditate
-    LearnPage(),          // 3 -- Learn (Knowledge)
-    ProfilePage(),        // 4 -- Profile
+    home.HomePage(),          // 0 -- Home
+    NourishPage(),            // 1 -- Calories
+    ExploreForYouPage(),      // 2 -- Explore (Glo-style feed)
+    ExplorePage(),            // 3 -- Classes (Find Upcoming Classes)
+    ProfilePage(),            // 4 -- Profile
   ];
 
   @override
@@ -34,13 +34,13 @@ class _MainShellState extends State<MainShell> {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isVintage = themeState.isVintage;
+        final isLight = themeState.isLight;
 
         // Dynamic colors
         final bgColor = ThemeColors.background(mode);
-        final activeColor = isVintage ? Colors.black : Colors.white;
+        final activeColor = isLight ? Colors.black : Colors.white;
         final inactiveColor =
-            isVintage ? ThemeColors.vintageTan : Colors.white54;
+            isLight ? ThemeColors.lightTextSecondary : Colors.white54;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -54,13 +54,13 @@ class _MainShellState extends State<MainShell> {
               filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isVintage
+                  color: isLight
                       ? Colors.white.withOpacity(0.97)
                       : Colors.black.withOpacity(0.88),
                   border: Border(
                     top: BorderSide(
-                      color: isVintage
-                          ? ThemeColors.vintageBorder
+                      color: isLight
+                          ? ThemeColors.lightBorder
                           : Colors.white.withOpacity(0.06),
                       width: 0.5,
                     ),
@@ -82,22 +82,22 @@ class _MainShellState extends State<MainShell> {
                           inactiveColor: inactiveColor,
                         ),
                         _buildNavItem(
-                          icon: Icons.restaurant_menu_rounded,
-                          label: 'Nourish',
+                          icon: Icons.local_fire_department_rounded,
+                          label: 'Calories',
                           index: 1,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
                         ),
                         _buildNavItem(
-                          icon: Icons.self_improvement_rounded,
-                          label: 'Meditate',
+                          icon: Icons.explore_rounded,
+                          label: 'Explore',
                           index: 2,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
                         ),
                         _buildNavItem(
-                          icon: Icons.auto_stories_rounded,
-                          label: 'Learn',
+                          icon: Icons.event_note_rounded,
+                          label: 'Classes',
                           index: 3,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
@@ -106,7 +106,7 @@ class _MainShellState extends State<MainShell> {
                           index: 4,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
-                          isVintage: isVintage,
+                          isLight: isLight,
                         ),
                       ],
                     ),
@@ -162,7 +162,7 @@ class _MainShellState extends State<MainShell> {
     required int index,
     required Color activeColor,
     required Color inactiveColor,
-    required bool isVintage,
+    required bool isLight,
   }) {
     final isActive = _currentIndex == index;
     return GestureDetector(
@@ -179,8 +179,8 @@ class _MainShellState extends State<MainShell> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isActive
-                    ? (isVintage ? Colors.black : Colors.white)
-                    : (isVintage
+                    ? (isLight ? Colors.black : Colors.white)
+                    : (isLight
                         ? Colors.black.withOpacity(0.08)
                         : Colors.white.withOpacity(0.12)),
                 border: isActive
@@ -197,7 +197,7 @@ class _MainShellState extends State<MainShell> {
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                     color: isActive
-                        ? (isVintage ? Colors.white : Colors.black)
+                        ? (isLight ? Colors.white : Colors.black)
                         : inactiveColor,
                   ),
                 ),
