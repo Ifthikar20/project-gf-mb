@@ -23,14 +23,8 @@ class ApiClient {
     // Add auth interceptor
     _dio.interceptors.add(_authInterceptor);
     
-    // Add logging in debug mode
-    if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        error: true,
-      ));
-    }
+    // Note: AppLogger handles request/response logging in the auth interceptor.
+    // No extra LogInterceptor needed — it was duplicating every call.
   }
   
   /// Set access token (called after login/register/OAuth)
@@ -78,14 +72,12 @@ class ApiClient {
       final statusCode = error.response?.statusCode;
       final responseData = error.response?.data;
 
-      // Log error details
-      AppLogger.e(
-        ' API Error: $path ($statusCode)\n'
-        ' Response Body: $responseData\n'
-        ' Error Type: ${error.type}\n'
-        ' Error Message: ${error.message}',
-        error: error,
-      );
+      // Compact error logging — only full detail for 500+ server errors
+      if (statusCode != null && statusCode >= 500) {
+        debugPrint('🔥 $statusCode $path — server error');
+      } else {
+        debugPrint('⛔ ${statusCode ?? '?'} $path — $responseData');
+      }
 
       return handler.next(error);
     },

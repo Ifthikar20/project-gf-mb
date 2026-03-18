@@ -26,7 +26,7 @@ class PersonalizationService {
       final data = response.data as Map<String, dynamic>;
       return data['onboarding']?['is_completed'] == true;
     } catch (e) {
-      debugPrint(' Onboarding check failed: $e');
+      debugPrint(' Onboarding check skipped (API unavailable)');
       // Default to completed so users aren't stuck
       return true;
     }

@@ -104,6 +104,22 @@ void main() async {
     ),
   );
 
+  // Suppress noisy image HTTP exceptions (403 from CloudFront thumbnails).
+  // CachedNetworkImage's errorWidget handles the fallback UI already —
+  // this just prevents Flutter from logging scary red exception traces.
+  final defaultOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    final isImageError =
+        details.library == 'image resource service';
+    if (isImageError) {
+      // Silently ignore — errorWidget in the UI handles this
+      debugPrint(' Image load failed (suppressed): ${details.exceptionAsString().split('\n').first}');
+      return;
+    }
+    // All other errors pass through normally
+    defaultOnError?.call(details);
+  };
+
   runApp(const WellnessApp());
 }
 

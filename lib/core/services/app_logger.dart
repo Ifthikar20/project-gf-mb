@@ -43,9 +43,9 @@ class AppLogger {
     _logger.w(message, error: error, stackTrace: stackTrace);
   }
 
-  /// Log an error message
+  /// Log an error message (compact one-liner to reduce noise)
   static void e(dynamic message, {Object? error, StackTrace? stackTrace}) {
-    _logger.e(message, error: error, stackTrace: stackTrace);
+    debugPrint('❌ $message');
   }
 
   /// Log a fatal/critical error
@@ -57,19 +57,19 @@ class AppLogger {
   // Convenience methods for API/Network logging
   // ============================================
 
-  /// Log an outgoing API request
+  /// Log an outgoing API request (compact one-liner)
   static void request(String method, String path, {dynamic data}) {
-    _logger.i(' $method $path${data != null ? '\n$data' : ''}');
+    debugPrint('→ $method $path');
   }
 
-  /// Log an incoming API response
+  /// Log an incoming API response (compact one-liner)
   static void response(int? statusCode, String path, {dynamic data}) {
-    _logger.i(' $statusCode $path${data != null ? '\n$data' : ''}');
+    debugPrint('← $statusCode $path');
   }
 
-  /// Log an API error
+  /// Log an API error (compact one-liner)
   static void apiError(String path, {int? statusCode, Object? error}) {
-    _logger.e(' API Error: $path (${statusCode ?? 'unknown'})', error: error);
+    debugPrint('⛔ API Error: $path (${statusCode ?? 'unknown'})');
   }
 
   /// Log authentication events

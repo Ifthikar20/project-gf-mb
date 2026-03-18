@@ -24,8 +24,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
   Future<T> _tryOr<T>(Future<T> Function() fn, T fallback) async {
     try {
       return await fn();
-    } catch (e) {
-      debugPrint(' WorkoutBloc: endpoint skipped — $e');
+    } catch (_) {
       return fallback;
     }
   }

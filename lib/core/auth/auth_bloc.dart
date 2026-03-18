@@ -237,7 +237,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       // If check fails, let them through (don't block on optional onboarding)
-      print(' Onboarding check failed, proceeding: $e');
+      print(' Onboarding check failed, proceeding');
       emit(AuthAuthenticated(user));
     }
   }

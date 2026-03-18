@@ -90,18 +90,20 @@ class WellnessSuggestionCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
             // Body
-            Text(
-              suggestion.body,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Colors.white54,
-                height: 1.5,
+            Flexible(
+              child: Text(
+                suggestion.body,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.white54,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
 
             // Action button

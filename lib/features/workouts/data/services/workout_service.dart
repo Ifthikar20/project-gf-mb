@@ -41,12 +41,17 @@ class WorkoutService {
   // Body Profile
   // ============================================
 
-  /// Get user's body profile — returns null if not set yet
+  /// Get user's body profile — returns null if not set yet or endpoint unavailable
   Future<BodyProfile?> getBodyProfile() async {
-    final response = await _api.get('/api/workouts/body-profile');
-    final data = response.data as Map<String, dynamic>;
-    final profile = data['body_profile'];
-    return profile != null ? BodyProfile.fromJson(profile) : null;
+    try {
+      final response = await _api.get('/api/workouts/body-profile');
+      final data = response.data as Map<String, dynamic>;
+      final profile = data['body_profile'];
+      return profile != null ? BodyProfile.fromJson(profile) : null;
+    } catch (_) {
+      // Endpoint may not be deployed yet — return null silently
+      return null;
+    }
   }
 
   /// Set or update body profile

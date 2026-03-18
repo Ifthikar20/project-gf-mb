@@ -71,6 +71,12 @@
 		<string>http</string>
 	</array>
 
+	<!-- Camera & Photo Library for food scanning -->
+	<key>NSCameraUsageDescription</key>
+	<string>BetterBliss uses your camera to scan food and estimate calories and macros.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BetterBliss needs photo library access to select food images for calorie scanning.</string>
+
 	<!-- HealthKit -->
 	<key>NSHealthShareUsageDescription</key>
 	<string>Great Feel reads your workout, heart rate, and activity data to show your fitness progress and personalized wellness insights.</string>

@@ -48,7 +48,7 @@ class MeditationRepository {
       debugPrint(' Fetching audio content from API...');
       final response = await _api.get('/content/browse', queryParameters: {
         'content_type': 'audio',
-        'limit': 100,
+        'limit': 50,
       });
       
       // Debug: Log the full response to understand structure
@@ -73,8 +73,8 @@ class MeditationRepository {
       
       debugPrint(' Fetched ${audios.length} audio items from API');
       return audios;
-    } catch (e) {
-      debugPrint(' Failed to fetch audio content: $e');
+    } catch (_) {
+      debugPrint(' Failed to fetch audio content');
       // Return cached if available, otherwise empty list
       if (_cachedAudios != null) {
         debugPrint(' Returning stale cache due to error');
@@ -99,8 +99,8 @@ class MeditationRepository {
       
       final List<dynamic> items = response.data['content'] ?? [];
       return items.map((json) => MeditationAudio.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint(' Failed to fetch audio by category: $e');
+    } catch (_) {
+      debugPrint(' Failed to fetch audio by category');
       // Filter cached data if available
       if (_cachedAudios != null) {
         return _cachedAudios!
@@ -123,8 +123,8 @@ class MeditationRepository {
       
       final List<dynamic> items = response.data['content'] ?? [];
       return items.map((json) => MeditationAudio.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint(' Failed to fetch featured audio: $e');
+    } catch (_) {
+      debugPrint(' Failed to fetch featured audio');
       // Return first few from cache
       if (_cachedAudios != null) {
         return _cachedAudios!.where((a) => a.featured).take(limit).toList();
@@ -139,8 +139,8 @@ class MeditationRepository {
     try {
       final response = await _api.get('/content/detail/$id');
       return MeditationAudio.fromJson(response.data);
-    } catch (e) {
-      debugPrint(' Failed to fetch audio detail: $e');
+    } catch (_) {
+      debugPrint(' Failed to fetch audio detail');
       // Try cache
       if (_cachedAudios != null) {
         try {
@@ -166,8 +166,8 @@ class MeditationRepository {
       
       debugPrint(' No audio_url in response');
       return null;
-    } catch (e) {
-      debugPrint(' Failed to get streaming URL: $e');
+    } catch (_) {
+      debugPrint(' Failed to get streaming URL');
       return null;
     }
   }

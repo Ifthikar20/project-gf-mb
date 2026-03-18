@@ -50,7 +50,7 @@ class WellnessAdvisorService {
         return suggestions;
       }
     } catch (e) {
-      debugPrint('⚠ WellnessAdvisor: API failed, using local rules: $e');
+      debugPrint('⚠ WellnessAdvisor: API unavailable, using local rules');
     }
 
     // Fallback to local rule engine

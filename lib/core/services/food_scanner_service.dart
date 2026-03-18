@@ -80,21 +80,7 @@ Rules:
       return FoodScanResult.fromJson(parsed);
     } catch (e) {
       debugPrint('🍽 Gemini analysis failed: $e');
-      // Return a fallback result
-      return const FoodScanResult(
-        items: [
-          DetectedFoodItem(
-            name: 'Could not analyze',
-            calories: 0,
-            proteinG: 0,
-            carbsG: 0,
-            fatG: 0,
-            servingSize: 'N/A',
-            confidence: 0,
-          ),
-        ],
-        totalCalories: 0,
-      );
+      rethrow;
     }
   }
 }
