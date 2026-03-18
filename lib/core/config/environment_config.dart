@@ -50,6 +50,9 @@ class EnvironmentConfig {
   /// Get API key (NEVER expose in logs)
   String get apiKey => _getSecret('API_KEY');
   
+  /// Get client identifier for X-Client-Id header (required on every request)
+  String get clientId => _getSecret('BB_CLIENT_ID');
+  
   /// Get Firebase API key
   String get firebaseApiKey => _getSecret('FIREBASE_API_KEY');
   

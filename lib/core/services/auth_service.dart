@@ -317,14 +317,14 @@ class AuthService {
   
   /// Reset password with verification
   Future<void> resetPassword({
-    required String email,
+    required String token,
     required String newPassword,
   }) async {
-    debugPrint(' [AUTH SERVICE] Resetting password for: $email');
+    debugPrint(' [AUTH SERVICE] Resetting password');
     
     try {
       await _api.post('/auth/reset-password', data: {
-        'email': email,
+        'token': token,
         'new_password': newPassword,
       });
       debugPrint(' Password reset successful');
@@ -342,7 +342,7 @@ class AuthService {
     
     try {
       await _api.post('/auth/change-password', data: {
-        'old_password': oldPassword,
+        'current_password': oldPassword,
         'new_password': newPassword,
       });
       debugPrint(' Password changed successfully');

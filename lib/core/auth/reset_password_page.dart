@@ -52,7 +52,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     try {
       await AuthService.instance.resetPassword(
-        email: widget.email,
+        token: _codeController.text,
         newPassword: _passwordController.text,
       );
       

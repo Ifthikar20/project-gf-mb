@@ -39,16 +39,20 @@ class ApiClient {
   /// Check if we have an access token
   bool get hasToken => _accessToken != null && _accessToken!.isNotEmpty;
   
-  BaseOptions get _baseOptions => BaseOptions(
-    baseUrl: EnvironmentConfig.instance.apiBaseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-    sendTimeout: const Duration(seconds: 30),
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-  );
+  BaseOptions get _baseOptions {
+    final appKey = EnvironmentConfig.instance.clientId;
+    return BaseOptions(
+      baseUrl: EnvironmentConfig.instance.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (appKey.isNotEmpty) 'X-Client-Id': appKey,
+      },
+    );
+  }
   
   InterceptorsWrapper get _authInterceptor => InterceptorsWrapper(
     onRequest: (options, handler) {
