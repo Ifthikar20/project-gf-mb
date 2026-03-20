@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../features/wellness_goals/presentation/pages/wellness_goals_page.dart'
     as home;
-import '../../../features/diet/presentation/pages/nourish_page.dart';
+import '../../../features/diet/presentation/pages/calories_page.dart';
 import '../../../features/explore/presentation/pages/explore_for_you_page.dart';
 import '../../../features/explore/presentation/pages/explore_page.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
@@ -23,7 +23,7 @@ class _MainShellState extends State<MainShell> {
 
   final List<Widget> _pages = const [
     home.HomePage(),          // 0 -- Home
-    NourishPage(),            // 1 -- Calories
+    CaloriesPage(),           // 1 -- Calories
     ExploreForYouPage(),      // 2 -- Explore (Glo-style feed)
     ExplorePage(),            // 3 -- Classes (Find Upcoming Classes)
     ProfilePage(),            // 4 -- Profile

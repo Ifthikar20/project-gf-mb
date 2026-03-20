@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/diet_models.dart';
 
-/// Individual meal card with meal type emoji, name, time, and macro badges
+/// Individual meal card with food image thumbnail, name, time, and macro badges.
+/// Shows the captured food photo when available, falls back to meal type emoji.
 class MealTimelineCard extends StatelessWidget {
   final MealLog meal;
   final VoidCallback? onDelete;
@@ -22,6 +24,8 @@ class MealTimelineCard extends StatelessWidget {
     final timeStr =
         '$hour:${meal.timestamp.minute.toString().padLeft(2, '0')} $amPm';
 
+    final hasImage = meal.imagePath != null && File(meal.imagePath!).existsSync();
+
     return Dismissible(
       key: ValueKey(meal.key ?? meal.timestamp.millisecondsSinceEpoch),
       direction: DismissDirection.endToStart,
@@ -37,7 +41,7 @@ class MealTimelineCard extends StatelessWidget {
             color: Color(0xFFEF4444), size: 22),
       ),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -49,21 +53,19 @@ class MealTimelineCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Meal type emoji
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withOpacity(0.06)
-                    : Colors.black.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  meal.mealType.emoji,
-                  style: const TextStyle(fontSize: 22),
-                ),
+            // Food image or meal type emoji
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: hasImage
+                    ? Image.file(
+                        File(meal.imagePath!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark),
+                      )
+                    : _emojiPlaceholder(isDark),
               ),
             ),
             const SizedBox(width: 12),
@@ -124,6 +126,23 @@ class MealTimelineCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _emojiPlaceholder(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.06)
+            : Colors.black.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          meal.mealType.emoji,
+          style: const TextStyle(fontSize: 24),
         ),
       ),
     );

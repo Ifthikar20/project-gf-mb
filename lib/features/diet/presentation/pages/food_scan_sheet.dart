@@ -4,11 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import '../../../../core/services/food_scanner_service.dart';
 import '../../data/models/food_scan_result.dart';
 import '../../data/models/diet_models.dart';
 import '../bloc/diet_bloc.dart';
 import '../bloc/diet_event.dart';
+import 'barcode_scan_page.dart';
 
 /// Full-screen AI food scanner — Cal.ai inspired camera UI.
 /// Opens the camera, captures a photo, shows AI scan results
@@ -64,39 +67,39 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     });
 
     try {
-      // TODO: Replace with backend API call when ready
-      // final bytes = await _capturedImage!.readAsBytes();
-      // final response = await ApiClient.instance.post('/api/food/analyze', data: ...);
-      
-      // For now, try Gemini if key is available, otherwise use placeholder
       final bytes = await _capturedImage!.readAsBytes();
-      FoodScanResult result;
-      try {
-        result = await FoodScannerService.instance.analyzeImage(bytes);
-      } catch (_) {
-        // Gemini key not set or API failed — use placeholder
-        debugPrint('📸 AI scanner unavailable, using placeholder');
-        await Future.delayed(const Duration(seconds: 1));
-        result = const FoodScanResult(
-          items: [
-            DetectedFoodItem(
-              name: 'Scanned Food',
-              calories: 350,
-              proteinG: 18,
-              carbsG: 42,
-              fatG: 12,
-              servingSize: '1 serving',
-              confidence: 0.7,
-            ),
-          ],
-          totalCalories: 350,
-          mealType: 'lunch',
-        );
-      }
+      final result = await FoodScannerService.instance.analyzeImage(bytes);
       
       if (mounted) {
         setState(() {
           _result = result;
+          _scanning = false;
+        });
+      }
+    } on FoodScanException catch (e) {
+      if (!mounted) return;
+
+      if (e.code == 'RATE_LIMITED') {
+        setState(() { _scanning = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Too many scans. Please wait a moment.')),
+        );
+      } else if (e.code == 'INVALID_IMAGE') {
+        setState(() { _scanning = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not read the image. Try a clearer photo.')),
+        );
+      } else if (e.code == 'AUTHENTICATION_REQUIRED') {
+        setState(() { _scanning = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to use the food scanner.')),
+        );
+        Navigator.pop(context);
+      } else {
+        // Show real error — no fake placeholder data
+        debugPrint('📸 Food scanner error (${e.code}): ${e.message}');
+        setState(() {
+          _error = 'Scan unavailable — ${e.message}';
           _scanning = false;
         });
       }
@@ -153,10 +156,26 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     }
   }
 
-  void _logMeal() {
+  /// Save the captured food photo to app documents dir.
+  Future<String?> _saveImageToDocuments() async {
+    if (_capturedImage == null) return null;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = 'food_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final savedFile = await _capturedImage!.copy(p.join(dir.path, fileName));
+      return savedFile.path;
+    } catch (e) {
+      debugPrint('📸 Failed to save food image: $e');
+      return null;
+    }
+  }
+
+  void _logMeal() async {
     if (_result == null) return;
     final mealType = _guessMealType();
+    final imagePath = await _saveImageToDocuments();
     for (final item in _result!.items) {
+      if (!mounted) return;
       context.read<DietBloc>().add(LogMeal(
             meal: MealLog(
               name: item.name,
@@ -166,11 +185,13 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               fatGrams: (item.fatG * _servings).round(),
               mealType: mealType,
               timestamp: DateTime.now(),
+              imagePath: imagePath,
               notes:
                   'Scanned via AI (${(item.confidence * 100).round()}% confidence)${_servings > 1 ? ' × $_servings servings' : ''}',
             ),
           ));
     }
+    if (!mounted) return;
     Navigator.pop(context);
     HapticFeedback.mediumImpact();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -183,6 +204,18 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
         backgroundColor: const Color(0xFF22C55E),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _switchToBarcode() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<DietBloc>(),
+          child: const BarcodeScanPage(),
+        ),
       ),
     );
   }
@@ -296,18 +329,30 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                 color: Colors.white,
               ),
             ),
-            // More button
+            // Barcode scan button
             GestureDetector(
-              onTap: () {},
+              onTap: _switchToBarcode,
               child: Container(
-                width: 36,
-                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.4),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(Icons.more_horiz,
-                    color: Colors.white, size: 20),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.qr_code_scanner_rounded,
+                        color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text('Barcode',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

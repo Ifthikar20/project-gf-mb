@@ -87,6 +87,18 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           }
           
           debugPrint('Kit  Using HLS stream: $videoUrl');
+        } on StreamingException catch (e) {
+          // Session expired — show auth error, don't try unsigned fallback
+          if (e.message.contains('session has expired')) {
+            setState(() {
+              _hasError = true;
+              _isLoading = false;
+              _errorMessage = 'Your session has expired. Please go back and log in again.';
+              _isPermissionError = true;
+            });
+            return;
+          }
+          debugPrint(' Streaming failed, using fallback: $e');
         } catch (e) {
           debugPrint(' Streaming failed, using fallback: $e');
         }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../config/environment_config.dart';
 import 'api_client.dart';
@@ -229,13 +230,29 @@ class StreamingService {
       } else {
         debugPrint(' Streaming response missing hls_playlist_url');
       }
-    } catch (e) {
+    } on DioException catch (e) {
+      // If 401: auth token expired/missing — don't fall back to unsigned URLs
+      // (unsigned CloudFront URLs will always fail with 403)
+      if (e.response?.statusCode == 401) {
+        debugPrint(' Streaming 401: auth token expired or missing — re-login required');
+        throw StreamingException(
+          'Your session has expired. Please log in again to play videos.');
+      }
+      // For other errors (500, timeout, etc.) — try fallback
       debugPrint(' Streaming endpoint failed, trying fallback: $e');
     }
     
     // Method 2: Fall back to content detail (unsigned URLs, may fail)
+    // NOTE: This fallback only works if CloudFront is configured to allow
+    // unsigned access. Otherwise the video will fail with 403.
     final urls = await getStreamingUrlsFromContentDetail(contentId);
     if (urls != null) {
+      // Warn if URL is unsigned
+      final isSigned = urls.hlsMaster.contains('Policy=') || 
+                       urls.hlsMaster.contains('Signature=');
+      if (!isSigned) {
+        debugPrint(' WARNING: Using unsigned URL which may fail: ${urls.hlsMaster}');
+      }
       return urls;
     }
     

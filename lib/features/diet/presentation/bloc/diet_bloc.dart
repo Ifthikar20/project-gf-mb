@@ -16,6 +16,7 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     on<LogMeal>(_onLogMeal);
     on<DeleteMeal>(_onDeleteMeal);
     on<ChangeDateFilter>(_onChangeDateFilter);
+    on<LoadMealsForRange>(_onLoadMealsForRange);
   }
 
   Future<void> _onLoadMeals(LoadMeals event, Emitter<DietState> emit) async {
@@ -23,11 +24,22 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     try {
       final meals = await _dataSource.getMealsForDate(event.date);
       final summary = DailyNutritionSummary.fromMeals(meals);
+
+      // Also load chart range data (default 7 days)
+      final chartDays = state is DietLoaded ? (state as DietLoaded).chartDays : 7;
+      final rangeData = await _dataSource.getMealsForRange(chartDays);
+      final rangeSummaries = <DateTime, DailyNutritionSummary>{};
+      for (final entry in rangeData.entries) {
+        rangeSummaries[entry.key] = DailyNutritionSummary.fromMeals(entry.value);
+      }
+
       emit(DietLoaded(
         meals: meals,
         summary: summary,
         tipOfTheDay: NutritionTipsData.getTipOfTheDay(),
         selectedDate: event.date,
+        rangeSummaries: rangeSummaries,
+        chartDays: chartDays,
       ));
     } catch (e) {
       emit(DietError('Failed to load meals: $e'));
@@ -41,7 +53,6 @@ class DietBloc extends Bloc<DietEvent, DietState> {
 
   Future<void> _onLogMeal(LogMeal event, Emitter<DietState> emit) async {
     await _dataSource.logMeal(event.meal);
-    // Reload for the current date
     final currentDate =
         state is DietLoaded ? (state as DietLoaded).selectedDate : DateTime.now();
     add(LoadMeals(date: currentDate));
@@ -57,5 +68,26 @@ class DietBloc extends Bloc<DietEvent, DietState> {
   Future<void> _onChangeDateFilter(
       ChangeDateFilter event, Emitter<DietState> emit) async {
     add(LoadMeals(date: event.date));
+  }
+
+  Future<void> _onLoadMealsForRange(
+      LoadMealsForRange event, Emitter<DietState> emit) async {
+    if (state is! DietLoaded) return;
+    final current = state as DietLoaded;
+
+    try {
+      final rangeData = await _dataSource.getMealsForRange(event.days);
+      final rangeSummaries = <DateTime, DailyNutritionSummary>{};
+      for (final entry in rangeData.entries) {
+        rangeSummaries[entry.key] = DailyNutritionSummary.fromMeals(entry.value);
+      }
+
+      emit(current.copyWithRange(
+        rangeSummaries: rangeSummaries,
+        chartDays: event.days,
+      ));
+    } catch (e) {
+      // Keep current state on range load failure
+    }
   }
 }

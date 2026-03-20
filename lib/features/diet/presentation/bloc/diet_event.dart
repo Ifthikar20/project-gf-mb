@@ -41,3 +41,11 @@ class ChangeDateFilter extends DietEvent {
   @override
   List<Object?> get props => [date];
 }
+
+/// Load meals for a date range (for charts — 7D/14D/30D)
+class LoadMealsForRange extends DietEvent {
+  final int days;
+  const LoadMealsForRange({required this.days});
+  @override
+  List<Object?> get props => [days];
+}

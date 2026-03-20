@@ -57,9 +57,14 @@ class DietLocalDataSource {
 
   /// Get meals for the last N days (for weekly overview)
   Future<Map<DateTime, List<MealLog>>> getMealsForWeek() async {
+    return getMealsForRange(7);
+  }
+
+  /// Get meals for the last N days (for charts — 7D/14D/30D)
+  Future<Map<DateTime, List<MealLog>>> getMealsForRange(int days) async {
     final result = <DateTime, List<MealLog>>{};
     final now = DateTime.now();
-    for (int i = 6; i >= 0; i--) {
+    for (int i = days - 1; i >= 0; i--) {
       final day = DateTime(now.year, now.month, now.day - i);
       result[day] = await getMealsForDate(day);
     }

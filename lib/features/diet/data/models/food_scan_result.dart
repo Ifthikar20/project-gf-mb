@@ -1,14 +1,17 @@
-/// Data model for food scan results from Gemini Vision API.
+/// Data model for food scan results from the backend API.
+/// The backend calls Gemini 2.5 Flash Vision server-side.
 
 class FoodScanResult {
   final List<DetectedFoodItem> items;
   final int totalCalories;
   final String? mealType; // breakfast, lunch, dinner, snack
+  final String? scanId; // UUID from backend (for audit trail)
 
   const FoodScanResult({
     required this.items,
     required this.totalCalories,
     this.mealType,
+    this.scanId,
   });
 
   double get totalProtein =>
@@ -26,8 +29,10 @@ class FoodScanResult {
     return FoodScanResult(
       items: items,
       totalCalories:
+          json['total_calories'] as int? ??
           items.fold(0, (sum, item) => sum + item.calories),
       mealType: json['meal_type'] as String?,
+      scanId: json['scan_id'] as String?,
     );
   }
 }

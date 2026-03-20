@@ -71,6 +71,9 @@ class MealLog extends HiveObject {
   @HiveField(7)
   final String? notes;
 
+  @HiveField(8)
+  final String? imagePath; // Local file path of captured food photo
+
   MealLog({
     required this.name,
     required this.calories,
@@ -80,6 +83,7 @@ class MealLog extends HiveObject {
     required this.mealType,
     required this.timestamp,
     this.notes,
+    this.imagePath,
   });
 
   /// Check if this meal was logged today
