@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -174,23 +175,28 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     if (_result == null) return;
     final mealType = _guessMealType();
     final imagePath = await _saveImageToDocuments();
-    for (final item in _result!.items) {
-      if (!mounted) return;
-      context.read<DietBloc>().add(LogMeal(
-            meal: MealLog(
-              name: item.name,
-              calories: item.calories * _servings,
-              proteinGrams: (item.proteinG * _servings).round(),
-              carbsGrams: (item.carbsG * _servings).round(),
-              fatGrams: (item.fatG * _servings).round(),
-              mealType: mealType,
-              timestamp: DateTime.now(),
-              imagePath: imagePath,
-              notes:
-                  'Scanned via AI (${(item.confidence * 100).round()}% confidence)${_servings > 1 ? ' × $_servings servings' : ''}',
-            ),
-          ));
-    }
+    final scanId = const Uuid().v4();
+    final now = DateTime.now();
+    final mealName = _result!.mealName; // e.g. "Burger", "Chicken Salad"
+
+    // Build all meals first, then log as single batch (1 reload instead of N)
+    final meals = _result!.items.map((item) => MealLog(
+          name: item.name,
+          calories: item.calories * _servings,
+          proteinGrams: (item.proteinG * _servings).round(),
+          carbsGrams: (item.carbsG * _servings).round(),
+          fatGrams: (item.fatG * _servings).round(),
+          mealType: mealType,
+          timestamp: now,
+          imagePath: imagePath,
+          scanId: scanId,
+          mealName: mealName,
+          notes:
+              'Scanned via AI (${(item.confidence * 100).round()}% confidence)${_servings > 1 ? ' × $_servings servings' : ''}',
+        )).toList();
+
+    if (!mounted) return;
+    context.read<DietBloc>().add(LogMealBatch(meals: meals));
     if (!mounted) return;
     Navigator.pop(context);
     HapticFeedback.mediumImpact();

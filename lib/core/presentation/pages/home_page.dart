@@ -21,13 +21,24 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    home.HomePage(),          // 0 -- Home
-    CaloriesPage(),           // 1 -- Calories
-    ExploreForYouPage(),      // 2 -- Explore (Glo-style feed)
-    ExplorePage(),            // 3 -- Classes (Find Upcoming Classes)
-    ProfilePage(),            // 4 -- Profile
-  ];
+  // Build pages lazily — only the active page is in the widget tree.
+  // IndexedStack kept ALL 5 pages alive causing OOM.
+  Widget _buildPage() {
+    switch (_currentIndex) {
+      case 0:
+        return const home.HomePage();
+      case 1:
+        return const CaloriesPage();
+      case 2:
+        return const ExploreForYouPage();
+      case 3:
+        return const ExplorePage();
+      case 4:
+        return const ProfilePage();
+      default:
+        return const home.HomePage();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +55,7 @@ class _MainShellState extends State<MainShell> {
 
         return Scaffold(
           backgroundColor: bgColor,
-          body: IndexedStack(
-            index: _currentIndex,
-            children: _pages,
-          ),
+          body: _buildPage(),
           extendBody: true,
           bottomNavigationBar: ClipRRect(
             child: BackdropFilter(

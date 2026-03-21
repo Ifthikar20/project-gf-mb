@@ -14,7 +14,6 @@ import '../../../videos/domain/entities/video_entity.dart';
 import '../../../meditation/presentation/bloc/meditation_bloc.dart';
 import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
-import '../widgets/breathing_exercise_card.dart';
 
 /// Glo-style Explore / For You feed.
 /// Horizontal scrolling cards with thumbnails, level badges,
@@ -27,6 +26,7 @@ class ExploreForYouPage extends StatefulWidget {
 }
 
 class _ExploreForYouPageState extends State<ExploreForYouPage> {
+  String _selectedCategory = 'All';
   @override
   void initState() {
     super.initState();
@@ -95,11 +95,63 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
                 ),
               ),
 
+              // ── Category Pills ──
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    children: [
+                      'All', 'Wellness', 'Fitness', 'Mindfulness',
+                      'Yoga', 'HIIT', 'Pilates', 'Meditation', 'Nutrition',
+                    ].map((cat) {
+                      final isActive = _selectedCategory == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedCategory = cat),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? (isLight ? Colors.black : Colors.white)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isActive
+                                    ? Colors.transparent
+                                    : borderColor,
+                              ),
+                            ),
+                            child: Text(
+                              cat,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: isActive
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                color: isActive
+                                    ? (isLight ? Colors.white : Colors.black)
+                                    : textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+
               // ── Featured / For You ──
               _buildSectionTitle('For You', textColor),
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 290,
+                  height: 240,
                   child: _buildFeaturedRow(
                     isLight: isLight,
                     surfaceColor: surfaceColor,
@@ -116,7 +168,7 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
               _buildSectionTitle('New Classes', textColor),
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 290,
+                  height: 240,
                   child: _buildFeaturedRow(
                     isLight: isLight,
                     surfaceColor: surfaceColor,
@@ -129,19 +181,11 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
                 ),
               ),
 
-              // ── Breathing Exercise ──
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: BreathingExerciseCard(isLight: isLight),
-                ),
-              ),
-
               // ── Trending ──
               _buildSectionTitle('Trending', textColor),
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 290,
+                  height: 240,
                   child: _buildTrendingRow(
                     isLight: isLight,
                     surfaceColor: surfaceColor,
@@ -209,7 +253,14 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
     return BlocBuilder<VideosBloc, VideosState>(
       builder: (context, state) {
         if (state is VideosLoaded) {
-          final videos = state.videos;
+          var videos = state.videos;
+          // Filter by category
+          if (_selectedCategory != 'All') {
+            videos = videos
+                .where((v) => v.category.toLowerCase()
+                    .contains(_selectedCategory.toLowerCase()))
+                .toList();
+          }
           // Split list: first half for "For You", second for "New"
           final start = isNew ? (videos.length ~/ 2) : 0;
           final end = isNew ? videos.length : (videos.length ~/ 2);
@@ -263,7 +314,13 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
     return BlocBuilder<VideosBloc, VideosState>(
       builder: (context, state) {
         if (state is VideosLoaded) {
-          final videos = state.videos.reversed.toList();
+          var videos = state.videos.reversed.toList();
+          if (_selectedCategory != 'All') {
+            videos = videos
+                .where((v) => v.category.toLowerCase()
+                    .contains(_selectedCategory.toLowerCase()))
+                .toList();
+          }
           return ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -317,7 +374,7 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
         }
       },
       child: Container(
-        width: 280,
+        width: 230,
         margin: const EdgeInsets.only(right: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,6 +496,38 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+            // ── Series badge + description ──
+            if (video.isSeries && video.episodeCount != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.playlist_play_rounded,
+                      size: 16, color: textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${video.episodeCount} episodes',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (video.description.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                video.description,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: textSecondary.withValues(alpha: 0.7),
+                  height: 1.3,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
       ),

@@ -32,9 +32,15 @@ import 'features/knowledge/presentation/bloc/knowledge_bloc.dart';
 import 'features/meditation/data/models/journal_models.dart';
 import 'features/advisor/presentation/bloc/advisor_bloc.dart';
 import 'features/advisor/presentation/bloc/advisor_event.dart';
+import 'features/explore/presentation/bloc/class_schedule_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Cap the in-memory image cache to prevent OOM on image-heavy pages.
+  // Default is unlimited — this limits to 50 images / 100 MB.
+  PaintingBinding.instance.imageCache.maximumSize = 50;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024;
 
   // Load environment variables from .env file
   await EnvironmentConfig.load();
@@ -183,6 +189,11 @@ class WellnessApp extends StatelessWidget {
           ),
           BlocProvider(
             create: (context) => AdvisorBloc()..add(LoadSuggestions()),
+          ),
+          BlocProvider(
+            create: (context) => ClassScheduleBloc(
+              videosBloc: context.read<VideosBloc>(),
+            ),
           ),
         ],
         // Use Builder to access AuthBloc and create auth-aware router

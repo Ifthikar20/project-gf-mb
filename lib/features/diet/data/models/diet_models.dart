@@ -74,6 +74,12 @@ class MealLog extends HiveObject {
   @HiveField(8)
   final String? imagePath; // Local file path of captured food photo
 
+  @HiveField(9)
+  final String? scanId; // Groups items from the same scan
+
+  @HiveField(10)
+  final String? mealName; // Display name: "Burger", "Chicken Salad"
+
   MealLog({
     required this.name,
     required this.calories,
@@ -84,6 +90,8 @@ class MealLog extends HiveObject {
     required this.timestamp,
     this.notes,
     this.imagePath,
+    this.scanId,
+    this.mealName,
   });
 
   /// Check if this meal was logged today

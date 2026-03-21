@@ -14,24 +14,34 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     on<LoadMeals>(_onLoadMeals);
     on<LoadTodayMeals>(_onLoadTodayMeals);
     on<LogMeal>(_onLogMeal);
+    on<LogMealBatch>(_onLogMealBatch);
     on<DeleteMeal>(_onDeleteMeal);
     on<ChangeDateFilter>(_onChangeDateFilter);
     on<LoadMealsForRange>(_onLoadMealsForRange);
+    on<LoadMealList>(_onLoadMealList);
   }
 
   Future<void> _onLoadMeals(LoadMeals event, Emitter<DietState> emit) async {
+    // Preserve values from previous state BEFORE emitting DietLoading
+    final prevChartDays = state is DietLoaded ? (state as DietLoaded).chartDays : 7;
+    final prevMealListDays = state is DietLoaded ? (state as DietLoaded).mealListDays : 1;
+
     emit(DietLoading());
     try {
       final meals = await _dataSource.getMealsForDate(event.date);
       final summary = DailyNutritionSummary.fromMeals(meals);
 
-      // Also load chart range data (default 7 days)
-      final chartDays = state is DietLoaded ? (state as DietLoaded).chartDays : 7;
-      final rangeData = await _dataSource.getMealsForRange(chartDays);
+      // Load chart range data
+      final rangeData = await _dataSource.getMealsForRange(prevChartDays);
       final rangeSummaries = <DateTime, DailyNutritionSummary>{};
       for (final entry in rangeData.entries) {
         rangeSummaries[entry.key] = DailyNutritionSummary.fromMeals(entry.value);
       }
+
+      // Load meal list items
+      final mealListItems = prevMealListDays == 1
+          ? meals
+          : await _getMealsForDayRange(prevMealListDays);
 
       emit(DietLoaded(
         meals: meals,
@@ -39,7 +49,9 @@ class DietBloc extends Bloc<DietEvent, DietState> {
         tipOfTheDay: NutritionTipsData.getTipOfTheDay(),
         selectedDate: event.date,
         rangeSummaries: rangeSummaries,
-        chartDays: chartDays,
+        chartDays: prevChartDays,
+        mealListItems: mealListItems,
+        mealListDays: prevMealListDays,
       ));
     } catch (e) {
       emit(DietError('Failed to load meals: $e'));
@@ -53,6 +65,18 @@ class DietBloc extends Bloc<DietEvent, DietState> {
 
   Future<void> _onLogMeal(LogMeal event, Emitter<DietState> emit) async {
     await _dataSource.logMeal(event.meal);
+    // Lightweight reload — just today's meals, no range data
+    final currentDate =
+        state is DietLoaded ? (state as DietLoaded).selectedDate : DateTime.now();
+    add(LoadMeals(date: currentDate));
+  }
+
+  /// Log multiple meals at once (from a scan) — saves all, reloads ONCE
+  Future<void> _onLogMealBatch(
+      LogMealBatch event, Emitter<DietState> emit) async {
+    for (final meal in event.meals) {
+      await _dataSource.logMeal(meal);
+    }
     final currentDate =
         state is DietLoaded ? (state as DietLoaded).selectedDate : DateTime.now();
     add(LoadMeals(date: currentDate));
@@ -89,5 +113,36 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     } catch (e) {
       // Keep current state on range load failure
     }
+  }
+
+  /// Load meal list for a given time range (Today/1W/2W/1M)
+  Future<void> _onLoadMealList(
+      LoadMealList event, Emitter<DietState> emit) async {
+    if (state is! DietLoaded) return;
+    final current = state as DietLoaded;
+
+    try {
+      final meals = event.days == 1
+          ? current.meals
+          : await _getMealsForDayRange(event.days);
+
+      emit(current.copyWithMealList(
+        mealListItems: meals,
+        mealListDays: event.days,
+      ));
+    } catch (e) {
+      // Keep current state on failure
+    }
+  }
+
+  /// Get all meals for the last N days as a flat list (newest first)
+  Future<List<MealLog>> _getMealsForDayRange(int days) async {
+    final rangeData = await _dataSource.getMealsForRange(days);
+    final allMeals = <MealLog>[];
+    for (final entry in rangeData.entries) {
+      allMeals.addAll(entry.value);
+    }
+    allMeals.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return allMeals;
   }
 }

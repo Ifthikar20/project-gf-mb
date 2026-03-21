@@ -22,6 +22,10 @@ class DietLoaded extends DietState {
   final Map<DateTime, DailyNutritionSummary> rangeSummaries;
   final int chartDays; // 7, 14, or 30
 
+  /// Meal list (can span multiple days when using time range filter)
+  final List<MealLog> mealListItems;
+  final int mealListDays; // 1=today, 7=week, 14=2weeks, 30=month
+
   const DietLoaded({
     required this.meals,
     required this.summary,
@@ -29,10 +33,15 @@ class DietLoaded extends DietState {
     required this.selectedDate,
     this.rangeSummaries = const {},
     this.chartDays = 7,
+    this.mealListItems = const [],
+    this.mealListDays = 1,
   });
 
   @override
-  List<Object?> get props => [meals, summary, tipOfTheDay, selectedDate, rangeSummaries, chartDays];
+  List<Object?> get props => [
+        meals, summary, tipOfTheDay, selectedDate,
+        rangeSummaries, chartDays, mealListItems, mealListDays,
+      ];
 
   /// Create a copy with updated range data (for chart updates without reloading meals)
   DietLoaded copyWithRange({
@@ -46,6 +55,25 @@ class DietLoaded extends DietState {
       selectedDate: selectedDate,
       rangeSummaries: rangeSummaries ?? this.rangeSummaries,
       chartDays: chartDays ?? this.chartDays,
+      mealListItems: mealListItems,
+      mealListDays: mealListDays,
+    );
+  }
+
+  /// Create a copy with updated meal list data
+  DietLoaded copyWithMealList({
+    required List<MealLog> mealListItems,
+    required int mealListDays,
+  }) {
+    return DietLoaded(
+      meals: meals,
+      summary: summary,
+      tipOfTheDay: tipOfTheDay,
+      selectedDate: selectedDate,
+      rangeSummaries: rangeSummaries,
+      chartDays: chartDays,
+      mealListItems: mealListItems,
+      mealListDays: mealListDays,
     );
   }
 }

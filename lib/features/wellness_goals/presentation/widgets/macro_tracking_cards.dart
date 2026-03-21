@@ -4,10 +4,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../workouts/presentation/bloc/workout_bloc.dart';
 import '../../../workouts/presentation/bloc/workout_state.dart';
+import '../../../diet/presentation/bloc/diet_bloc.dart';
+import '../../../diet/presentation/bloc/diet_state.dart';
 import '../bloc/goals_bloc.dart';
 import '../bloc/goals_state.dart';
 
-/// Three Cal AI-style metric cards showing Active Minutes, Workouts, and Goals.
+/// Four metric cards: Calories Today, Mindfulness, Workouts, Goals.
 /// Displayed in a horizontal scrollable row with mini circular progress rings.
 class MacroTrackingCards extends StatelessWidget {
   const MacroTrackingCards({super.key});
@@ -16,81 +18,97 @@ class MacroTrackingCards extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocBuilder<WorkoutBloc, WorkoutState>(
-      builder: (context, workoutState) {
-        // Active minutes
-        int activeMinutes = 0;
-        int activeMinutesTarget = 275;
-        int workoutsCount = 0;
-        int workoutsTarget = 5;
-
-        if (workoutState is WorkoutLoaded) {
-          activeMinutes = workoutState.stats?.thisWeekMinutes ?? 0;
-          workoutsCount = workoutState.stats?.thisWeekCount ?? 0;
-          try {
-            final minGoal = workoutState.goals
-                .firstWhere((g) => g.goalType == 'active_minutes');
-            activeMinutesTarget = minGoal.targetValue;
-          } catch (_) {}
-          try {
-            final countGoal = workoutState.goals
-                .firstWhere((g) => g.goalType == 'workout_count');
-            workoutsTarget = countGoal.targetValue;
-          } catch (_) {}
+    return BlocBuilder<DietBloc, DietState>(
+      builder: (context, dietState) {
+        int cals = 0;
+        int calTarget = 2000;
+        if (dietState is DietLoaded) {
+          cals = dietState.summary.totalCalories;
+          calTarget = dietState.summary.calorieGoal;
         }
 
-        return BlocBuilder<GoalsBloc, GoalsState>(
-          builder: (context, goalsState) {
-            int activeGoals = 0;
-            int totalGoals = 3;
-            if (goalsState is GoalsLoaded) {
-              final goals = goalsState.goals;
-              activeGoals =
-                  goals.where((g) => g.isCompleted).length;
-              totalGoals = goals.isEmpty ? 3 : goals.length;
+        return BlocBuilder<WorkoutBloc, WorkoutState>(
+          builder: (context, workoutState) {
+            int activeMinutes = 0;
+            int activeMinutesTarget = 275;
+            int workoutsCount = 0;
+            int workoutsTarget = 5;
+
+            if (workoutState is WorkoutLoaded) {
+              activeMinutes = workoutState.stats?.thisWeekMinutes ?? 0;
+              workoutsCount = workoutState.stats?.thisWeekCount ?? 0;
+              try {
+                final minGoal = workoutState.goals
+                    .firstWhere((g) => g.goalType == 'active_minutes');
+                activeMinutesTarget = minGoal.targetValue;
+              } catch (_) {}
+              try {
+                final countGoal = workoutState.goals
+                    .firstWhere((g) => g.goalType == 'workout_count');
+                workoutsTarget = countGoal.targetValue;
+              } catch (_) {}
             }
 
-            final cards = [
-              _MetricData(
-                value: activeMinutes,
-                target: activeMinutesTarget,
-                label: 'Mindfulness minutes',
-                icon: Icons.timer_rounded,
-                color: const Color(0xFFFF6B6B),
-                ringColor: const Color(0xFFFF6B6B),
-              ),
-              _MetricData(
-                value: workoutsCount,
-                target: workoutsTarget,
-                label: 'Workouts done',
-                icon: Icons.fitness_center_rounded,
-                color: const Color(0xFFF59E0B),
-                ringColor: const Color(0xFFF59E0B),
-              ),
-              _MetricData(
-                value: activeGoals,
-                target: totalGoals,
-                label: 'Goals complete',
-                icon: Icons.emoji_events_rounded,
-                color: const Color(0xFF3B82F6),
-                ringColor: const Color(0xFF3B82F6),
-              ),
-            ];
+            return BlocBuilder<GoalsBloc, GoalsState>(
+              builder: (context, goalsState) {
+                int activeGoals = 0;
+                int totalGoals = 3;
+                if (goalsState is GoalsLoaded) {
+                  final goals = goalsState.goals;
+                  activeGoals = goals.where((g) => g.isCompleted).length;
+                  totalGoals = goals.isEmpty ? 3 : goals.length;
+                }
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: cards.map((data) {
-                  return Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: data != cards.last ? 10 : 0,
-                      ),
-                      child: _MacroCard(data: data, isDark: isDark),
+                final cards = [
+                  _MetricData(
+                    value: cals,
+                    target: calTarget,
+                    label: 'Calories today',
+                    icon: Icons.local_fire_department_rounded,
+                    color: const Color(0xFF22C55E),
+                    ringColor: const Color(0xFF22C55E),
+                  ),
+                  _MetricData(
+                    value: activeMinutes,
+                    target: activeMinutesTarget,
+                    label: 'Mindfulness minutes',
+                    icon: Icons.timer_rounded,
+                    color: const Color(0xFFFF6B6B),
+                    ringColor: const Color(0xFFFF6B6B),
+                  ),
+                  _MetricData(
+                    value: workoutsCount,
+                    target: workoutsTarget,
+                    label: 'Workouts done',
+                    icon: Icons.fitness_center_rounded,
+                    color: const Color(0xFFF59E0B),
+                    ringColor: const Color(0xFFF59E0B),
+                  ),
+                  _MetricData(
+                    value: activeGoals,
+                    target: totalGoals,
+                    label: 'Goals complete',
+                    icon: Icons.emoji_events_rounded,
+                    color: const Color(0xFF3B82F6),
+                    ringColor: const Color(0xFF3B82F6),
+                  ),
+                ];
+
+                return SizedBox(
+                  height: 110,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: cards.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (_, i) => SizedBox(
+                      width: (MediaQuery.of(context).size.width - 62) / 3,
+                      child: _MacroCard(data: cards[i], isDark: isDark),
                     ),
-                  );
-                }).toList(),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -144,13 +162,16 @@ class _MacroCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '${data.value}',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black,
-                  height: 1.0,
+              Flexible(
+                child: Text(
+                  '${data.value}',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : Colors.black,
+                    height: 1.0,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
@@ -168,28 +189,26 @@ class _MacroCard extends StatelessWidget {
             data.label,
             style: GoogleFonts.inter(
               fontSize: 11,
-              color: isDark ? Colors.white.withOpacity(0.40) : Colors.black38,
+              color: isDark ? Colors.white.withValues(alpha: 0.40) : Colors.black38,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 12),
+          const Spacer(),
           // Mini ring + icon
-          Row(
-            children: [
-              SizedBox(
-                width: 36,
-                height: 36,
-                child: CustomPaint(
-                  painter: _MiniRingPainter(
-                    progress: progress,
-                    color: data.ringColor,
-                    isDark: isDark,
-                  ),
-                  child: Center(
-                    child: Icon(data.icon, size: 14, color: data.color),
-                  ),
-                ),
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: CustomPaint(
+              painter: _MiniRingPainter(
+                progress: progress,
+                color: data.ringColor,
+                isDark: isDark,
               ),
-            ],
+              child: Center(
+                child: Icon(data.icon, size: 14, color: data.color),
+              ),
+            ),
           ),
         ],
       ),
@@ -214,16 +233,14 @@ class _MiniRingPainter extends CustomPainter {
     final radius = size.width / 2 - 3;
     const strokeWidth = 4.0;
 
-    // Background track
     final bgPaint = Paint()
-      ..color = color.withOpacity(isDark ? 0.12 : 0.10)
+      ..color = color.withValues(alpha: isDark ? 0.12 : 0.10)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius, bgPaint);
 
-    // Progress arc
     if (progress > 0) {
       final progressPaint = Paint()
         ..color = color

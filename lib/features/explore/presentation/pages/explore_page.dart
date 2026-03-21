@@ -1,5 +1,5 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -11,11 +11,13 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../videos/presentation/bloc/videos_bloc.dart';
 import '../../../videos/presentation/bloc/videos_event.dart';
 import '../../../videos/presentation/bloc/videos_state.dart';
-import '../../../videos/domain/entities/video_entity.dart';
 import '../../../meditation/presentation/bloc/meditation_bloc.dart';
 import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
-import '../widgets/breathing_exercise_card.dart';
+import '../bloc/class_schedule_bloc.dart';
+import '../bloc/class_schedule_event.dart';
+import '../bloc/class_schedule_state.dart';
+import '../../data/models/scheduled_class_model.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -44,10 +46,14 @@ class _ExplorePageState extends State<ExplorePage> {
     if (meditationState is MeditationInitial) {
       context.read<MeditationBloc>().add(LoadMeditationAudios());
     }
+
+    // Load classes for today
+    context
+        .read<ClassScheduleBloc>()
+        .add(LoadClasses(date: _selectedDate));
   }
 
   DateTime _getWeekStart(DateTime date) {
-    // Start week on the current day (scrollable)
     return DateTime(date.year, date.month, date.day)
         .subtract(Duration(days: date.weekday % 7));
   }
@@ -57,6 +63,13 @@ class _ExplorePageState extends State<ExplorePage> {
       _weekStart = _weekStart.add(Duration(days: 7 * direction));
       _currentMonth = DateFormat('MMMM yyyy').format(_weekStart);
     });
+  }
+
+  void _selectDate(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+    });
+    context.read<ClassScheduleBloc>().add(LoadClasses(date: date));
   }
 
   bool _isToday(DateTime date) {
@@ -70,50 +83,6 @@ class _ExplorePageState extends State<ExplorePage> {
     return date.year == _selectedDate.year &&
         date.month == _selectedDate.month &&
         date.day == _selectedDate.day;
-  }
-
-  // Generate mock class schedule based on videos
-  List<_ScheduledClass> _generateSchedule(List<VideoEntity> videos) {
-    final rng = Random(_selectedDate.day * 100 + _selectedDate.month);
-    final List<_ScheduledClass> classes = [];
-
-    // Morning classes (6am - 12pm)
-    final morningTimes = ['06:00', '07:30', '09:00', '09:15', '10:30'];
-    // Afternoon classes (12pm - 6pm)
-    final afternoonTimes = ['12:00', '13:30', '14:00', '15:30', '16:00'];
-
-    for (int i = 0; i < videos.length && i < 6; i++) {
-      final video = videos[i];
-      final isMorning = i < 3;
-      final times = isMorning ? morningTimes : afternoonTimes;
-      final timeIndex = rng.nextInt(times.length);
-      final startTime = times[timeIndex];
-      final durationMin =
-          video.durationInSeconds > 0 ? video.durationInSeconds ~/ 60 : 30;
-      final endHour =
-          int.parse(startTime.split(':')[0]) + (durationMin ~/ 60);
-      final endMin =
-          int.parse(startTime.split(':')[1]) + (durationMin % 60);
-      final endTime =
-          '${(endHour + endMin ~/ 60).toString().padLeft(2, '0')}:${(endMin % 60).toString().padLeft(2, '0')}';
-
-      classes.add(_ScheduledClass(
-        time: '$startTime - $endTime',
-        title: video.title,
-        instructor: video.instructor.isNotEmpty ? video.instructor : 'Guest Teacher',
-        durationMin: durationMin,
-        level: 'Level ${rng.nextInt(2) + 1}',
-        category: video.category.isNotEmpty ? video.category : 'Wellness',
-        signedUp: rng.nextInt(25) + 3,
-        avatarUrl: video.expertAvatarUrl,
-        thumbnailUrl: video.thumbnailUrl,
-        isMorning: isMorning,
-        video: video,
-      ));
-    }
-
-    classes.sort((a, b) => a.time.compareTo(b.time));
-    return classes;
   }
 
   @override
@@ -199,7 +168,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 ),
               ),
 
-              // ── Class Schedule ──
+              // ── Class Schedule (from bloc) ──
               _buildClassSchedule(
                 isLight: isLight,
                 bgColor: bgColor,
@@ -208,14 +177,6 @@ class _ExplorePageState extends State<ExplorePage> {
                 textSecondary: textSecondary,
                 borderColor: borderColor,
                 primaryColor: primaryColor,
-              ),
-
-              // ── Breathing Exercise ──
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: BreathingExerciseCard(isLight: isLight),
-                ),
               ),
 
               // Bottom spacing
@@ -280,11 +241,10 @@ class _ExplorePageState extends State<ExplorePage> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: days.map((d) {
               final dayIndex = d.weekday % 7;
-              final today = _isToday(d);
               return Expanded(
                 child: Center(
                   child: Text(
-                    today ? 'Today' : dayLabels[dayIndex],
+                    _isToday(d) ? 'Today' : dayLabels[dayIndex],
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -303,11 +263,7 @@ class _ExplorePageState extends State<ExplorePage> {
               final selected = _isSelected(d);
               return Expanded(
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedDate = d;
-                    });
-                  },
+                  onTap: () => _selectDate(d),
                   child: Center(
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -346,7 +302,7 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   // ─────────────────────────────────
-  // Class Schedule — grouped by time of day
+  // Class Schedule — from ClassScheduleBloc
   // ─────────────────────────────────
   Widget _buildClassSchedule({
     required bool isLight,
@@ -357,14 +313,35 @@ class _ExplorePageState extends State<ExplorePage> {
     required Color borderColor,
     required Color primaryColor,
   }) {
-    return BlocBuilder<VideosBloc, VideosState>(
+    return BlocBuilder<ClassScheduleBloc, ClassScheduleState>(
       builder: (context, state) {
-        if (state is VideosLoaded) {
-          final schedule = _generateSchedule(state.videos);
-          final morning =
-              schedule.where((c) => c.isMorning).toList();
-          final afternoon =
-              schedule.where((c) => !c.isMorning).toList();
+        if (state is ClassScheduleLoaded) {
+          final morning = state.morningClasses;
+          final afternoon = state.afternoonClasses;
+
+          if (morning.isEmpty && afternoon.isEmpty) {
+            return SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.event_available_rounded,
+                          color: textSecondary, size: 48),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No classes scheduled for this day',
+                        style: GoogleFonts.inter(
+                          color: textSecondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
 
           return SliverToBoxAdapter(
             child: Padding(
@@ -448,10 +425,9 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  /// Individual class row — matches the Glo reference:
-  /// time, avatar, title, instructor, duration, level, category, signed up
+  /// Individual class row with reminder toggle
   Widget _buildClassRow({
-    required _ScheduledClass cls,
+    required ScheduledClassModel cls,
     required bool isLight,
     required Color surfaceColor,
     required Color textColor,
@@ -461,11 +437,8 @@ class _ExplorePageState extends State<ExplorePage> {
   }) {
     return GestureDetector(
       onTap: () {
-        if (cls.video.isSeries && cls.video.seriesId != null) {
-          context.push(
-              '${AppRouter.programEnroll}?seriesId=${cls.video.seriesId}');
-        } else {
-          context.push('${AppRouter.videoPlayer}?id=${cls.video.id}');
+        if (cls.videoId != null) {
+          context.push('${AppRouter.videoPlayer}?id=${cls.videoId}');
         }
       },
       child: Container(
@@ -477,7 +450,7 @@ class _ExplorePageState extends State<ExplorePage> {
           border: Border.all(color: borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isLight ? 0.03 : 0.12),
+              color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.12),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -486,7 +459,7 @@ class _ExplorePageState extends State<ExplorePage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Video thumbnail
+            // Thumbnail
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Stack(
@@ -515,14 +488,13 @@ class _ExplorePageState extends State<ExplorePage> {
                           color: textSecondary, size: 28),
                     ),
                   ),
-                  // Play overlay
                   Positioned.fill(
                     child: Center(
                       child: Container(
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
+                          color: Colors.black.withValues(alpha: 0.4),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.play_arrow_rounded,
@@ -539,9 +511,8 @@ class _ExplorePageState extends State<ExplorePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Time
                   Text(
-                    cls.time,
+                    cls.timeRange,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -549,7 +520,6 @@ class _ExplorePageState extends State<ExplorePage> {
                     ),
                   ),
                   const SizedBox(height: 3),
-                  // Title
                   Text(
                     cls.title,
                     style: GoogleFonts.inter(
@@ -561,7 +531,6 @@ class _ExplorePageState extends State<ExplorePage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  // Instructor
                   Text(
                     'With ${cls.instructor}',
                     style: GoogleFonts.inter(
@@ -569,17 +538,15 @@ class _ExplorePageState extends State<ExplorePage> {
                       color: textSecondary,
                     ),
                   ),
-                  // Duration + level
                   Text(
-                    '${cls.durationMin} minutes • ${cls.level}',
+                    '${cls.durationMinutes} minutes • ${cls.level}',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: textSecondary,
                     ),
                   ),
-                  // Category + signed up
                   Text(
-                    '${cls.category} • ${cls.signedUp} signed up',
+                    '${cls.category} • ${cls.signedUpCount} signed up',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: textSecondary,
@@ -588,38 +555,52 @@ class _ExplorePageState extends State<ExplorePage> {
                 ],
               ),
             ),
+            // Reminder toggle
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                final bloc = context.read<ClassScheduleBloc>();
+                if (cls.hasReminder && cls.reminderId != null) {
+                  bloc.add(CancelClassReminder(
+                    classId: cls.id,
+                    reminderId: cls.reminderId!,
+                  ));
+                } else {
+                  bloc.add(SetClassReminder(classId: cls.id));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Reminder set for ${cls.title}'),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: cls.hasReminder
+                      ? const Color(0xFF22C55E).withValues(alpha: 0.12)
+                      : (isLight
+                          ? Colors.black.withValues(alpha: 0.04)
+                          : Colors.white.withValues(alpha: 0.06)),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  cls.hasReminder
+                      ? Icons.notifications_active_rounded
+                      : Icons.notifications_none_rounded,
+                  size: 18,
+                  color: cls.hasReminder
+                      ? const Color(0xFF22C55E)
+                      : textSecondary,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}
-
-/// Model for a scheduled class
-class _ScheduledClass {
-  final String time;
-  final String title;
-  final String instructor;
-  final int durationMin;
-  final String level;
-  final String category;
-  final int signedUp;
-  final String? avatarUrl;
-  final String? thumbnailUrl;
-  final bool isMorning;
-  final VideoEntity video;
-
-  _ScheduledClass({
-    required this.time,
-    required this.title,
-    required this.instructor,
-    required this.durationMin,
-    required this.level,
-    required this.category,
-    required this.signedUp,
-    this.avatarUrl,
-    this.thumbnailUrl,
-    required this.isMorning,
-    required this.video,
-  });
 }

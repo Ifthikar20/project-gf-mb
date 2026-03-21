@@ -26,13 +26,15 @@ class MealLogAdapter extends TypeAdapter<MealLog> {
       timestamp: fields[6] as DateTime,
       notes: fields[7] as String?,
       imagePath: fields[8] as String?,
+      scanId: fields[9] as String?,
+      mealName: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MealLog obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -50,7 +52,11 @@ class MealLogAdapter extends TypeAdapter<MealLog> {
       ..writeByte(7)
       ..write(obj.notes)
       ..writeByte(8)
-      ..write(obj.imagePath);
+      ..write(obj.imagePath)
+      ..writeByte(9)
+      ..write(obj.scanId)
+      ..writeByte(10)
+      ..write(obj.mealName);
   }
 
   @override

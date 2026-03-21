@@ -6,12 +6,14 @@ class FoodScanResult {
   final int totalCalories;
   final String? mealType; // breakfast, lunch, dinner, snack
   final String? scanId; // UUID from backend (for audit trail)
+  final String? mealName; // Display name: "Burger", "Chicken Salad", etc.
 
   const FoodScanResult({
     required this.items,
     required this.totalCalories,
     this.mealType,
     this.scanId,
+    this.mealName,
   });
 
   double get totalProtein =>
@@ -33,6 +35,7 @@ class FoodScanResult {
           items.fold(0, (sum, item) => sum + item.calories),
       mealType: json['meal_type'] as String?,
       scanId: json['scan_id'] as String?,
+      mealName: json['meal_name'] as String?,
     );
   }
 }

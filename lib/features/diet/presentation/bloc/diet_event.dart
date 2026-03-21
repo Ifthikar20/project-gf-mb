@@ -26,6 +26,14 @@ class LogMeal extends DietEvent {
   List<Object?> get props => [meal];
 }
 
+/// Log multiple meals at once (from a scan) — saves all, reloads once
+class LogMealBatch extends DietEvent {
+  final List<MealLog> meals;
+  const LogMealBatch({required this.meals});
+  @override
+  List<Object?> get props => [meals];
+}
+
 /// Delete a meal by its Hive key
 class DeleteMeal extends DietEvent {
   final int key;
@@ -46,6 +54,14 @@ class ChangeDateFilter extends DietEvent {
 class LoadMealsForRange extends DietEvent {
   final int days;
   const LoadMealsForRange({required this.days});
+  @override
+  List<Object?> get props => [days];
+}
+
+/// Load meal list for a given time range (Today/1W/2W/1M)
+class LoadMealList extends DietEvent {
+  final int days; // 1=today, 7=week, 14=2weeks, 30=month
+  const LoadMealList({required this.days});
   @override
   List<Object?> get props => [days];
 }

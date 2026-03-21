@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../bloc/diet_bloc.dart';
 import '../bloc/diet_event.dart';
@@ -10,8 +11,9 @@ import '../widgets/meal_timeline_card.dart';
 import '../widgets/nutrition_charts.dart';
 import 'log_meal_sheet.dart';
 import 'food_scan_sheet.dart';
+import '../../data/models/diet_models.dart';
 
-/// Calories tab — charts, meal list, camera button in title bar.
+/// Calories tab — charts, grouped meal list with time range filter.
 class CaloriesPage extends StatefulWidget {
   const CaloriesPage({super.key});
 
@@ -20,6 +22,8 @@ class CaloriesPage extends StatefulWidget {
 }
 
 class _CaloriesPageState extends State<CaloriesPage> {
+  int _mealListDays = 1; // 1=Today, 7=1W, 14=2W, 30=1M
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +58,48 @@ class _CaloriesPageState extends State<CaloriesPage> {
     );
   }
 
+  void _setMealRange(int days) {
+    setState(() => _mealListDays = days);
+    context.read<DietBloc>().add(LoadMealList(days: days));
+  }
+
+  /// Group meals by scanId. Null scanId → standalone card.
+  List<List<MealLog>> _groupMeals(List<MealLog> meals) {
+    final groups = <String, List<MealLog>>{};
+    final standalones = <List<MealLog>>[];
+
+    for (final meal in meals) {
+      if (meal.scanId != null) {
+        groups.putIfAbsent(meal.scanId!, () => []).add(meal);
+      } else {
+        standalones.add([meal]);
+      }
+    }
+
+    final result = <List<MealLog>>[];
+    result.addAll(groups.values);
+    result.addAll(standalones);
+
+    // Sort groups by first item's timestamp (newest first)
+    result.sort((a, b) => b.first.timestamp.compareTo(a.first.timestamp));
+    return result;
+  }
+
+  /// Group meals by date for multi-day views
+  Map<String, List<List<MealLog>>> _groupByDate(List<MealLog> meals) {
+    final byDate = <String, List<MealLog>>{};
+    for (final meal in meals) {
+      final key = DateFormat('yyyy-MM-dd').format(meal.timestamp);
+      byDate.putIfAbsent(key, () => []).add(meal);
+    }
+
+    final result = <String, List<List<MealLog>>>{};
+    for (final entry in byDate.entries) {
+      result[entry.key] = _groupMeals(entry.value);
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
@@ -71,6 +117,10 @@ class _CaloriesPageState extends State<CaloriesPage> {
             bottom: false,
             child: BlocBuilder<DietBloc, DietState>(
               builder: (context, state) {
+                final meals = state is DietLoaded
+                    ? (_mealListDays == 1 ? state.meals : state.mealListItems)
+                    : <MealLog>[];
+
                 return ListView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
@@ -79,36 +129,40 @@ class _CaloriesPageState extends State<CaloriesPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Calories',
-                          style: GoogleFonts.inter(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: text,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: _openScanner,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 3),
+                        Text('Calories',
+                            style: GoogleFonts.inter(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: text,
+                            )),
+                        Row(
+                          children: [
+                            // Camera button
+                            GestureDetector(
+                              onTap: _openScanner,
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                                child: const Icon(Icons.camera_alt_rounded,
+                                    color: Colors.white, size: 22),
+                              ),
                             ),
-                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 22),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -118,8 +172,8 @@ class _CaloriesPageState extends State<CaloriesPage> {
                     if (state is DietLoaded) ...[
                       NutritionCharts(
                         todaySummary: state.summary,
-                        rangeSummaries: state.rangeSummaries ?? const {},
-                        chartDays: state.chartDays ?? 7,
+                        rangeSummaries: state.rangeSummaries,
+                        chartDays: state.chartDays,
                         onRangeChanged: (days) {
                           context.read<DietBloc>().add(LoadMealsForRange(days: days));
                         },
@@ -127,18 +181,26 @@ class _CaloriesPageState extends State<CaloriesPage> {
                       const SizedBox(height: 24),
                     ],
 
-                    // ── Today's Meals header ──
+                    // ── Meals header + time range tabs ──
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Today\'s Meals',
-                          style: GoogleFonts.inter(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: text,
-                          ),
-                        ),
+                        Text('Meals',
+                            style: GoogleFonts.inter(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: text,
+                            )),
+                        const Spacer(),
+                        // Time range pills
+                        _rangePill('Today', 1, text, subtle, isLight),
+                        const SizedBox(width: 6),
+                        _rangePill('1W', 7, text, subtle, isLight),
+                        const SizedBox(width: 6),
+                        _rangePill('2W', 14, text, subtle, isLight),
+                        const SizedBox(width: 6),
+                        _rangePill('1M', 30, text, subtle, isLight),
+                        const SizedBox(width: 10),
+                        // Log button
                         GestureDetector(
                           onTap: _openLogMeal,
                           child: Container(
@@ -152,14 +214,12 @@ class _CaloriesPageState extends State<CaloriesPage> {
                               children: [
                                 const Icon(Icons.add, color: Colors.white, size: 14),
                                 const SizedBox(width: 4),
-                                Text(
-                                  'Log',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                Text('Log',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    )),
                               ],
                             ),
                           ),
@@ -168,22 +228,12 @@ class _CaloriesPageState extends State<CaloriesPage> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Meal list
-                    if (state is DietLoaded && state.meals.isNotEmpty)
-                      ...state.meals.map((meal) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: MealTimelineCard(
-                              meal: meal,
-                              onDelete: () {
-                                if (meal.key != null) {
-                                  context.read<DietBloc>().add(DeleteMeal(key: meal.key!));
-                                }
-                              },
-                            ),
-                          )),
+                    // ── Meal list ──
+                    if (meals.isNotEmpty)
+                      ..._buildMealList(meals, text, subtle, border, isLight),
 
-                    // Empty state
-                    if (state is! DietLoaded || state.meals.isEmpty)
+                    // ── Empty state ──
+                    if (meals.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(32),
                         decoration: BoxDecoration(
@@ -195,19 +245,15 @@ class _CaloriesPageState extends State<CaloriesPage> {
                           children: [
                             Icon(Icons.restaurant_rounded, size: 32, color: subtle),
                             const SizedBox(height: 8),
-                            Text(
-                              'No meals logged yet',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: text,
-                              ),
-                            ),
+                            Text('No meals logged yet',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: text,
+                                )),
                             const SizedBox(height: 4),
-                            Text(
-                              'Tap 📷 to scan food or + Log to add manually',
-                              style: GoogleFonts.inter(fontSize: 12, color: subtle),
-                            ),
+                            Text('Tap 📷 to scan food or + Log to add manually',
+                                style: GoogleFonts.inter(fontSize: 12, color: subtle)),
                           ],
                         ),
                       ),
@@ -218,6 +264,97 @@ class _CaloriesPageState extends State<CaloriesPage> {
           ),
         );
       },
+    );
+  }
+
+  /// Build meal list — grouped by date if multi-day, or just grouped by scanId
+  List<Widget> _buildMealList(
+      List<MealLog> meals, Color text, Color subtle, Color border, bool isLight) {
+    if (_mealListDays == 1) {
+      // Today — just group by scanId
+      final groups = _groupMeals(meals);
+      return groups
+          .map((group) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: MealGroupCard(
+                  items: group,
+                  onDelete: () {
+                    for (final meal in group) {
+                      if (meal.key != null) {
+                        context.read<DietBloc>().add(DeleteMeal(key: meal.key!));
+                      }
+                    }
+                  },
+                ),
+              ))
+          .toList();
+    }
+
+    // Multi-day — group by date, then by scanId
+    final byDate = _groupByDate(meals);
+    final sortedDates = byDate.keys.toList()..sort((a, b) => b.compareTo(a));
+    final widgets = <Widget>[];
+
+    for (final dateKey in sortedDates) {
+      final date = DateTime.parse(dateKey);
+      final isToday = DateFormat('yyyy-MM-dd').format(DateTime.now()) == dateKey;
+      final label = isToday
+          ? 'Today'
+          : DateFormat('EEEE, MMM d').format(date);
+
+      // Date header
+      widgets.add(Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 8),
+        child: Text(label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: subtle,
+            )),
+      ));
+
+      // Meal groups for this date
+      for (final group in byDate[dateKey]!) {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: MealGroupCard(
+            items: group,
+            onDelete: () {
+              for (final meal in group) {
+                if (meal.key != null) {
+                  context.read<DietBloc>().add(DeleteMeal(key: meal.key!));
+                }
+              }
+            },
+          ),
+        ));
+      }
+    }
+    return widgets;
+  }
+
+  Widget _rangePill(String label, int days, Color text, Color subtle, bool isLight) {
+    final active = _mealListDays == days;
+    return GestureDetector(
+      onTap: () => _setMealRange(days),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: active
+              ? (isLight ? Colors.black : Colors.white)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: active ? null : Border.all(color: subtle.withValues(alpha: 0.3)),
+        ),
+        child: Text(label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: active
+                  ? (isLight ? Colors.white : Colors.black)
+                  : subtle,
+            )),
+      ),
     );
   }
 }
