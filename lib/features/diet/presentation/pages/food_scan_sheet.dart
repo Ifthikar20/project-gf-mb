@@ -32,6 +32,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
   bool _scanning = false;
   String? _error;
   int _servings = 1;
+  bool _showDetail = false;
 
   @override
   void initState() {
@@ -671,7 +672,57 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+
+            // ── Warning badges ──
+            if (item.hasWarnings) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: item.warnings.map((w) => _warningChip(w)).toList(),
+              ),
+            ],
+
+            // ── Detail toggle ──
+            const SizedBox(height: 14),
+            GestureDetector(
+              onTap: () => setState(() => _showDetail = !_showDetail),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _showDetail ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.black54,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _showDetail ? 'Hide Details' : 'See Details',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Expanded detail view ──
+            if (_showDetail) ...[
+              const SizedBox(height: 14),
+              _buildDetailBreakdown(item),
+            ],
+
+            const SizedBox(height: 16),
 
             // Done button
             GestureDetector(
@@ -792,6 +843,225 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
           border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
         child: Icon(icon, size: 14, color: Colors.black87),
+      ),
+    );
+  }
+
+  // ─── Warning Chip ───
+  Widget _warningChip(FoodWarning w) {
+    Color bg, fg;
+    if (w.isHigh) {
+      bg = const Color(0xFFFEE2E2);
+      fg = const Color(0xFFDC2626);
+    } else if (w.isMedium) {
+      bg = const Color(0xFFFEF3C7);
+      fg = const Color(0xFFD97706);
+    } else {
+      bg = const Color(0xFFF1F5F9);
+      fg = const Color(0xFF64748B);
+    }
+
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(w.detail, style: GoogleFonts.inter(color: Colors.white)),
+            backgroundColor: fg,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_warningIcon(w.type), size: 12, color: fg),
+            const SizedBox(width: 4),
+            Text(
+              w.label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: fg,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _warningIcon(String type) {
+    switch (type) {
+      case 'allergen':
+        return Icons.warning_amber_rounded;
+      case 'high_caffeine':
+        return Icons.bolt_rounded;
+      case 'high_sugar':
+        return Icons.cake_rounded;
+      case 'high_sodium':
+        return Icons.water_drop_outlined;
+      case 'high_sat_fat':
+        return Icons.opacity_rounded;
+      case 'high_calorie':
+        return Icons.local_fire_department_rounded;
+      default:
+        return Icons.info_outline_rounded;
+    }
+  }
+
+  // ─── Detail Breakdown Card ───
+  Widget _buildDetailBreakdown(DetectedFoodItem item) {
+    final multiplier = _servings;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Nutrition Breakdown',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _progressRow('Protein', '${(item.proteinG * multiplier).round()}g',
+              item.proteinG / 50, const Color(0xFF3B82F6)),
+          _progressRow('Carbs', '${(item.carbsG * multiplier).round()}g',
+              item.carbsG / 100, const Color(0xFFF59E0B)),
+          _progressRow('Fat', '${(item.fatG * multiplier).round()}g',
+              item.fatG / 65, const Color(0xFFEC4899)),
+          _progressRow('Sugar', '${(item.sugarG * multiplier).round()}g',
+              item.sugarG / 50, const Color(0xFFF97316)),
+          _progressRow('Fiber', '${(item.fiberG * multiplier).round()}g',
+              item.fiberG / 30, const Color(0xFF22C55E)),
+          const SizedBox(height: 4),
+          // Sodium
+          _infoRow('Sodium', '${(item.sodiumMg * multiplier)}mg'),
+          // Caffeine (only if > 0)
+          if (item.hasCaffeine)
+            _infoRow('Caffeine', '${(item.caffeineMg * multiplier)}mg'),
+          // Warning details
+          if (item.hasWarnings) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            const SizedBox(height: 10),
+            ...item.warnings.map((w) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(_warningIcon(w.type),
+                          size: 14,
+                          color: w.isHigh
+                              ? const Color(0xFFDC2626)
+                              : w.isMedium
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFF64748B)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          w.detail,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.black54,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _progressRow(String label, String value, double ratio, Color color) {
+    final clampedRatio = ratio.clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 56,
+            child: Text(label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black54,
+                )),
+          ),
+          SizedBox(
+            width: 44,
+            child: Text(value,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                )),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              height: 6,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: clampedRatio,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 56,
+            child: Text(label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black54,
+                )),
+          ),
+          Text(value,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              )),
+        ],
       ),
     );
   }
