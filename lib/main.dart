@@ -196,7 +196,9 @@ class WellnessApp extends StatelessWidget {
             ),
           ),
         ],
-        // Use Builder to access AuthBloc and create auth-aware router
+        // Use Builder to access AuthBloc and create auth-aware router.
+        // IMPORTANT: Router must be created ONCE outside BlocBuilder to avoid
+        // recreating it on every theme change (which resets all navigation state).
         child: Builder(
           builder: (context) {
             final authBloc = context.read<AuthBloc>();

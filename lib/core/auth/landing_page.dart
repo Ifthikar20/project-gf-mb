@@ -23,6 +23,15 @@ class _LandingPageState extends State<LandingPage> {
   static const Color primaryPurple = Color(0xFF8B5CF6);
   static const Color lightPurple = Color(0xFFA78BFA);
 
+  // Cached text styles — avoids per-build GoogleFonts resolution overhead.
+  static final _dialogTitleStyle = GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600);
+  static final _dialogBodyStyle = GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.6);
+  static final _welcomeStyle = GoogleFonts.poppins(
+    color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold, height: 1.2,
+  );
+  static final _termsBaseStyle = GoogleFonts.inter(fontSize: 12, height: 1.4);
+  static final _btnStyle = GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600);
+
   @override
   void initState() {
     super.initState();
@@ -54,10 +63,7 @@ class _LandingPageState extends State<LandingPage> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Terms & Conditions',
-          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
+        title: Text('Terms & Conditions', style: _dialogTitleStyle),
         content: SingleChildScrollView(
           child: Text(
             '''Terms of Service
@@ -80,7 +86,7 @@ In no event shall we or our suppliers be liable for any damages arising out of t
 We may revise these terms of service at any time without notice.
 
 For questions about these terms, please contact support.''',
-            style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.6),
+            style: _dialogBodyStyle,
           ),
         ),
         actions: [
@@ -99,10 +105,7 @@ For questions about these terms, please contact support.''',
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Privacy Policy',
-          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
+        title: Text('Privacy Policy', style: _dialogTitleStyle),
         content: SingleChildScrollView(
           child: Text(
             '''Privacy Policy
@@ -126,7 +129,7 @@ You may update, correct, or delete your account information at any time.
 
 6. Contact Us
 If you have any questions about this Privacy Policy, please contact us.''',
-            style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.6),
+            style: _dialogBodyStyle,
           ),
         ),
         actions: [
@@ -205,11 +208,7 @@ If you have any questions about this Privacy Policy, please contact us.''',
                   // Welcome text
                   Text(
                     'Welcome to\nGreat Feel.',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
+                    style: _welcomeStyle.copyWith(
                       shadows: [
                         Shadow(
                           color: Colors.black.withOpacity(0.5),
@@ -248,10 +247,8 @@ If you have any questions about this Privacy Policy, please contact us.''',
                       Expanded(
                         child: RichText(
                           text: TextSpan(
-                            style: GoogleFonts.inter(
+                            style: _termsBaseStyle.copyWith(
                               color: Colors.white.withOpacity(0.85),
-                              fontSize: 12,
-                              height: 1.4,
                             ),
                             children: [
                               const TextSpan(text: 'I agree to the '),
@@ -302,13 +299,7 @@ If you have any questions about this Privacy Policy, please contact us.''',
                         ),
                         elevation: 0,
                       ),
-                      child: Text(
-                        'Sign up free',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text('Sign up free', style: _btnStyle),
                     ),
                   ),
                   
@@ -336,9 +327,7 @@ If you have any questions about this Privacy Policy, please contact us.''',
                       ),
                       child: Text(
                         'Log in',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        style: _btnStyle.copyWith(
                           color: _agreedToTerms 
                               ? Colors.white 
                               : Colors.white.withOpacity(0.4),

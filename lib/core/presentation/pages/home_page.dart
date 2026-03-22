@@ -21,6 +21,11 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
+  // Cached text styles — avoids per-build GoogleFonts resolution overhead.
+  static final _navLabelActive = GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w600);
+  static final _navLabelInactive = GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w400);
+  static final _profileInitialsStyle = GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700);
+
   // Build pages lazily — only the active page is in the widget tree.
   // IndexedStack kept ALL 5 pages alive causing OOM.
   Widget _buildPage() {
@@ -59,7 +64,7 @@ class _MainShellState extends State<MainShell> {
           extendBody: true,
           bottomNavigationBar: ClipRRect(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
                 decoration: BoxDecoration(
                   color: isLight
@@ -152,10 +157,8 @@ class _MainShellState extends State<MainShell> {
             const SizedBox(height: 3),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: (isActive ? _navLabelActive : _navLabelInactive).copyWith(
                 color: isActive ? activeColor : inactiveColor,
-                fontSize: 9,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -201,9 +204,7 @@ class _MainShellState extends State<MainShell> {
               child: Center(
                 child: Text(
                   'JD',
-                  style: GoogleFonts.inter(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
+                  style: _profileInitialsStyle.copyWith(
                     color: isActive
                         ? (isLight ? Colors.white : Colors.black)
                         : inactiveColor,
@@ -214,10 +215,8 @@ class _MainShellState extends State<MainShell> {
             const SizedBox(height: 3),
             Text(
               'Profile',
-              style: GoogleFonts.inter(
+              style: (isActive ? _navLabelActive : _navLabelInactive).copyWith(
                 color: isActive ? activeColor : inactiveColor,
-                fontSize: 9,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,

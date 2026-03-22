@@ -29,6 +29,26 @@ class _LoginPageState extends State<LoginPage> {
   static const _fieldBg = Color(0xFFF3F4F6);
   static const _fieldBorder = Color(0xFFE5E7EB);
 
+  // Cached text styles — avoids per-build GoogleFonts resolution overhead.
+  static final _titleStyle = GoogleFonts.inter(
+    fontSize: 28, fontWeight: FontWeight.w800, color: _dark,
+  );
+  static final _subtitleStyle = GoogleFonts.inter(fontSize: 15, color: _grey);
+  static final _fieldStyle = GoogleFonts.inter(color: _dark, fontSize: 15);
+  static final _hintStyle = GoogleFonts.inter(color: _grey, fontSize: 15);
+  static final _btnStyle = GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600);
+  static final _forgotStyle = GoogleFonts.inter(
+    color: _purple, fontSize: 13, fontWeight: FontWeight.w500,
+  );
+  static final _orStyle = GoogleFonts.inter(color: _grey, fontSize: 13);
+  static final _googleBtnStyle = GoogleFonts.inter(
+    fontSize: 15, fontWeight: FontWeight.w500, color: _dark,
+  );
+  static final _signUpTextStyle = GoogleFonts.inter(color: _grey, fontSize: 14);
+  static final _signUpLinkStyle = GoogleFonts.inter(
+    color: _purple, fontSize: 14, fontWeight: FontWeight.w600,
+  );
+
   @override
   void dispose() {
     _emailCtrl.dispose();
@@ -85,7 +105,6 @@ class _LoginPageState extends State<LoginPage> {
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
-                // ── Logo + Welcome (flexible height) ──
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: Padding(
@@ -108,19 +127,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        Text(
-                          'Welcome back',
-                          style: GoogleFonts.inter(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: _dark,
-                          ),
-                        ),
+                        Text('Welcome back', style: _titleStyle),
                         const SizedBox(height: 6),
-                        Text(
-                          'Sign in to continue your practice',
-                          style: GoogleFonts.inter(fontSize: 15, color: _grey),
-                        ),
+                        Text('Sign in to continue your practice', style: _subtitleStyle),
                         const Spacer(),
 
                         // ── Form ──
@@ -129,9 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Error banner
-                              if (_error != null)
-                                _buildError(_error!),
+                              if (_error != null) _buildError(_error!),
 
                               // Email
                               _field(
@@ -183,12 +190,7 @@ class _LoginPageState extends State<LoginPage> {
                                     minimumSize: Size.zero,
                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  child: Text(
-                                    'Forgot Password?',
-                                    style: GoogleFonts.inter(
-                                      color: _purple, fontSize: 13, fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
+                                  child: Text('Forgot Password?', style: _forgotStyle),
                                 ),
                               ),
                               const SizedBox(height: 14),
@@ -214,10 +216,7 @@ class _LoginPageState extends State<LoginPage> {
                                             color: Colors.white, strokeWidth: 2,
                                           ),
                                         )
-                                      : Text('Log in',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 16, fontWeight: FontWeight.w600,
-                                          )),
+                                      : Text('Log in', style: _btnStyle),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -228,8 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                                   const Expanded(child: Divider(color: _fieldBorder)),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: Text('or',
-                                        style: GoogleFonts.inter(color: _grey, fontSize: 13)),
+                                    child: Text('or', style: _orStyle),
                                   ),
                                   const Expanded(child: Divider(color: _fieldBorder)),
                                 ],
@@ -258,11 +256,7 @@ class _LoginPageState extends State<LoginPage> {
                                         child: CustomPaint(painter: GoogleLogoPainter()),
                                       ),
                                       const SizedBox(width: 12),
-                                      Text('Continue with Google',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15, fontWeight: FontWeight.w500,
-                                            color: _dark,
-                                          )),
+                                      Text('Continue with Google', style: _googleBtnStyle),
                                     ],
                                   ),
                                 ),
@@ -273,14 +267,10 @@ class _LoginPageState extends State<LoginPage> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text("Don't have an account? ",
-                                      style: GoogleFonts.inter(color: _grey, fontSize: 14)),
+                                  Text("Don't have an account? ", style: _signUpTextStyle),
                                   GestureDetector(
                                     onTap: () => context.push('/register'),
-                                    child: Text('Sign up',
-                                        style: GoogleFonts.inter(
-                                          color: _purple, fontSize: 14, fontWeight: FontWeight.w600,
-                                        )),
+                                    child: Text('Sign up', style: _signUpLinkStyle),
                                   ),
                                 ],
                               ),
@@ -345,10 +335,10 @@ class _LoginPageState extends State<LoginPage> {
       textInputAction: action,
       onFieldSubmitted: onSubmit,
       onChanged: (_) => _clearError(),
-      style: GoogleFonts.inter(color: _dark, fontSize: 15),
+      style: _fieldStyle,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.inter(color: _grey, fontSize: 15),
+        hintStyle: _hintStyle,
         prefixIcon: Icon(icon, color: _grey, size: 20),
         suffixIcon: suffix,
         filled: true,

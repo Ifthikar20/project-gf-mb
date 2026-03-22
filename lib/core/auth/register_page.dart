@@ -34,6 +34,19 @@ class _RegisterPageState extends State<RegisterPage> {
 
   static const _purple = Color(0xFF8B5CF6);
 
+  // Cached text styles — avoids per-build GoogleFonts resolution overhead.
+  static final _titleStyle = GoogleFonts.poppins(
+    color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, height: 1.2,
+  );
+  static final _socialLabelStyle = GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600);
+  static final _socialLabelStyleLight = GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500);
+  static final _errorTextStyle = GoogleFonts.inter(fontSize: 12);
+  static final _reqLabelStyle = GoogleFonts.inter(fontSize: 10);
+  static final _submitBtnStyle = GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600);
+  static final _loginLinkStyle = GoogleFonts.inter(
+    color: _purple, fontSize: 13, fontWeight: FontWeight.w600,
+  );
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -105,9 +118,14 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             children: [
               // ── Top: Backdrop image ──
-              if (!_showEmailForm || MediaQuery.of(context).viewInsets.bottom == 0)
+              // NOTE: Previously used MediaQuery.viewInsets.bottom to hide
+              // the image when the keyboard was open. This caused the ENTIRE
+              // page to rebuild on every keyboard animation frame (~18 rebuilds
+              // over 300ms), which is why the keyboard took ~3s to respond.
+              // Now we hide the image based on _showEmailForm state only.
+              if (!_showEmailForm)
                 Expanded(
-                  flex: _showEmailForm ? 1 : 2,
+                  flex: 2,
                   child: Stack(
                     children: [
                       SizedBox.expand(
@@ -135,16 +153,28 @@ class _RegisterPageState extends State<RegisterPage> {
                         left: 8,
                         child: IconButton(
                           icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-                          onPressed: () {
-                            if (_showEmailForm) {
-                              setState(() { _showEmailForm = false; _error = null; });
-                            } else {
-                              context.pop();
-                            }
-                          },
+                          onPressed: () => context.pop(),
                         ),
                       ),
                     ],
+                  ),
+                ),
+
+              // When in email form, show a compact header with back button
+              if (_showEmailForm)
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8, top: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                        onPressed: () {
+                          setState(() { _showEmailForm = false; _error = null; });
+                        },
+                      ),
+                    ),
                   ),
                 ),
 
@@ -159,12 +189,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Title
                       Text(
                         _showEmailForm ? 'Create your account' : 'Sign up to start\nyour journey',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          height: 1.2,
-                        ),
+                        style: _titleStyle,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -243,7 +268,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 children: [
                   Icon(icon, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
-                  Text(label, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(label, style: _socialLabelStyle),
                 ],
               ),
             )
@@ -259,7 +284,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 children: [
                   Icon(icon, color: iconColor ?? Colors.white, size: 20),
                   const SizedBox(width: 8),
-                  Text(label, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text(label, style: _socialLabelStyleLight),
                 ],
               ),
             ),
@@ -366,8 +391,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       width: 20, height: 20,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                     )
-                  : Text('Create Account',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600)),
+                  : Text('Create Account', style: _submitBtnStyle),
             ),
           ),
           const SizedBox(height: 16),
@@ -392,8 +416,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             const SizedBox(width: 6),
             Text(r.label,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
+                style: _reqLabelStyle.copyWith(
                   color: r.isMet ? Colors.green : Colors.white.withValues(alpha: 0.4),
                 )),
           ],
@@ -418,7 +441,7 @@ class _RegisterPageState extends State<RegisterPage> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(msg,
-                style: GoogleFonts.inter(color: Colors.red.shade300, fontSize: 12)),
+                style: _errorTextStyle.copyWith(color: Colors.red.shade300)),
           ),
           GestureDetector(
             onTap: _clearError,
@@ -441,10 +464,7 @@ class _RegisterPageState extends State<RegisterPage> {
               )),
           GestureDetector(
             onTap: () => context.push('/login'),
-            child: Text('Log in',
-                style: GoogleFonts.inter(
-                  color: _purple, fontSize: 13, fontWeight: FontWeight.w600,
-                )),
+            child: Text('Log in', style: _loginLinkStyle),
           ),
         ],
       ),
