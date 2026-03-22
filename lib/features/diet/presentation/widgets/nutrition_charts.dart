@@ -25,7 +25,7 @@ class NutritionCharts extends StatefulWidget {
 
 class _NutritionChartsState extends State<NutritionCharts>
     with SingleTickerProviderStateMixin {
-  int _chartType = 0; // 0 = pie, 1 = bar
+  int _chartType = 0; // 0 = pie, 1 = bar, 2 = line
   late AnimationController _animCtrl;
   late Animation<double> _anim;
 
@@ -77,8 +77,8 @@ class _NutritionChartsState extends State<NutritionCharts>
             children: [
               // Chart type toggle
               _buildToggle(
-                labels: ['Macros', 'Trends'],
-                icons: [Icons.pie_chart_rounded, Icons.bar_chart_rounded],
+                labels: ['Macros', 'Bar', 'Line'],
+                icons: [Icons.pie_chart_rounded, Icons.bar_chart_rounded, Icons.show_chart_rounded],
                 selected: _chartType,
                 onChanged: (i) {
                   setState(() => _chartType = i);
@@ -87,8 +87,8 @@ class _NutritionChartsState extends State<NutritionCharts>
                 isDark: isDark,
               ),
               const Spacer(),
-              // Time range toggle (only for bar chart)
-              if (_chartType == 1)
+              // Time range toggle (for bar or line chart)
+              if (_chartType == 1 || _chartType == 2)
                 _buildRangeToggle(isDark),
             ],
           ),
@@ -100,8 +100,10 @@ class _NutritionChartsState extends State<NutritionCharts>
             builder: (_, __) {
               if (_chartType == 0) {
                 return _buildPieChart(text, subtle, isDark);
-              } else {
+              } else if (_chartType == 1) {
                 return _buildBarChart(text, subtle, isDark);
+              } else {
+                return _buildLineChart(text, subtle, isDark);
               }
             },
           ),
@@ -328,6 +330,60 @@ class _NutritionChartsState extends State<NutritionCharts>
       ),
     );
   }
+
+  // ─── Line Chart (Daily Calories Trend) ───
+  Widget _buildLineChart(Color text, Color subtle, bool isDark) {
+    final entries = widget.rangeSummaries.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    if (entries.isEmpty) {
+      return SizedBox(
+        height: 200,
+        child: Center(
+          child: Text('No data yet', style: GoogleFonts.inter(color: subtle)),
+        ),
+      );
+    }
+
+    final maxCal = entries.fold<int>(0, (m, e) => max(m, e.value.totalCalories));
+    final goal = widget.todaySummary.calorieGoal;
+    final chartMax = max(maxCal, goal).toDouble();
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: CustomPaint(
+            size: Size(MediaQuery.of(context).size.width - 72, 200),
+            painter: _CalorieLinePainter(
+              entries: entries,
+              maxValue: chartMax,
+              goal: goal.toDouble(),
+              progress: _anim.value,
+              isDark: isDark,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Legend
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(width: 16, height: 3, decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6),
+              borderRadius: BorderRadius.circular(2),
+            )),
+            const SizedBox(width: 6),
+            Text('Calories', style: GoogleFonts.inter(fontSize: 11, color: subtle)),
+            const SizedBox(width: 16),
+            Container(width: 16, height: 2, color: const Color(0xFF10B981).withOpacity(0.5)),
+            const SizedBox(width: 6),
+            Text('Goal: $goal cal', style: GoogleFonts.inter(fontSize: 11, color: subtle)),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 // ──────────────────────────────────────────
@@ -540,5 +596,148 @@ class _CalorieBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CalorieBarPainter old) =>
+      old.progress != progress || old.entries.length != entries.length;
+}
+
+// ──────────────────────────────────────────
+// Daily Calorie Line Chart Painter
+// ──────────────────────────────────────────
+class _CalorieLinePainter extends CustomPainter {
+  final List<MapEntry<DateTime, DailyNutritionSummary>> entries;
+  final double maxValue, goal, progress;
+  final bool isDark;
+
+  _CalorieLinePainter({
+    required this.entries,
+    required this.maxValue,
+    required this.goal,
+    required this.progress,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (entries.isEmpty || maxValue == 0) return;
+
+    final chartH = size.height - 28; // room for labels
+    final chartW = size.width;
+    final count = entries.length;
+    final days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // ── Goal line (dashed) ──
+    final goalY = chartH * (1 - goal / maxValue);
+    final goalPaint = Paint()
+      ..color = const Color(0xFF10B981).withOpacity(0.35)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    const dashW = 6.0;
+    const dashGap = 4.0;
+    double dx = 0;
+    while (dx < chartW) {
+      canvas.drawLine(
+        Offset(dx, goalY),
+        Offset(min(dx + dashW, chartW), goalY),
+        goalPaint,
+      );
+      dx += dashW + dashGap;
+    }
+
+    // ── Build data points ──
+    final points = <Offset>[];
+    for (int i = 0; i < count; i++) {
+      final x = count == 1 ? chartW / 2 : (i / (count - 1)) * chartW;
+      final cal = entries[i].value.totalCalories.toDouble();
+      final y = chartH * (1 - cal / maxValue);
+      points.add(Offset(x, y));
+    }
+
+    // ── Animated visible count ──
+    final visibleCount = (count * progress).ceil().clamp(0, count);
+    if (visibleCount < 2) return;
+
+    final visiblePoints = points.sublist(0, visibleCount);
+
+    // ── Gradient fill under line ──
+    final fillPath = Path()
+      ..moveTo(visiblePoints.first.dx, chartH);
+    for (final p in visiblePoints) {
+      fillPath.lineTo(p.dx, p.dy);
+    }
+    fillPath.lineTo(visiblePoints.last.dx, chartH);
+    fillPath.close();
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFF8B5CF6).withOpacity(0.25),
+          const Color(0xFF8B5CF6).withOpacity(0.02),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, chartW, chartH));
+    canvas.drawPath(fillPath, fillPaint);
+
+    // ── Line ──
+    final linePath = Path()..moveTo(visiblePoints.first.dx, visiblePoints.first.dy);
+    for (int i = 1; i < visiblePoints.length; i++) {
+      linePath.lineTo(visiblePoints[i].dx, visiblePoints[i].dy);
+    }
+
+    final linePaint = Paint()
+      ..color = const Color(0xFF8B5CF6)
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(linePath, linePaint);
+
+    // ── Data points ──
+    final dotPaint = Paint()..color = const Color(0xFF8B5CF6);
+    final dotBorderPaint = Paint()
+      ..color = isDark ? const Color(0xFF1A1A1A) : Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    for (final p in visiblePoints) {
+      canvas.drawCircle(p, 4, dotPaint);
+      canvas.drawCircle(p, 4, dotBorderPaint);
+    }
+
+    // ── Date labels ──
+    for (int i = 0; i < count; i++) {
+      final date = entries[i].key;
+      String label;
+      if (count <= 7) {
+        label = days[date.weekday % 7];
+      } else if (count <= 14) {
+        label = '${date.day}';
+      } else {
+        label = (i % 5 == 0 || i == count - 1)
+            ? '${months[date.month]} ${date.day}'
+            : '';
+      }
+
+      if (label.isNotEmpty) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: TextStyle(
+              fontSize: count > 14 ? 8 : 10,
+              color: isDark ? Colors.white38 : Colors.black38,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final x = count == 1 ? chartW / 2 : (i / (count - 1)) * chartW;
+        tp.paint(canvas, Offset(x - tp.width / 2, chartH + 8));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CalorieLinePainter old) =>
       old.progress != progress || old.entries.length != entries.length;
 }

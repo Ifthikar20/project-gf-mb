@@ -263,8 +263,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               ),
             ),
 
-          // ── Corner brackets overlay (when scanning / waiting) ──
-          if (!hasResult && _capturedImage != null)
+          // ── Corner brackets overlay (only when NOT scanning) ──
+          if (!hasResult && _capturedImage != null && !_scanning)
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
@@ -273,7 +273,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               ),
             ),
 
-          // ── Top bar: X — AI Scanner — ••• ──
+          // ── Top bar: X — AI Scanner ──
           _buildTopBar(),
 
           // ── Scanning indicator ──
@@ -328,7 +328,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
             ),
             // Title
             Text(
-              'AI Scanner',
+              'Calorie Scanner',
               style: GoogleFonts.inter(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -367,42 +367,13 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     );
   }
 
-  // ─── Scanning overlay ───
+  // ─── Scanning overlay (animated text, no spinner) ───
   Widget _buildScanningOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.3),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 48,
-                height: 48,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Analyzing food...',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'AI is identifying calories & macros',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ),
+        color: Colors.black.withValues(alpha: 0.55),
+        child: const Center(
+          child: _ScanningTextAnimation(),
         ),
       ),
     );
@@ -544,6 +515,62 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               ),
             ),
             const SizedBox(height: 4),
+
+            // ── Liquid/Beverage badge ──
+            if (item.isLiquidOrBeverage)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: item.isBeverage
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: item.isBeverage
+                          ? const Color(0xFFBFDBFE)
+                          : const Color(0xFFBBF7D0),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        item.isBeverage
+                            ? Icons.local_cafe_rounded
+                            : Icons.water_drop_rounded,
+                        size: 15,
+                        color: item.isBeverage
+                            ? const Color(0xFF3B82F6)
+                            : const Color(0xFF22C55E),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        item.isBeverage ? 'Beverage' : 'Liquid',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: item.isBeverage
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFF22C55E),
+                        ),
+                      ),
+                      if (item.volumeDisplay != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          item.volumeDisplay!,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
 
             // Food name + servings
             Row(
@@ -857,4 +884,109 @@ class _CornerBracketsPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CornerBracketsPainter old) =>
       scanning != old.scanning;
+}
+
+// ─────────────────────────────────────────────
+// Animated scanning text ─ cycles through messages
+// ─────────────────────────────────────────────
+class _ScanningTextAnimation extends StatefulWidget {
+  const _ScanningTextAnimation();
+
+  @override
+  State<_ScanningTextAnimation> createState() => _ScanningTextAnimationState();
+}
+
+class _ScanningTextAnimationState extends State<_ScanningTextAnimation> {
+  static const _messages = [
+    'Breaking down the image...',
+    'Finding calories & macros...',
+    'Identifying ingredients...',
+    'Analyzing portion size...',
+    'Almost there...',
+  ];
+
+  int _index = 0;
+  int _dotCount = 0;
+  late final _messageTimer = Stream.periodic(
+    const Duration(seconds: 3),
+    (i) => i,
+  ).listen((_) {
+    if (mounted) setState(() => _index = (_index + 1) % _messages.length);
+  });
+  late final _dotTimer = Stream.periodic(
+    const Duration(milliseconds: 500),
+    (i) => i,
+  ).listen((_) {
+    if (mounted) setState(() => _dotCount = (_dotCount + 1) % 4);
+  });
+
+  @override
+  void dispose() {
+    _messageTimer.cancel();
+    _dotTimer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Pulsing icon
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.85, end: 1.0),
+          duration: const Duration(milliseconds: 1200),
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: child,
+            );
+          },
+          onEnd: () {
+            if (mounted) setState(() {});
+          },
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+              border: Border.all(
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.restaurant_menu_rounded,
+              color: Color(0xFF8B5CF6),
+              size: 28,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Main message
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: Text(
+            _messages[_index],
+            key: ValueKey(_index),
+            style: GoogleFonts.inter(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Subtitle with dots
+        Text(
+          'Scanning${'.' * _dotCount}',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: Colors.white54,
+          ),
+        ),
+      ],
+    );
+  }
 }

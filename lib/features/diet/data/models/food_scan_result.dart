@@ -48,6 +48,8 @@ class DetectedFoodItem {
   final double fatG;
   final String servingSize;
   final double confidence; // 0.0 – 1.0
+  final String type; // 'solid', 'liquid', 'beverage'
+  final int? liquidVolumeMl; // estimated ml for liquids/beverages
 
   const DetectedFoodItem({
     required this.name,
@@ -57,7 +59,17 @@ class DetectedFoodItem {
     required this.fatG,
     required this.servingSize,
     this.confidence = 0.8,
+    this.type = 'solid',
+    this.liquidVolumeMl,
   });
+
+  bool get isLiquid => type == 'liquid';
+  bool get isBeverage => type == 'beverage';
+  bool get isLiquidOrBeverage => type == 'liquid' || type == 'beverage';
+
+  /// Display string for volume: "350 ml" or null for solids
+  String? get volumeDisplay =>
+      liquidVolumeMl != null ? '$liquidVolumeMl ml' : null;
 
   factory DetectedFoodItem.fromJson(Map<String, dynamic> json) {
     return DetectedFoodItem(
@@ -68,6 +80,8 @@ class DetectedFoodItem {
       fatG: (json['fat_g'] as num?)?.toDouble() ?? 0,
       servingSize: json['serving_size'] as String? ?? '1 serving',
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.8,
+      type: json['type'] as String? ?? 'solid',
+      liquidVolumeMl: (json['liquid_volume_ml'] as num?)?.toInt(),
     );
   }
 }
