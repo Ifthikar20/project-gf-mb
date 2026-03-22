@@ -46,6 +46,8 @@ class MeditationCategoryPage extends StatelessWidget {
                         child: CachedNetworkImage(
                           imageUrl: 'https://picsum.photos/seed/$categoryId/800/600',
                           fit: BoxFit.cover,
+                          memCacheHeight: 560,
+                          memCacheWidth: 800,
                           placeholder: (context, url) => Container(
                             color: const Color(0xFF282828),
                           ),
@@ -232,6 +234,8 @@ class MeditationCategoryPage extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl: audio.imageUrl,
                   fit: BoxFit.cover,
+                  memCacheHeight: 280,
+                  memCacheWidth: 280,
                   placeholder: (context, url) => Container(
                     color: const Color(0xFF282828),
                     child: const Center(

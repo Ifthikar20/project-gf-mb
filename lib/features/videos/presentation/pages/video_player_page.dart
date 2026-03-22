@@ -580,6 +580,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                                 child: CachedNetworkImage(
                                   imageUrl: 'https://picsum.photos/seed/${_video?.instructor ?? 'author'}/100/100',
                                   fit: BoxFit.cover,
+                                  memCacheHeight: 96,
+                                  memCacheWidth: 96,
                                   errorWidget: (context, url, error) => Container(
                                     color: const Color(0xFF282828),
                                     child: const Icon(Icons.person, color: Colors.white),
@@ -978,6 +980,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                           width: 100,
                           height: 70,
                           fit: BoxFit.cover,
+                          memCacheHeight: 140,
+                          memCacheWidth: 200,
                           placeholder: (context, url) => Container(
                             color: const Color(0xFF282828),
                             child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),

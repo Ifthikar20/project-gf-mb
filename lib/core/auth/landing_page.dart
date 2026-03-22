@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
 import '../config/api_endpoints.dart';
 
+
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
 
@@ -18,6 +19,10 @@ class _LandingPageState extends State<LandingPage> {
   // Video controller
   late VideoPlayerController _videoController;
   bool _isVideoInitialized = false;
+
+  // Gesture recognizers — must be disposed to avoid leaks.
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
 
   // Purple theme color
   static const Color primaryPurple = Color(0xFF8B5CF6);
@@ -35,6 +40,8 @@ class _LandingPageState extends State<LandingPage> {
   @override
   void initState() {
     super.initState();
+    _termsRecognizer = TapGestureRecognizer()..onTap = _showTermsDialog;
+    _privacyRecognizer = TapGestureRecognizer()..onTap = _showPrivacyDialog;
     _initializeVideo();
   }
 
@@ -53,6 +60,8 @@ class _LandingPageState extends State<LandingPage> {
 
   @override
   void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     _videoController.dispose();
     super.dispose();
   }
@@ -258,8 +267,7 @@ If you have any questions about this Privacy Policy, please contact us.''',
                                   color: lightPurple,
                                   decoration: TextDecoration.underline,
                                 ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = _showTermsDialog,
+                                recognizer: _termsRecognizer,
                               ),
                               const TextSpan(text: ' and '),
                               TextSpan(
@@ -268,8 +276,7 @@ If you have any questions about this Privacy Policy, please contact us.''',
                                   color: lightPurple,
                                   decoration: TextDecoration.underline,
                                 ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = _showPrivacyDialog,
+                                recognizer: _privacyRecognizer,
                               ),
                               const TextSpan(text: '.'),
                             ],

@@ -29,6 +29,8 @@ class VideoCard extends StatelessWidget {
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  memCacheHeight: 400, // 2x display for retina
+                  memCacheWidth: 800,
                   placeholder: (context, url) => Container(
                     height: 200,
                     color: Colors.grey[300],

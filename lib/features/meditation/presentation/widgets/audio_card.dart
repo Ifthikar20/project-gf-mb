@@ -29,6 +29,8 @@ class AudioCard extends StatelessWidget {
                   CachedNetworkImage(
                     imageUrl: audio.imageUrl,
                     fit: BoxFit.cover,
+                    memCacheHeight: 400,
+                    memCacheWidth: 400,
                     placeholder: (context, url) => Container(
                       color: Colors.grey[300],
                       child: const Center(

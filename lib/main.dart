@@ -38,9 +38,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Cap the in-memory image cache to prevent OOM on image-heavy pages.
-  // Default is unlimited — this limits to 50 images / 100 MB.
-  PaintingBinding.instance.imageCache.maximumSize = 50;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024;
+  // Default is unlimited — this limits to 30 images / 50 MB.
+  PaintingBinding.instance.imageCache.maximumSize = 30;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 * 1024 * 1024;
 
   // Load environment variables from .env file
   await EnvironmentConfig.load();

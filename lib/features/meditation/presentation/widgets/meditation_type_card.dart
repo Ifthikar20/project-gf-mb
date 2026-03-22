@@ -43,6 +43,8 @@ class MeditationTypeCard extends StatelessWidget {
               CachedNetworkImage(
                 imageUrl: meditationType.imageUrl,
                 fit: BoxFit.cover,
+                memCacheHeight: 360,
+                memCacheWidth: 300,
                 placeholder: (context, url) => Container(
                   color: meditationType.color.withOpacity(0.3),
                   child: const Center(

@@ -389,6 +389,8 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
                     CachedNetworkImage(
                       imageUrl: video.thumbnailUrl,
                       fit: BoxFit.cover,
+                      memCacheHeight: 320,
+                      memCacheWidth: 460,
                       placeholder: (_, __) => Container(color: surfaceColor),
                       errorWidget: (_, __, ___) => Container(
                         color: surfaceColor,
@@ -611,6 +613,8 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
                             imageUrl: audio.imageUrl,
                             fit: BoxFit.cover,
                             width: 150,
+                            memCacheHeight: 260,
+                            memCacheWidth: 300,
                             placeholder: (_, __) =>
                                 Container(color: surfaceColor),
                             errorWidget: (_, __, ___) => Container(

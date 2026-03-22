@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -344,9 +345,7 @@ class _SearchPageState extends State<SearchPage> {
         }
 
         if (state is SearchLoading) {
-          return const Center(
-            child: CircularProgressIndicator(color: _accentColor),
-          );
+          return _buildSearchLoadingAnimation();
         }
 
         if (state is SearchError) {
@@ -385,6 +384,153 @@ class _SearchPageState extends State<SearchPage> {
         return const SizedBox.shrink();
       },
     );
+  }
+  Widget _buildSearchLoadingAnimation() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // ── Pulsing search icon with glow ──
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 1500),
+              builder: (context, value, child) {
+                // Create a continuous pulse by using sin
+                final pulse = (1.0 + 0.15 * _sinFromLinear(value));
+                final glowOpacity = 0.2 + 0.15 * _sinFromLinear(value);
+                return Transform.scale(
+                  scale: pulse,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          _accentColor.withValues(alpha: glowOpacity),
+                          _accentColor.withValues(alpha: 0.0),
+                        ],
+                        stops: const [0.5, 1.0],
+                      ),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _accentColor.withValues(alpha: 0.12),
+                          border: Border.all(
+                            color: _accentColor.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.search_rounded,
+                          color: _accentColor,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              onEnd: () {
+                // Trigger rebuild to loop animation
+                if (mounted) setState(() {});
+              },
+            ),
+            const SizedBox(height: 24),
+
+            // ── Animated "Searching" text ──
+            _AnimatedSearchText(accentColor: _accentColor),
+            const SizedBox(height: 8),
+            Text(
+              'Finding the best results for you',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 36),
+
+            // ── Shimmer skeleton cards ──
+            ...List.generate(3, (index) {
+              return TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.3, end: 0.7),
+                duration: Duration(milliseconds: 800 + index * 200),
+                builder: (context, value, child) {
+                  final shimmerOpacity = 0.3 + 0.4 * _sinFromLinear(value);
+                  return Opacity(
+                    opacity: shimmerOpacity,
+                    child: child,
+                  );
+                },
+                onEnd: () {
+                  if (mounted) setState(() {});
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _surfaceColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Thumbnail placeholder
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 12,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              height: 10,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Converts a linear 0→1 value into a smooth sine wave oscillation (-1 to 1)
+  double _sinFromLinear(double t) {
+    return sin(t * 3.14159 * 2);
   }
 
   /// Build unified search results with grouped sections
@@ -494,6 +640,8 @@ class _SearchPageState extends State<SearchPage> {
                       child: CachedNetworkImage(
                         imageUrl: expert.imageUrl ?? '',
                         fit: BoxFit.cover,
+                        memCacheHeight: 160,
+                        memCacheWidth: 160,
                         placeholder: (context, url) => Container(
                           color: _surfaceColor,
                           child: const Icon(Icons.person, color: Colors.white24, size: 32),
@@ -551,6 +699,8 @@ class _SearchPageState extends State<SearchPage> {
                 width: 80,
                 height: 60,
                 fit: BoxFit.cover,
+                memCacheHeight: 120,
+                memCacheWidth: 160,
                 placeholder: (context, url) => Container(
                   width: 80,
                   height: 60,
@@ -636,6 +786,8 @@ class _SearchPageState extends State<SearchPage> {
                     width: 80,
                     height: 60,
                     fit: BoxFit.cover,
+                    memCacheHeight: 120,
+                    memCacheWidth: 160,
                     placeholder: (context, url) => Container(
                       width: 80,
                       height: 60,
@@ -776,6 +928,8 @@ class _SearchPageState extends State<SearchPage> {
         child: CachedNetworkImage(
           imageUrl: imageUrl,
           fit: BoxFit.cover,
+          memCacheHeight: 112,
+          memCacheWidth: 112,
           placeholder: (context, url) => Container(color: _surfaceColor),
           errorWidget: (context, url, error) => Container(
             color: _surfaceColor,
@@ -794,6 +948,8 @@ class _SearchPageState extends State<SearchPage> {
         width: 80,
         height: 60,
         fit: BoxFit.cover,
+        memCacheHeight: 120,
+        memCacheWidth: 160,
         placeholder: (context, url) => Container(
           width: 80,
           height: 60,
@@ -891,5 +1047,44 @@ class _SearchPageState extends State<SearchPage> {
         context.push('${AppRouter.audioPlayer}?id=${result.id}');
         break;
     }
+  }
+}
+
+/// Self-contained animated "Searching..." text with cycling dots
+class _AnimatedSearchText extends StatefulWidget {
+  final Color accentColor;
+  const _AnimatedSearchText({required this.accentColor});
+
+  @override
+  State<_AnimatedSearchText> createState() => _AnimatedSearchTextState();
+}
+
+class _AnimatedSearchTextState extends State<_AnimatedSearchText> {
+  int _dotCount = 0;
+  late final _timer = Stream.periodic(
+    const Duration(milliseconds: 500),
+    (i) => i,
+  ).listen((_) {
+    if (mounted) setState(() => _dotCount = (_dotCount + 1) % 4);
+  });
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dots = '.' * _dotCount;
+    return Text(
+      'Searching$dots',
+      style: TextStyle(
+        color: widget.accentColor,
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.3,
+      ),
+    );
   }
 }

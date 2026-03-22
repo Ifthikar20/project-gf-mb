@@ -469,6 +469,8 @@ class _ExplorePageState extends State<ExplorePage> {
                     width: 90,
                     height: 90,
                     fit: BoxFit.cover,
+                    memCacheHeight: 180,
+                    memCacheWidth: 180,
                     placeholder: (_, __) => Container(
                       width: 90,
                       height: 90,

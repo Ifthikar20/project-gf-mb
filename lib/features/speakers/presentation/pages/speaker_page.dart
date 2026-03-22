@@ -254,6 +254,8 @@ class _SpeakerPageState extends State<SpeakerPage> {
                           child: CachedNetworkImage(
                             imageUrl: _displayImage,
                             fit: BoxFit.cover,
+                            memCacheHeight: 800,
+                            memCacheWidth: 600,
                             placeholder: (_, __) => Container(
                               color: surfaceColor,
                               child: Center(
@@ -504,6 +506,8 @@ class _SpeakerPageState extends State<SpeakerPage> {
                     width: 200,
                     height: 140,
                     fit: BoxFit.cover,
+                    memCacheHeight: 280,
+                    memCacheWidth: 400,
                     placeholder: (_, __) => Container(
                       width: 200,
                       height: 140,
@@ -616,6 +620,8 @@ class _SpeakerPageState extends State<SpeakerPage> {
                 width: 70,
                 height: 50,
                 fit: BoxFit.cover,
+                memCacheHeight: 100,
+                memCacheWidth: 140,
                 placeholder: (_, __) => Container(
                   width: 70,
                   height: 50,

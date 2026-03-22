@@ -23,6 +23,11 @@ class AudioPlayerPage extends StatefulWidget {
 class _AudioPlayerPageState extends State<AudioPlayerPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   late VideoPlayerController _videoController;
+
+  // Stream subscriptions — must be cancelled in dispose() to avoid leaks.
+  StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<Duration?>? _durationSub;
+  StreamSubscription<PlayerState>? _playerStateSub;
   bool _isVideoInitialized = false;
   MeditationAudio? _audio;
   bool _isLoading = true;
@@ -78,19 +83,32 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   }
 
   void _setupAudioListeners() {
-    _audioPlayer.positionStream.listen((position) {
-      if (mounted) {
-        setState(() => _position = position);
+    // Single position listener handles both UI updates and 80% tracking.
+    _positionSub = _audioPlayer.positionStream.listen((position) {
+      if (!mounted) return;
+      setState(() => _position = position);
+
+      // Track at 80% completion (only once)
+      if (_audio != null && _duration != null && _duration!.inSeconds > 0) {
+        final progress = position.inSeconds / _duration!.inSeconds;
+        if (progress >= 0.80 && !_hasTrackedCompletion) {
+          _hasTrackedCompletion = true;
+          GoalTrackingService.instance.trackAudioCompletion(
+            audioId: _audio!.id,
+            category: _audio!.category,
+            durationSeconds: _duration!.inSeconds,
+          );
+        }
       }
     });
 
-    _audioPlayer.durationStream.listen((duration) {
+    _durationSub = _audioPlayer.durationStream.listen((duration) {
       if (mounted) {
         setState(() => _duration = duration);
       }
     });
 
-    _audioPlayer.playerStateStream.listen((state) {
+    _playerStateSub = _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         // Track goal completion when audio finishes
         if (_audio != null && _duration != null) {
@@ -102,22 +120,6 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         }
         _audioPlayer.seek(Duration.zero);
         _audioPlayer.pause();
-      }
-    });
-    
-    // Also track if user reaches 80%+ progress
-    _audioPlayer.positionStream.listen((position) {
-      if (_audio != null && _duration != null && _duration!.inSeconds > 0) {
-        final progress = position.inSeconds / _duration!.inSeconds;
-        // Track at 80% completion (only once)
-        if (progress >= 0.80 && !_hasTrackedCompletion) {
-          _hasTrackedCompletion = true;
-          GoalTrackingService.instance.trackAudioCompletion(
-            audioId: _audio!.id,
-            category: _audio!.category,
-            durationSeconds: _duration!.inSeconds,
-          );
-        }
       }
     });
   }
@@ -264,9 +266,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   @override
   void dispose() {
     _headsUpTimer?.cancel();
+    _sleepTimer?.cancel();
+    // Cancel stream subscriptions before disposing the player.
+    _positionSub?.cancel();
+    _durationSub?.cancel();
+    _playerStateSub?.cancel();
     _videoController.dispose();
     _audioPlayer.dispose();
-    _sleepTimer?.cancel();
     super.dispose();
   }
 
@@ -508,6 +514,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                                   width: 56,
                                   height: 56,
                                   fit: BoxFit.cover,
+                                  memCacheHeight: 112,
+                                  memCacheWidth: 112,
                                   errorWidget: (context, url, error) => Container(
                                     width: 56,
                                     height: 56,

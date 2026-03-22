@@ -200,6 +200,8 @@ class WatchHistoryPage extends StatelessWidget {
                       width: 100,
                       height: 75,
                       fit: BoxFit.cover,
+                      memCacheHeight: 150,
+                      memCacheWidth: 200,
                       errorWidget: (context, url, error) => _buildPlaceholder(item.contentType, surfaceColor, textSecondary),
                     )
                   : _buildPlaceholder(item.contentType, surfaceColor, textSecondary),

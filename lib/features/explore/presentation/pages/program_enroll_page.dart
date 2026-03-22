@@ -151,6 +151,8 @@ class _ProgramEnrollPageState extends State<ProgramEnrollPage> {
                   imageUrl: series.thumbnailUrl ??
                       'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=600&fit=crop',
                   fit: BoxFit.cover,
+                  memCacheHeight: 800,
+                  memCacheWidth: 800,
                   placeholder: (_, __) => Container(
                     color: surfaceColor,
                     child: Center(

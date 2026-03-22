@@ -222,6 +222,8 @@ class LibraryPage extends StatelessWidget {
                 width: 120,
                 height: 90,
                 fit: BoxFit.cover,
+                memCacheHeight: 180,
+                memCacheWidth: 240,
                 errorWidget: (context, url, error) => Container(
                   width: 120,
                   height: 90,
