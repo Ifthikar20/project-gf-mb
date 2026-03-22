@@ -31,7 +31,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   static const Color primaryPurple = Color(0xFF8B5CF6);
   static const Color darkBg = Color(0xFF0A0A0A);
   static const Color cardBg = Color(0xFF1A1A1A);
-  static const Color cardBorder = Color(0xFF2A2A2A);
+
 
   @override
   void dispose() {

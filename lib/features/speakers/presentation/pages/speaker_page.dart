@@ -32,7 +32,7 @@ class SpeakerPage extends StatefulWidget {
 class _SpeakerPageState extends State<SpeakerPage> {
   ExpertEntity? _expert;
   bool _isLoading = true;
-  bool _useFallback = false;
+
   bool _isFollowing = false;
 
   @override
@@ -49,13 +49,11 @@ class _SpeakerPageState extends State<SpeakerPage> {
         setState(() {
           _expert = expert;
           _isLoading = false;
-          if (expert == null) _useFallback = true;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _useFallback = true;
           _isLoading = false;
         });
       }

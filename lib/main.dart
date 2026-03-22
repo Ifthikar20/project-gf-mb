@@ -17,10 +17,10 @@ import 'features/wellness_goals/presentation/bloc/goals_bloc.dart';
 import 'features/wellness_goals/presentation/bloc/goals_event.dart';
 import 'features/videos/data/repositories/videos_repository.dart';
 import 'features/videos/presentation/bloc/videos_bloc.dart';
-import 'features/videos/presentation/bloc/videos_event.dart';
+
 import 'features/meditation/data/repositories/meditation_repository.dart';
 import 'features/meditation/presentation/bloc/meditation_bloc.dart';
-import 'features/meditation/presentation/bloc/meditation_event.dart';
+
 import 'features/wellness_goals/data/models/wellness_checkin_model.dart';
 import 'features/wellness_goals/data/models/fitness_profile_model.dart';
 import 'features/library/presentation/bloc/library_bloc.dart';

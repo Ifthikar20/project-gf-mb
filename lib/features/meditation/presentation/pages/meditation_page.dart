@@ -12,8 +12,7 @@ import '../widgets/meditation_type_card.dart';
 import '../widgets/horizontal_section.dart';
 import '../../domain/entities/meditation_type.dart';
 import 'breathing_exercise_page.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../../data/models/journal_models.dart';
+
 import '../../../advisor/presentation/widgets/advisor_suggestion_section.dart';
 
 class MeditationPage extends StatefulWidget {

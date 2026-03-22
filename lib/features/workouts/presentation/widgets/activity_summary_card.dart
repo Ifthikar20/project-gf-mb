@@ -86,7 +86,7 @@ class ActivitySummaryCard extends StatelessWidget {
                         Row(
                           children: [
                             _buildStat(
-                              value: '${stats!.thisWeekCalories}',
+                              value: '${stats.thisWeekCalories}',
                               label: 'cal',
                               target: _goalTarget(goals, 'calories_burned'),
                               color: const Color(0xFFFF6B6B),

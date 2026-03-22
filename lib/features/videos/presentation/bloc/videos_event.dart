@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/video_entity.dart';
+
 
 abstract class VideosEvent extends Equatable {
   const VideosEvent();

@@ -79,7 +79,7 @@ class _HeartRateMonitorCardState extends State<HeartRateMonitorCard>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF5F5F5);
-    final textColor = isDark ? Colors.white : Colors.black;
+
 
     return Container(
       padding: const EdgeInsets.all(20),

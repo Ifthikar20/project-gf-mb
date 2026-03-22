@@ -55,8 +55,7 @@ class _BreathingExerciseCardState extends State<BreathingExerciseCard>
   @override
   Widget build(BuildContext context) {
     final isLight = widget.isLight;
-    final surfaceColor = isLight ? ThemeColors.lightSurface : ThemeColors.darkSurface;
-    final borderColor = isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder;
+
     final textColor = isLight ? ThemeColors.lightTextPrimary : ThemeColors.darkTextPrimary;
     final textSecondary = isLight ? ThemeColors.lightTextSecondary : ThemeColors.darkTextSecondary;
 

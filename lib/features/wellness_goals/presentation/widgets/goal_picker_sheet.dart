@@ -5,7 +5,7 @@ import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/goal_tracking_service.dart';
 import '../../data/goal_templates.dart';
-import '../../data/models/goal_model.dart';
+
 import '../bloc/goals_bloc.dart';
 import '../bloc/goals_event.dart';
 

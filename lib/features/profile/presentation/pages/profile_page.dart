@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/auth/auth_bloc.dart';
-import '../../../../core/services/auth_service.dart';
+
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../wellness_goals/presentation/bloc/goals_bloc.dart';
 import '../../../wellness_goals/presentation/bloc/goals_state.dart';
-import '../../../wellness_goals/presentation/bloc/goals_event.dart';
+
 import '../../../wellness_goals/domain/entities/goal_entity.dart';
 import '../../../wellness_goals/presentation/widgets/goal_picker_sheet.dart';
 
@@ -27,8 +27,7 @@ class ProfilePage extends StatelessWidget {
         final bgColor = ThemeColors.background(mode);
         final surfaceColor = ThemeColors.surface(mode);
         final primaryColor = ThemeColors.primary(mode);
-        final secondaryColor = ThemeColors.secondary(mode);
-        final accentColor = ThemeColors.accent(mode);
+
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);
         final errorColor = ThemeColors.error(mode);
@@ -792,18 +791,6 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildIconButton(IconData icon, Color surfaceColor, Color iconColor, Color? borderColor) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(8),
-        border: borderColor != null ? Border.all(color: borderColor.withOpacity(0.2)) : null,
-      ),
-      child: Icon(icon, color: iconColor, size: 20),
-    );
-  }
-
   Widget _buildSectionTitle(String title, Color textColor, Color primaryColor, bool isLight) {
     return Row(
       children: [
@@ -834,42 +821,6 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
         ],
-      ],
-    );
-  }
-
-  Widget _buildStatItem(String value, String label, IconData icon, Color color, bool isLight, Color textColor, Color textSecondary) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              value,
-              style: isLight
-                  ? GoogleFonts.inter(
-                      color: textColor,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    )
-                  : TextStyle(
-                      color: textColor,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: textSecondary.withOpacity(0.7),
-            fontSize: 12,
-          ),
-        ),
       ],
     );
   }
@@ -954,65 +905,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactGoalItem(
-    GoalEntity goal,
-    AppThemeMode mode,
-    Color surfaceColor,
-    Color textColor,
-    Color textSecondary,
-    Color primaryColor,
-    bool isLight,
-  ) {
-    final progress = goal.progress;
-    final progressColor = _getGoalColor(goal.type, primaryColor);
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  goal.title,
-                  style: TextStyle(
-                    color: textColor.withOpacity(0.9),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${goal.currentValue}/${goal.targetValue}',
-                style: TextStyle(
-                  color: textSecondary.withOpacity(0.7),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          // Linear progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
-              backgroundColor: mode == AppThemeMode.dark
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.black.withOpacity(0.08),
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              minHeight: 5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Color _getGoalColor(GoalType type, Color defaultColor) {
     switch (type) {
@@ -1029,7 +922,6 @@ class ProfilePage extends StatelessWidget {
       case GoalType.watchTime:
         return const Color(0xFF14B8A6);
       case GoalType.manual:
-      default:
         return defaultColor;
     }
   }
@@ -1123,7 +1015,6 @@ class ProfilePage extends StatelessWidget {
       case GoalType.watchTime:
         return Icons.timer;
       case GoalType.manual:
-      default:
         return Icons.flag;
     }
   }
@@ -1143,7 +1034,6 @@ class ProfilePage extends StatelessWidget {
       case GoalType.categoryExplore:
         return '${goal.currentValue}/${goal.targetValue} Categories';
       case GoalType.manual:
-      default:
         return '${goal.currentValue}/${goal.targetValue}';
     }
   }

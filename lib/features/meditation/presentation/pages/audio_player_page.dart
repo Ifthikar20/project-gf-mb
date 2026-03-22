@@ -96,7 +96,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         if (_audio != null && _duration != null) {
           GoalTrackingService.instance.trackAudioCompletion(
             audioId: _audio!.id,
-            category: _audio!.category ?? 'Meditation',
+            category: _audio!.category,
             durationSeconds: _duration!.inSeconds,
           );
         }
@@ -114,7 +114,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
           _hasTrackedCompletion = true;
           GoalTrackingService.instance.trackAudioCompletion(
             audioId: _audio!.id,
-            category: _audio!.category ?? 'Meditation',
+            category: _audio!.category,
             durationSeconds: _duration!.inSeconds,
           );
         }

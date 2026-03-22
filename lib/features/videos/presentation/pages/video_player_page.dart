@@ -34,7 +34,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   bool _isLiked = false;
   int _currentEpisode = 1;
   double _videoProgress = 0.0;
-  String? _streamingUrl;
+
   
   // Episodes from API (replaces mock data)
   List<EpisodeEntity> _episodes = [];
@@ -78,7 +78,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         try {
           final streamingUrls = await StreamingService.instance.getStreamingUrls(widget.videoId);
           videoUrl = streamingUrls.hlsMaster;
-          _streamingUrl = videoUrl;
+
           
           // Diagnostic: Log if URL is likely unsigned
           bool isSigned = videoUrl.contains('Policy=') || videoUrl.contains('Signature=') || videoUrl.contains('md5=');
@@ -292,14 +292,14 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         // Track goal completion (80% threshold for goals)
         GoalTrackingService.instance.trackVideoCompletion(
           videoId: _video!.id,
-          category: _video!.category ?? 'Wellness',
+          category: _video!.category,
           durationSeconds: duration.inSeconds,
         );
       } else if (progressPercent >= 80) {
         // Also track for goal if 80%+ watched
         GoalTrackingService.instance.trackVideoCompletion(
           videoId: _video!.id,
-          category: _video!.category ?? 'Wellness',
+          category: _video!.category,
           durationSeconds: duration.inSeconds,
         );
         AnalyticsService.instance.trackVideoProgress(
@@ -549,7 +549,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                             // Use expertSlug if available, otherwise don't navigate
                             final expertSlug = _video!.expertSlug;
                             if (expertSlug != null && expertSlug.isNotEmpty) {
-                              final speakerName = _video!.instructor ?? 'Wellness Guide';
+                              final speakerName = _video!.instructor;
                               final speakerImageUrl = _video!.expertAvatarUrl ?? 
                                   'https://picsum.photos/seed/${speakerName.replaceAll(' ', '')}/100/100';
                               context.push(

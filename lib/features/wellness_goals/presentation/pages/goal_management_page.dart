@@ -3,10 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/fitness_profile_model.dart';
-import '../../data/recovery_suggestions.dart';
 import '../../../workouts/presentation/bloc/workout_bloc.dart';
 import '../../../workouts/presentation/bloc/workout_event.dart';
-import '../../../workouts/presentation/bloc/workout_state.dart';
+
 import '../widgets/goals_section.dart';
 import 'fitness_goal_setup_page.dart';
 

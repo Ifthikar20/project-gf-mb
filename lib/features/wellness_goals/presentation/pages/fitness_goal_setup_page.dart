@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/fitness_profile_model.dart';
 import '../../../workouts/presentation/bloc/workout_bloc.dart';
-import '../../../workouts/presentation/bloc/workout_event.dart';
+
 import '../../../workouts/presentation/bloc/workout_state.dart';
 import '../../../workouts/data/models/workout_models.dart';
 

@@ -50,7 +50,7 @@ class _LearnPageState extends State<LearnPage> {
         final textColor = ThemeColors.textPrimary(mode);
         final subtleColor = ThemeColors.textSecondary(mode);
         final borderColor = ThemeColors.border(mode);
-        final primaryColor = ThemeColors.primary(mode);
+
 
         return Scaffold(
           backgroundColor: bgColor,

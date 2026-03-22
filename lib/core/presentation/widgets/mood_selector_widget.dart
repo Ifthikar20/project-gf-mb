@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -116,7 +116,7 @@ class _MoodSelectorWidgetState extends State<MoodSelectorWidget>
       builder: (context, themeState) {
         final isLight = themeState.isLight;
         final mode = themeState.mode;
-        final surfaceColor = ThemeColors.surface(mode);
+
         final primaryColor = ThemeColors.primary(mode);
         final textColor = ThemeColors.textPrimary(mode);
         final textSecondary = ThemeColors.textSecondary(mode);

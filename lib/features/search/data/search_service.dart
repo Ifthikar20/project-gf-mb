@@ -24,11 +24,7 @@ class SearchService {
   };
   
   // Whitelist of allowed categories (lowercase)
-  static const Set<String> _allowedCategories = {
-    'all', 'category', 'sleep', 'focus', 'calm', 'anxiety', 
-    'stress', 'meditation', 'wellness', 'personal growth',
-    'mental health', 'relationships', 'mindfulness'
-  };
+
 
   SearchService({ApiClient? apiClient}) 
       : _apiClient = apiClient ?? ApiClient.instance;

@@ -13,7 +13,7 @@ import '../auth/account_settings_page.dart';
 import '../auth/auth_bloc.dart';
 
 import '../../features/videos/presentation/pages/video_player_page.dart';
-import '../../features/workouts/presentation/pages/workout_summary_page.dart';
+
 import '../../features/workouts/presentation/pages/body_profile_page.dart';
 import '../../features/workouts/presentation/pages/goals_setup_page.dart';
 import '../../features/workouts/presentation/bloc/workout_bloc.dart';
@@ -24,8 +24,7 @@ import '../../features/library/presentation/pages/watch_history_page.dart';
 import '../../features/speakers/presentation/pages/speaker_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/meditation/presentation/pages/breathing_exercise_page.dart';
-import '../../features/knowledge/presentation/pages/article_detail_page.dart';
-import '../../features/knowledge/data/models/knowledge_models.dart';
+
 import '../../features/workouts/presentation/pages/workout_check_page.dart';
 import '../../features/explore/presentation/pages/program_enroll_page.dart';
 
@@ -277,137 +276,6 @@ class AppRouter {
     );
   }
 
-  // Legacy static router for backward compatibility during transition
-  // This will be removed once main.dart is updated
-  static final GoRouter router = GoRouter(
-    initialLocation: landing,
-    errorBuilder: (context, state) {
-      if (state.uri.path.contains('/auth/callback') || 
-          state.uri.toString().contains('betterbliss://auth')) {
-        return const LandingPage();
-      }
-      return const LandingPage();
-    },
-    routes: [
-      GoRoute(
-        path: home,
-        builder: (context, state) => const MainShell(),
-      ),
-      GoRoute(
-        path: landing,
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const LandingPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 200),
-        ),
-      ),
-      GoRoute(
-        path: login,
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const LoginPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 200),
-        ),
-      ),
-      GoRoute(
-        path: register,
-        pageBuilder: (context, state) => CustomTransitionPage(
-          key: state.pageKey,
-          child: const RegisterPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 200),
-        ),
-      ),
-      GoRoute(
-        path: forgotPassword,
-        builder: (context, state) => const ForgotPasswordPage(),
-      ),
-      GoRoute(
-        path: resetPassword,
-        builder: (context, state) {
-          final email = state.uri.queryParameters['email'] ?? '';
-          return ResetPasswordPage(email: Uri.decodeComponent(email));
-        },
-      ),
-
-      GoRoute(
-        path: changePassword,
-        builder: (context, state) => const ChangePasswordPage(),
-      ),
-      GoRoute(
-        path: accountSettings,
-        builder: (context, state) => const AccountSettingsPage(),
-      ),
-      GoRoute(
-        path: videoPlayer,
-        pageBuilder: (context, state) {
-          final videoId = state.uri.queryParameters['id'] ?? '';
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: VideoPlayerPage(videoId: videoId),
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero,
-            opaque: true,
-            barrierColor: Colors.black,
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return animation.isCompleted ? child : Container(color: Colors.black);
-            },
-          );
-        },
-      ),
-      GoRoute(
-        path: meditationCategory,
-        builder: (context, state) {
-          final categoryId = state.uri.queryParameters['id'] ?? '';
-          final categoryName = state.uri.queryParameters['name'] ?? 'Meditation';
-          return MeditationCategoryPage(
-            categoryId: categoryId,
-            categoryName: Uri.decodeComponent(categoryName),
-          );
-        },
-      ),
-      GoRoute(
-        path: audioPlayer,
-        builder: (context, state) {
-          final audioId = state.uri.queryParameters['id'] ?? '';
-          return AudioPlayerPage(audioId: audioId);
-        },
-      ),
-      GoRoute(
-        path: library,
-        builder: (context, state) => const LibraryPage(),
-      ),
-      GoRoute(
-        path: watchHistory,
-        builder: (context, state) => const WatchHistoryPage(),
-      ),
-      GoRoute(
-        path: speakerProfile,
-        builder: (context, state) {
-          final speakerId = state.uri.queryParameters['id'] ?? '';
-          final speakerName = state.uri.queryParameters['name'] ?? 'Speaker';
-          final speakerImageUrl = state.uri.queryParameters['imageUrl'] ?? '';
-          return SpeakerPage(
-            speakerId: speakerId,
-            speakerName: Uri.decodeComponent(speakerName),
-            speakerImageUrl: Uri.decodeComponent(speakerImageUrl),
-          );
-        },
-      ),
-      GoRoute(
-        path: search,
-        builder: (context, state) => const SearchPage(),
-      ),
-    ],
-  );
 }
 
 /// Converts a Stream to a Listenable for GoRouter refreshListenable
