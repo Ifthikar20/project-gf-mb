@@ -18,15 +18,12 @@ import '../widgets/wellness_stats_card.dart';
 import '../widgets/macro_tracking_cards.dart';
 import '../widgets/recent_activity_section.dart';
 import '../widgets/suggestions_feed.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import '../../data/models/wellness_checkin_model.dart';
-import 'wellness_checkin_page.dart';
 import '../../../advisor/presentation/bloc/advisor_bloc.dart';
 import '../../../advisor/presentation/bloc/advisor_event.dart';
 import '../../../advisor/presentation/bloc/advisor_state.dart';
 import '../../../advisor/presentation/widgets/advisor_suggestion_section.dart';
 import '../widgets/water_reminder_card.dart';
-import '../widgets/quick_access_bar.dart';
+import '../widgets/suggestion_badge.dart';
 import '../widgets/content_recommendations.dart';
 
 class HomePage extends StatefulWidget {
@@ -61,9 +58,6 @@ class _HomePageState extends State<HomePage> {
       context.read<MeditationBloc>().add(LoadMeditationAudios());
     }
 
-    // Auto-trigger wellness check-in if not done today
-    _checkDailyCheckIn();
-
     // Load AI suggestions
     final advisorState = context.read<AdvisorBloc>().state;
     if (advisorState is AdvisorInitial) {
@@ -71,29 +65,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _checkDailyCheckIn() async {
-    try {
-      final box = await Hive.openBox<WellnessCheckInModel>('wellness_checkins');
-      final today = DateTime.now();
-      final key = '${today.year}-${today.month}-${today.day}';
-      final existing = box.get(key);
 
-      if (existing == null && mounted) {
-        // Delay slightly so the home page renders first
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const WellnessCheckInPage(),
-              fullscreenDialog: true,
-            ),
-          );
-        }
-      }
-    } catch (_) {
-      // Silent fail
-    }
-  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -172,12 +144,9 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // ── Quick Access Shortcuts ──
+              // ── Smart Suggestions ──
               const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 16),
-                  child: QuickAccessBar(),
-                ),
+                child: SuggestionBadge(),
               ),
 
               // ── Weekly Day Selector ──

@@ -1,19 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/diet_models.dart';
 
-/// Full-screen detail page for a logged meal group.
-/// Shows hero image, per-item list, nutrition breakdown, warnings,
-/// nutritional benefits, and calorie burn suggestions.
+/// Premium meal detail page.
 class MealDetailPage extends StatelessWidget {
   final List<MealLog> items;
 
   const MealDetailPage({super.key, required this.items});
 
-  MealLog get _primary => items.first;
+  MealLog get _p => items.first;
 
   int get _totalCal => items.fold(0, (s, m) => s + m.calories);
   int get _totalP => items.fold(0, (s, m) => s + m.proteinGrams);
@@ -24,287 +22,267 @@ class MealDetailPage extends StatelessWidget {
   int get _totalSodium => items.fold(0, (s, m) => s + m.sodiumMg);
   int get _totalCaffeine => items.fold(0, (s, m) => s + m.caffeineMg);
 
-  /// Try local file first, then S3 URL
   bool get _hasLocalImage =>
-      _primary.imagePath != null && File(_primary.imagePath!).existsSync();
-  bool get _hasRemoteImage => _primary.imageUrl != null;
+      _p.imagePath != null && File(_p.imagePath!).existsSync();
+  bool get _hasRemoteImage => _p.imageUrl != null;
   bool get _hasImage => _hasLocalImage || _hasRemoteImage;
 
   String get _title {
-    if (items.length == 1) return _primary.name;
-    if (_primary.mealName != null) return _primary.mealName!;
-    return '${_primary.mealType.label} · ${items.length} items';
+    if (items.length == 1) return _p.name;
+    if (_p.mealName != null) return _p.mealName!;
+    return '${_p.mealType.label} · ${items.length} items';
   }
 
-  String get _timeStr {
-    final h = _primary.timestamp.hour > 12
-        ? _primary.timestamp.hour - 12
-        : (_primary.timestamp.hour == 0 ? 12 : _primary.timestamp.hour);
-    final amPm = _primary.timestamp.hour >= 12 ? 'PM' : 'AM';
-    return '$h:${_primary.timestamp.minute.toString().padLeft(2, '0')} $amPm';
+  String get _time {
+    final h = _p.timestamp.hour > 12
+        ? _p.timestamp.hour - 12
+        : (_p.timestamp.hour == 0 ? 12 : _p.timestamp.hour);
+    final amPm = _p.timestamp.hour >= 12 ? 'PM' : 'AM';
+    return '$h:${_p.timestamp.minute.toString().padLeft(2, '0')} $amPm';
   }
 
-  // ── JSON parsers ──
-
-  List<Map<String, dynamic>> _parseJsonList(String? json) {
+  List<Map<String, dynamic>> _parseJson(String? json) {
     if (json == null) return [];
     try {
-      final list = jsonDecode(json) as List<dynamic>;
-      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      return (jsonDecode(json) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
     } catch (_) {
       return [];
     }
   }
 
-  List<Map<String, dynamic>> get _allWarnings {
+  List<Map<String, dynamic>> get _warnings {
     final seen = <String>{};
-    final result = <Map<String, dynamic>>[];
+    final r = <Map<String, dynamic>>[];
     for (final item in items) {
-      for (final w in _parseJsonList(item.warningsJson)) {
-        final key = '${w['type']}_${w['label']}';
-        if (!seen.contains(key)) {
-          seen.add(key);
-          result.add(w);
-        }
+      for (final w in _parseJson(item.warningsJson)) {
+        final k = '${w['type']}_${w['label']}';
+        if (seen.add(k)) r.add(w);
       }
     }
-    return result;
+    return r;
   }
 
-  List<Map<String, dynamic>> get _allBenefits {
+  List<Map<String, dynamic>> get _benefits {
     final seen = <String>{};
-    final result = <Map<String, dynamic>>[];
+    final r = <Map<String, dynamic>>[];
     for (final item in items) {
-      for (final b in _parseJsonList(item.benefitsJson)) {
-        final key = b['title'] as String? ?? '';
-        if (!seen.contains(key)) {
-          seen.add(key);
-          result.add(b);
-        }
+      for (final b in _parseJson(item.benefitsJson)) {
+        final k = b['title'] as String? ?? '';
+        if (seen.add(k)) r.add(b);
       }
     }
-    return result;
+    return r;
   }
 
-  List<Map<String, dynamic>> get _allCalorieBurn {
-    // Use calorie_burn from the primary (highest calorie) item
+  List<Map<String, dynamic>> get _burns {
     final sorted = List<MealLog>.from(items)
       ..sort((a, b) => b.calories.compareTo(a.calories));
-    return _parseJsonList(sorted.first.calorieBurnJson);
+    return _parseJson(sorted.first.calorieBurnJson);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF111111) : const Color(0xFFF8F8FA);
-    final card = isDark ? const Color(0xFF1A1A1A) : Colors.white;
-    final text = isDark ? Colors.white : Colors.black;
-    final subtle = isDark ? Colors.white38 : Colors.black38;
-    final border = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE8E8EC);
+    final dk = Theme.of(context).brightness == Brightness.dark;
+    final bg = dk ? const Color(0xFF0A0A0A) : const Color(0xFFF5F5F7);
+    final cardBg = dk ? const Color(0xFF161616) : Colors.white;
+    final txt = dk ? Colors.white : const Color(0xFF1A1A1A);
+    final sub = dk ? const Color(0xFF8A8A8E) : const Color(0xFF8A8A8E);
+    final bdr = dk ? const Color(0xFF2A2A2A) : const Color(0xFFE5E5EA);
 
     return Scaffold(
       backgroundColor: bg,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── Hero image + back button ──
+          // ── Hero ──
           SliverAppBar(
-            expandedHeight: _hasImage ? 280 : 0,
+            expandedHeight: _hasImage ? 300 : 0,
             pinned: true,
-            backgroundColor: card,
-            leading: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-              ),
-            ),
-            title: Text('Meal Details',
+            stretch: true,
+            backgroundColor: dk ? const Color(0xFF0A0A0A) : Colors.white,
+            leading: _backBtn(),
+            title: Text(_title,
                 style: GoogleFonts.inter(
-                  fontSize: 17, fontWeight: FontWeight.w700, color: text,
-                )),
+                    fontSize: 17, fontWeight: FontWeight.w600, color: txt)),
             flexibleSpace: _hasImage
                 ? FlexibleSpaceBar(
-                    background: _hasLocalImage
-                        ? Image.file(
-                            File(_primary.imagePath!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _remoteOrPlaceholder(isDark),
-                          )
-                        : _remoteOrPlaceholder(isDark),
+                    stretchModes: const [StretchMode.zoomBackground],
+                    background: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _heroImage(dk),
+                        // Bottom gradient
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: 100,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  bg.withValues(alpha: 0.9),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   )
                 : null,
           ),
 
-          // ── Content ──
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Title + time ──
+                  const SizedBox(height: 8),
+
+                  // ── Meal type + time chip ──
                   Row(
                     children: [
-                      _typeIcon(_primary.safeItemType, isDark),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_title,
-                                style: GoogleFonts.inter(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: text,
-                                )),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${_primary.mealType.emoji} ${_primary.mealType.label} · $_timeStr',
-                              style: GoogleFonts.inter(fontSize: 13, color: subtle),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _chip('${_p.mealType.emoji} ${_p.mealType.label}', dk),
+                      const SizedBox(width: 8),
+                      _chip(_time, dk),
+                      const Spacer(),
+                      _typeChip(_p.safeItemType, dk),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Calorie hero ──
+                  // ── Calorie + macro ring card ──
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: bdr),
                     ),
-                    child: Column(
+                    child: Row(
                       children: [
-                        Text('Total Calories',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white70,
-                            )),
-                        const SizedBox(height: 4),
-                        Text('$_totalCal',
-                            style: GoogleFonts.inter(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            )),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _calMacro('Protein', '${_totalP}g'),
-                            _calMacro('Carbs', '${_totalC}g'),
-                            _calMacro('Fat', '${_totalF}g'),
-                          ],
+                        // Ring
+                        SizedBox(
+                          width: 100,
+                          height: 100,
+                          child: CustomPaint(
+                            painter: _MacroRingPainter(
+                              protein: _totalP.toDouble(),
+                              carbs: _totalC.toDouble(),
+                              fat: _totalF.toDouble(),
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('$_totalCal',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w900,
+                                        color: txt,
+                                        height: 1,
+                                      )),
+                                  Text('cal',
+                                      style: GoogleFonts.inter(
+                                          fontSize: 12, color: sub)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        // Macro rows
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _macroRow('Protein', '${_totalP}g',
+                                  const Color(0xFF5E9EFF), txt, sub),
+                              const SizedBox(height: 12),
+                              _macroRow('Carbs', '${_totalC}g',
+                                  const Color(0xFFFFBB38), txt, sub),
+                              const SizedBox(height: 12),
+                              _macroRow('Fat', '${_totalF}g',
+                                  const Color(0xFFFF6B8A), txt, sub),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                  // ── Items list ──
-                  if (items.length > 1) ...[
-                    Text('Items',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: text,
-                        )),
-                    const SizedBox(height: 10),
-                    ...items.map((item) => _itemRow(item, text, subtle, card, border)),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // ── Nutrition breakdown ──
-                  Text('Nutrition Breakdown',
-                      style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.w700, color: text,
-                      )),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: card,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: border),
-                    ),
-                    child: Column(
-                      children: [
-                        _progressRow('Protein', '${_totalP}g', _totalP / 50, const Color(0xFF3B82F6), text, subtle),
-                        _progressRow('Carbs', '${_totalC}g', _totalC / 100, const Color(0xFFF59E0B), text, subtle),
-                        _progressRow('Fat', '${_totalF}g', _totalF / 65, const Color(0xFFEC4899), text, subtle),
-                        _progressRow('Sugar', '${_totalSugar}g', _totalSugar / 50, const Color(0xFFF97316), text, subtle),
-                        _progressRow('Fiber', '${_totalFiber}g', _totalFiber / 30, const Color(0xFF22C55E), text, subtle),
-                        const SizedBox(height: 4),
-                        _infoRow('Sodium', '${_totalSodium}mg', text, subtle),
-                        if (_totalCaffeine > 0)
-                          _infoRow('Caffeine', '${_totalCaffeine}mg', text, subtle),
+                  // ── Micro row ──
+                  Row(
+                    children: [
+                      _microCard('Sugar', '${_totalSugar}g',
+                          Icons.cake_rounded, const Color(0xFFF97316),
+                          cardBg, bdr, txt, sub),
+                      const SizedBox(width: 8),
+                      _microCard('Fiber', '${_totalFiber}g',
+                          Icons.grass_rounded, const Color(0xFF34D399),
+                          cardBg, bdr, txt, sub),
+                      const SizedBox(width: 8),
+                      _microCard('Sodium', '${_totalSodium}mg',
+                          Icons.water_drop_outlined, const Color(0xFF60A5FA),
+                          cardBg, bdr, txt, sub),
+                      if (_totalCaffeine > 0) ...[
+                        const SizedBox(width: 8),
+                        _microCard('Caffeine', '${_totalCaffeine}mg',
+                            Icons.bolt_rounded, const Color(0xFFA78BFA),
+                            cardBg, bdr, txt, sub),
                       ],
-                    ),
+                    ],
                   ),
 
-                  // ── Benefits ──
-                  if (_allBenefits.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Text('Nutritional Benefits',
-                        style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w700, color: text,
-                        )),
+                  // ── Items ──
+                  if (items.length > 1) ...[
+                    const SizedBox(height: 24),
+                    _sectionLabel('Items', txt),
                     const SizedBox(height: 10),
-                    ..._allBenefits.map((b) => _benefitRow(b, card, border, text, subtle)),
+                    ...items.map((m) => _itemTile(m, cardBg, bdr, txt, sub)),
+                  ],
+
+                  // ── Benefits (2-col grid) ──
+                  if (_benefits.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _sectionLabel('Good for you', txt),
+                    const SizedBox(height: 10),
+                    _benefitsGrid(_benefits, dk, cardBg, bdr, txt, sub),
                   ],
 
                   // ── Warnings ──
-                  if (_allWarnings.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Text('Health Alerts',
-                        style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w700, color: text,
-                        )),
+                  if (_warnings.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _sectionLabel('Heads up', txt),
                     const SizedBox(height: 10),
-                    ..._allWarnings.map((w) => _warningRow(w, border)),
+                    ..._warnings.map((w) => _warningTile(w, dk, bdr)),
                   ],
 
                   // ── Burn it off ──
-                  if (_allCalorieBurn.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        const Text('🔥', style: TextStyle(fontSize: 18)),
-                        const SizedBox(width: 6),
-                        Text('Burn it off',
-                            style: GoogleFonts.inter(
-                              fontSize: 15, fontWeight: FontWeight.w700, color: text,
-                            )),
-                      ],
-                    ),
+                  if (_burns.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _sectionLabel('Burn it off', txt),
                     const SizedBox(height: 10),
                     SizedBox(
-                      height: 120,
+                      height: 130,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _allCalorieBurn.length,
+                        itemCount: _burns.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 10),
                         itemBuilder: (_, i) =>
-                            _burnCard(_allCalorieBurn[i], card, border, text, subtle),
+                            _burnTile(_burns[i], dk, cardBg, bdr, txt, sub),
                       ),
                     ),
                   ],
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 60),
                 ],
               ),
             ),
@@ -314,241 +292,365 @@ class MealDetailPage extends StatelessWidget {
     );
   }
 
-  // ── Helpers ──
+  // ═══════════════════════════════════════════
+  // ── Widgets
+  // ═══════════════════════════════════════════
 
-  Widget _remoteOrPlaceholder(bool isDark) {
-    if (_hasRemoteImage) {
-      return Image.network(
-        _primary.imageUrl!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            Container(color: isDark ? Colors.black : Colors.grey[200]),
-      );
-    }
-    return Container(color: isDark ? Colors.black : Colors.grey[200]);
-  }
-
-  Widget _typeIcon(String type, bool isDark) {
-    final IconData icon;
-    final Color color;
-    switch (type) {
-      case 'beverage':
-        icon = Icons.local_cafe_rounded;
-        color = const Color(0xFF3B82F6);
-        break;
-      case 'liquid':
-        icon = Icons.soup_kitchen_rounded;
-        color = const Color(0xFF22C55E);
-        break;
-      default:
-        icon = Icons.restaurant_rounded;
-        color = const Color(0xFF8B5CF6);
-    }
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+  Widget _backBtn() {
+    return GestureDetector(
+      onTap: null, // handled by AppBar
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          shape: BoxShape.circle,
+        ),
+        child:
+            const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
       ),
-      child: Icon(icon, color: color, size: 22),
     );
   }
 
-  Widget _calMacro(String label, String value) {
-    return Column(
+  Widget _heroImage(bool dk) {
+    if (_hasLocalImage) {
+      return Image.file(File(_p.imagePath!),
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _networkOrPlaceholder(dk));
+    }
+    return _networkOrPlaceholder(dk);
+  }
+
+  Widget _networkOrPlaceholder(bool dk) {
+    if (_hasRemoteImage) {
+      return Image.network(_p.imageUrl!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              Container(color: dk ? const Color(0xFF1A1A1A) : const Color(0xFFE5E5EA)));
+    }
+    return Container(color: dk ? const Color(0xFF1A1A1A) : const Color(0xFFE5E5EA));
+  }
+
+  Widget _chip(String label, bool dk) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: dk ? const Color(0xFF1E1E1E) : const Color(0xFFEEEEF0),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: dk ? const Color(0xFFB0B0B0) : const Color(0xFF6B6B6B),
+          )),
+    );
+  }
+
+  Widget _typeChip(String type, bool dk) {
+    final String label;
+    final Color c;
+    switch (type) {
+      case 'beverage':
+        label = '☕ Beverage';
+        c = const Color(0xFF5E9EFF);
+        break;
+      case 'liquid':
+        label = '🍲 Liquid';
+        c = const Color(0xFF34D399);
+        break;
+      default:
+        label = '🍽 Solid';
+        c = const Color(0xFFA78BFA);
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: dk ? 0.15 : 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withValues(alpha: 0.3)),
+      ),
+      child: Text(label,
+          style: GoogleFonts.inter(
+              fontSize: 12, fontWeight: FontWeight.w600, color: c)),
+    );
+  }
+
+  Widget _macroRow(
+      String label, String value, Color color, Color txt, Color sub) {
+    return Row(
       children: [
-        Text(value,
-            style: GoogleFonts.inter(
-              fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white,
-            )),
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        ),
+        const SizedBox(width: 10),
         Text(label,
             style: GoogleFonts.inter(
-              fontSize: 11, color: Colors.white70,
-            )),
+                fontSize: 14, fontWeight: FontWeight.w500, color: sub)),
+        const Spacer(),
+        Text(value,
+            style: GoogleFonts.inter(
+                fontSize: 16, fontWeight: FontWeight.w700, color: txt)),
       ],
     );
   }
 
-  Widget _itemRow(MealLog item, Color text, Color subtle, Color card, Color border) {
+  Widget _microCard(String label, String value, IconData icon, Color color,
+      Color cardBg, Color bdr, Color txt, Color sub) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: bdr),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 6),
+            Text(value,
+                style: GoogleFonts.inter(
+                    fontSize: 14, fontWeight: FontWeight.w700, color: txt)),
+            Text(label,
+                style: GoogleFonts.inter(fontSize: 10, color: sub)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text, Color color) {
+    return Text(text,
+        style: GoogleFonts.inter(
+            fontSize: 18, fontWeight: FontWeight.w700, color: color));
+  }
+
+  Widget _itemTile(
+      MealLog m, Color cardBg, Color bdr, Color txt, Color sub) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: bdr),
       ),
       child: Row(
         children: [
-          _typeIcon(item.safeItemType, false),
+          _itemTypeIcon(m.safeItemType),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name,
+                Text(m.name,
                     style: GoogleFonts.inter(
-                      fontSize: 14, fontWeight: FontWeight.w600, color: text,
-                    )),
+                        fontSize: 15, fontWeight: FontWeight.w600, color: txt)),
                 const SizedBox(height: 2),
                 Text(
-                  'P${item.proteinGrams}g · C${item.carbsGrams}g · F${item.fatGrams}g',
-                  style: GoogleFonts.inter(fontSize: 11, color: subtle),
-                ),
+                    'P ${m.proteinGrams}g · C ${m.carbsGrams}g · F ${m.fatGrams}g',
+                    style: GoogleFonts.inter(fontSize: 12, color: sub)),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('${item.calories} cal',
-                  style: GoogleFonts.inter(
-                    fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF10B981),
-                  )),
-              if (item.isLiquidOrBeverage)
-                Text(item.isBeverage ? 'Beverage' : 'Liquid',
-                    style: GoogleFonts.inter(fontSize: 10, color: subtle)),
+          Text('${m.calories}',
+              style: GoogleFonts.inter(
+                  fontSize: 20, fontWeight: FontWeight.w800, color: txt)),
+          Text(' cal',
+              style: GoogleFonts.inter(fontSize: 12, color: sub)),
+        ],
+      ),
+    );
+  }
+
+  Widget _itemTypeIcon(String type) {
+    final IconData icon;
+    final Color c;
+    switch (type) {
+      case 'beverage':
+        icon = Icons.local_cafe_rounded;
+        c = const Color(0xFF5E9EFF);
+        break;
+      case 'liquid':
+        icon = Icons.soup_kitchen_rounded;
+        c = const Color(0xFF34D399);
+        break;
+      default:
+        icon = Icons.restaurant_rounded;
+        c = const Color(0xFFA78BFA);
+    }
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: c, size: 20),
+    );
+  }
+
+  // ── Benefits: 2-column grid cards ──
+
+  Widget _benefitsGrid(List<Map<String, dynamic>> benefits, bool dk,
+      Color cardBg, Color bdr, Color txt, Color sub) {
+    final colors = [
+      const Color(0xFF34D399),
+      const Color(0xFF5E9EFF),
+      const Color(0xFFA78BFA),
+      const Color(0xFFFFBB38),
+      const Color(0xFFFF6B8A),
+      const Color(0xFF60A5FA),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.4,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: benefits.length,
+      itemBuilder: (_, i) {
+        final b = benefits[i];
+        final c = colors[i % colors.length];
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: dk ? const Color(0xFF161616) : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: c.withValues(alpha: 0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: c.withValues(alpha: dk ? 0.08 : 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _progressRow(String label, String value, double ratio, Color color,
-      Color text, Color subtle) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          SizedBox(width: 60, child: Text(label,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: subtle))),
-          SizedBox(width: 48, child: Text(value,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: text))),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Container(
-              height: 8,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: ratio.clamp(0.0, 1.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: c.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _benefitIcon(b['icon'] as String? ?? ''),
+                  color: c,
+                  size: 18,
                 ),
               ),
-            ),
+              const Spacer(),
+              Text(b['title'] as String? ?? '',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: txt,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              Text(b['detail'] as String? ?? '',
+                  style: GoogleFonts.inter(
+                      fontSize: 11, color: sub, height: 1.25),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(String label, String value, Color text, Color subtle) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(width: 60, child: Text(label,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: subtle))),
-          Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: text)),
-        ],
-      ),
-    );
-  }
-
-  Widget _benefitRow(Map<String, dynamic> b, Color card, Color border, Color text, Color subtle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECFDF5),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF86EFAC)),
-      ),
-      child: Row(
-        children: [
-          Icon(_benefitIcon(b['icon'] as String? ?? ''), size: 18, color: const Color(0xFF16A34A)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(b['title'] as String? ?? '',
-                    style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF16A34A),
-                    )),
-                if ((b['detail'] as String?)?.isNotEmpty == true) ...[
-                  const SizedBox(height: 2),
-                  Text(b['detail'] as String,
-                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF15803D), height: 1.3)),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   IconData _benefitIcon(String icon) {
     switch (icon) {
-      case 'protein': return Icons.fitness_center_rounded;
-      case 'fiber': return Icons.grass_rounded;
-      case 'vitamins': return Icons.wb_sunny_rounded;
-      case 'minerals': return Icons.diamond_rounded;
-      case 'antioxidants': return Icons.shield_rounded;
-      case 'healthy_fats': return Icons.favorite_rounded;
-      case 'energy': return Icons.bolt_rounded;
-      case 'hydration': return Icons.water_drop_rounded;
-      case 'probiotics': return Icons.science_rounded;
-      case 'low_calorie': return Icons.trending_down_rounded;
-      default: return Icons.eco_rounded;
+      case 'protein':
+        return Icons.fitness_center_rounded;
+      case 'fiber':
+        return Icons.grass_rounded;
+      case 'vitamins':
+        return Icons.wb_sunny_rounded;
+      case 'minerals':
+        return Icons.diamond_rounded;
+      case 'antioxidants':
+        return Icons.shield_rounded;
+      case 'healthy_fats':
+        return Icons.favorite_rounded;
+      case 'energy':
+        return Icons.bolt_rounded;
+      case 'hydration':
+        return Icons.water_drop_rounded;
+      case 'probiotics':
+        return Icons.science_rounded;
+      case 'low_calorie':
+        return Icons.trending_down_rounded;
+      default:
+        return Icons.eco_rounded;
     }
   }
 
-  Widget _warningRow(Map<String, dynamic> w, Color border) {
-    final severity = w['severity'] as String? ?? 'low';
-    final Color bg, fg;
+  // ── Warnings ──
 
-    if (severity == 'high') {
-      bg = const Color(0xFFFEE2E2);
-      fg = const Color(0xFFDC2626);
-    } else if (severity == 'medium') {
-      bg = const Color(0xFFFEF3C7);
-      fg = const Color(0xFFD97706);
+  Widget _warningTile(Map<String, dynamic> w, bool dk, Color bdr) {
+    final sev = w['severity'] as String? ?? 'low';
+    final Color accent;
+    final Color bg;
+    if (sev == 'high') {
+      accent = const Color(0xFFEF4444);
+      bg = dk ? const Color(0xFF1C1111) : const Color(0xFFFEF2F2);
+    } else if (sev == 'medium') {
+      accent = const Color(0xFFF59E0B);
+      bg = dk ? const Color(0xFF1C1A0E) : const Color(0xFFFFFBEB);
     } else {
-      bg = const Color(0xFFF1F5F9);
-      fg = const Color(0xFF64748B);
+      accent = const Color(0xFF64748B);
+      bg = dk ? const Color(0xFF151618) : const Color(0xFFF8FAFC);
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: bg, borderRadius: BorderRadius.circular(14), border: Border.all(color: border),
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.2)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(_warningIcon(w['type'] as String? ?? ''), size: 18, color: fg),
-          const SizedBox(width: 10),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child:
+                Icon(_warningIcon(w['type'] as String? ?? ''), size: 16, color: accent),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(w['label'] as String? ?? '',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: fg)),
+                    style: GoogleFonts.inter(
+                        fontSize: 14, fontWeight: FontWeight.w600, color: accent)),
                 if ((w['detail'] as String?)?.isNotEmpty == true) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(w['detail'] as String,
-                      style: GoogleFonts.inter(fontSize: 12, color: fg.withValues(alpha: 0.7), height: 1.3)),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: accent.withValues(alpha: 0.7),
+                        height: 1.3,
+                      )),
                 ],
               ],
             ),
@@ -560,40 +662,63 @@ class MealDetailPage extends StatelessWidget {
 
   IconData _warningIcon(String type) {
     switch (type) {
-      case 'allergen': return Icons.warning_amber_rounded;
-      case 'high_caffeine': return Icons.bolt_rounded;
-      case 'high_sugar': return Icons.cake_rounded;
-      case 'high_sodium': return Icons.water_drop_outlined;
-      case 'high_sat_fat': return Icons.opacity_rounded;
-      case 'high_calorie': return Icons.local_fire_department_rounded;
-      default: return Icons.info_outline_rounded;
+      case 'allergen':
+        return Icons.warning_amber_rounded;
+      case 'high_caffeine':
+        return Icons.bolt_rounded;
+      case 'high_sugar':
+        return Icons.cake_rounded;
+      case 'high_sodium':
+        return Icons.water_drop_outlined;
+      case 'high_sat_fat':
+        return Icons.opacity_rounded;
+      case 'high_calorie':
+        return Icons.local_fire_department_rounded;
+      default:
+        return Icons.info_outline_rounded;
     }
   }
 
-  Widget _burnCard(Map<String, dynamic> c, Color card, Color border, Color text, Color subtle) {
+  // ── Burn it off ──
+
+  Widget _burnTile(Map<String, dynamic> c, bool dk, Color cardBg, Color bdr,
+      Color txt, Color sub) {
     final steps = c['steps'] as int?;
+    final accent = const Color(0xFFF97316);
     return Container(
-      width: 160,
+      width: 150,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: border),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_burnIcon(c['icon'] as String? ?? ''), size: 22, color: const Color(0xFFF97316)),
-          const SizedBox(height: 8),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _burnIcon(c['icon'] as String? ?? ''),
+              size: 16,
+              color: accent,
+            ),
+          ),
+          const Spacer(),
           Text(c['activity'] as String? ?? '',
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: text)),
-          const SizedBox(height: 2),
+              style: GoogleFonts.inter(
+                  fontSize: 14, fontWeight: FontWeight.w700, color: txt)),
           Text(c['duration'] as String? ?? '',
-              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFF97316))),
+              style: GoogleFonts.inter(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
           if (steps != null)
-            Text('${_formatSteps(steps)} steps',
-                style: GoogleFonts.inter(fontSize: 11, color: subtle)),
+            Text('${_fmtSteps(steps)} steps',
+                style: GoogleFonts.inter(fontSize: 11, color: sub)),
         ],
       ),
     );
@@ -601,23 +726,89 @@ class MealDetailPage extends StatelessWidget {
 
   IconData _burnIcon(String icon) {
     switch (icon) {
-      case 'walking': return Icons.directions_walk_rounded;
-      case 'running': return Icons.directions_run_rounded;
-      case 'cycling': return Icons.directions_bike_rounded;
-      case 'swimming': return Icons.pool_rounded;
-      case 'yoga': return Icons.self_improvement_rounded;
-      case 'jump_rope': return Icons.sports_rounded;
-      case 'stairs': return Icons.stairs_rounded;
-      case 'dancing': return Icons.music_note_rounded;
-      case 'hiit': return Icons.timer_rounded;
-      default: return Icons.fitness_center_rounded;
+      case 'walking':
+        return Icons.directions_walk_rounded;
+      case 'running':
+        return Icons.directions_run_rounded;
+      case 'cycling':
+        return Icons.directions_bike_rounded;
+      case 'swimming':
+        return Icons.pool_rounded;
+      case 'yoga':
+        return Icons.self_improvement_rounded;
+      case 'jump_rope':
+        return Icons.sports_rounded;
+      case 'stairs':
+        return Icons.stairs_rounded;
+      case 'dancing':
+        return Icons.music_note_rounded;
+      case 'hiit':
+        return Icons.timer_rounded;
+      default:
+        return Icons.fitness_center_rounded;
     }
   }
 
-  String _formatSteps(int steps) {
-    if (steps >= 1000) {
-      return '${(steps / 1000).toStringAsFixed(steps % 1000 == 0 ? 0 : 1)}k';
-    }
-    return steps.toString();
+  String _fmtSteps(int s) =>
+      s >= 1000 ? '${(s / 1000).toStringAsFixed(s % 1000 == 0 ? 0 : 1)}k' : '$s';
+}
+
+// ═══════════════════════════════════════════
+// Custom painter for macro donut ring
+// ═══════════════════════════════════════════
+
+class _MacroRingPainter extends CustomPainter {
+  final double protein;
+  final double carbs;
+  final double fat;
+
+  _MacroRingPainter({
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = protein + carbs + fat;
+    if (total == 0) return;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 6;
+    const strokeWidth = 10.0;
+    const gap = 0.06; // radians gap between segments
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    double startAngle = -math.pi / 2;
+
+    // Track bg
+    paint.color = const Color(0xFF2A2A2A).withValues(alpha: 0.2);
+    canvas.drawCircle(center, radius, paint);
+
+    // Protein arc (blue)
+    final pAngle = (protein / total) * 2 * math.pi - gap;
+    paint.color = const Color(0xFF5E9EFF);
+    canvas.drawArc(rect, startAngle, pAngle.clamp(0.01, 6.0), false, paint);
+    startAngle += pAngle + gap;
+
+    // Carbs arc (yellow)
+    final cAngle = (carbs / total) * 2 * math.pi - gap;
+    paint.color = const Color(0xFFFFBB38);
+    canvas.drawArc(rect, startAngle, cAngle.clamp(0.01, 6.0), false, paint);
+    startAngle += cAngle + gap;
+
+    // Fat arc (pink)
+    final fAngle = (fat / total) * 2 * math.pi - gap;
+    paint.color = const Color(0xFFFF6B8A);
+    canvas.drawArc(rect, startAngle, fAngle.clamp(0.01, 6.0), false, paint);
   }
+
+  @override
+  bool shouldRepaint(covariant _MacroRingPainter old) =>
+      old.protein != protein || old.carbs != carbs || old.fat != fat;
 }
