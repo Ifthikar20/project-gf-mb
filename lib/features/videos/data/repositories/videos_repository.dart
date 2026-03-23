@@ -23,25 +23,36 @@ class VideosRepository {
       });
       
       final List<dynamic> items = response.data['content'] ?? response.data ?? [];
-      List<VideoEntity> videos = items.map((json) => VideoEntity(
-        id: json['id'] ?? json['uuid'] ?? '',
-        title: json['title'] ?? '',
-        description: json['description'] ?? '',
-        thumbnailUrl: json['thumbnail_url'] ?? 'https://via.placeholder.com/600x400?text=Video',
-        videoUrl: json['video_url'] ?? json['hls_url'] ?? '',
-        durationInSeconds: json['duration_seconds'] ?? 0,
-        category: json['category_name'] ?? json['category'] ?? 'General',
-        instructor: json['expert_name'] ?? json['instructor'] ?? 'Instructor',
-        accessTier: json['access_tier'] ?? 'free',
-        viewCount: json['view_count'] ?? 0,
-        expertSlug: json['expert_slug'],
-        expertAvatarUrl: json['expert_avatar_url'] ?? json['expert_image_url'],
-        // Series fields
-        isSeries: json['is_series'] ?? false,
-        seriesId: json['series_id'],
-        episodeNumber: json['episode_number'],
-        episodeCount: json['episode_count'],
-      )).toList();
+      
+      // Debug: log first item's instructor-related fields
+      if (items.isNotEmpty) {
+        final first = items.first;
+        debugPrint(' Video instructor fields: expert_slug=${first['expert_slug']}, instructor_slug=${first['instructor_slug']}, expert_name=${first['expert_name']}, instructor=${first['instructor']}');
+      }
+      
+      List<VideoEntity> videos = items.map((json) {
+        final instructorName = json['instructor_name'] ?? json['expert_name'] ?? json['instructor'] ?? 'Instructor';
+        final slug = json['instructor_slug'] ?? json['expert_slug'] ?? _nameToSlug(instructorName);
+        return VideoEntity(
+          id: json['id'] ?? json['uuid'] ?? '',
+          title: json['title'] ?? '',
+          description: json['description'] ?? '',
+          thumbnailUrl: json['thumbnail_url'] ?? 'https://via.placeholder.com/600x400?text=Video',
+          videoUrl: json['video_url'] ?? json['hls_url'] ?? '',
+          durationInSeconds: json['duration_seconds'] ?? 0,
+          category: json['category_name'] ?? json['category'] ?? 'General',
+          instructor: instructorName,
+          accessTier: json['access_tier'] ?? 'free',
+          viewCount: json['view_count'] ?? 0,
+          expertSlug: slug,
+          expertAvatarUrl: json['expert_avatar_url'] ?? json['expert_image_url'] ?? json['instructor_avatar_url'],
+          // Series fields
+          isSeries: json['is_series'] ?? false,
+          seriesId: json['series_id'],
+          episodeNumber: json['episode_number'],
+          episodeCount: json['episode_count'],
+        );
+      }).toList();
       
       debugPrint(' Loaded ${videos.length} videos from API');
       
@@ -73,6 +84,8 @@ class VideosRepository {
       final response = await _api.get('/content/detail/$id');
       
       final json = response.data;
+      final instructorName = json['instructor_name'] ?? json['expert_name'] ?? json['instructor'] ?? 'Instructor';
+      final slug = json['instructor_slug'] ?? json['expert_slug'] ?? _nameToSlug(instructorName);
       VideoEntity video = VideoEntity(
         id: json['id'] ?? json['uuid'] ?? id,
         title: json['title'] ?? '',
@@ -81,11 +94,11 @@ class VideosRepository {
         videoUrl: json['video_url'] ?? json['hls_url'] ?? '',
         durationInSeconds: json['duration_seconds'] ?? 0,
         category: json['category_name'] ?? json['category'] ?? 'General',
-        instructor: json['expert_name'] ?? json['instructor'] ?? 'Instructor',
+        instructor: instructorName,
         accessTier: json['access_tier'] ?? 'free',
         viewCount: json['view_count'] ?? 0,
-        expertSlug: json['expert_slug'],
-        expertAvatarUrl: json['expert_avatar_url'] ?? json['expert_image_url'],
+        expertSlug: slug,
+        expertAvatarUrl: json['expert_avatar_url'] ?? json['expert_image_url'] ?? json['instructor_avatar_url'],
         // Series fields
         isSeries: json['is_series'] ?? false,
         seriesId: json['series_id'],
@@ -382,5 +395,16 @@ class VideosRepository {
     }
 
     return allVideos.where((video) => video.category == category).toList();
+  }
+
+  /// Derive a URL-friendly slug from an instructor name
+  /// e.g. "Jane Doe" → "jane-doe"
+  String? _nameToSlug(String name) {
+    if (name.isEmpty || name == 'Instructor') return null;
+    return name
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-');
   }
 }

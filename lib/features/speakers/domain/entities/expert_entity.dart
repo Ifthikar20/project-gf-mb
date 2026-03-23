@@ -161,6 +161,7 @@ class ExpertEntity extends Equatable {
   final String? title;
   final String? bio;
   final String? shortBio;
+  final String? funFact;
   final String? imageUrl;
   final String? backgroundImageUrl;
   final List<String> specialties;
@@ -186,6 +187,7 @@ class ExpertEntity extends Equatable {
     this.title,
     this.bio,
     this.shortBio,
+    this.funFact,
     this.imageUrl,
     this.backgroundImageUrl,
     this.specialties = const [],
@@ -211,9 +213,15 @@ class ExpertEntity extends Equatable {
     final audioJson = json['audio_sessions'] ?? json['audio'] as List<dynamic>? ?? [];
     final statsJson = json['stats'] as Map<String, dynamic>? ?? {};
 
-    // specialties can be a list of strings
+    // specialties can be a comma-separated string or a list
     List<String> specialties = [];
-    if (json['specialties'] is List) {
+    if (json['specialties'] is String) {
+      specialties = (json['specialties'] as String)
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    } else if (json['specialties'] is List) {
       specialties = (json['specialties'] as List).map((e) => e.toString()).toList();
     }
 
@@ -224,6 +232,7 @@ class ExpertEntity extends Equatable {
       title: json['title'],
       bio: json['bio'],
       shortBio: json['short_bio'],
+      funFact: json['fun_fact'],
       imageUrl: json['avatar_url'] ?? json['image_url'] ?? json['imageUrl'],
       backgroundImageUrl: json['background_image_url'] ?? json['backgroundImageUrl'],
       specialties: specialties,
@@ -259,7 +268,7 @@ class ExpertEntity extends Equatable {
   List<Object?> get props => [
     id, slug, name, title, bio, shortBio, imageUrl, backgroundImageUrl, specialties,
     linkedinUrl, instagramUrl, websiteUrl, yearsExperience, specialization, 
-    primaryCategory, shareUrl, shareText, verified, featured,
+    primaryCategory, shareUrl, shareText, funFact, verified, featured,
     videos, series, audioSessions, stats,
   ];
 }

@@ -3,7 +3,7 @@ import 'api_client.dart';
 import '../config/environment_config.dart';
 
 /// Content service for the BetterBliss API
-/// Handles content browsing, categories, experts, and analytics tracking
+/// Handles content browsing, categories, instructors, and analytics tracking
 class ContentService {
   static ContentService? _instance;
   final ApiClient _api;
@@ -55,19 +55,19 @@ class ContentService {
   }
   
   // ============================================
-  // Experts
+  // Instructors (formerly Experts)
   // ============================================
   
-  /// List featured wellness experts
+  /// List featured wellness instructors
   Future<Map<String, dynamic>> getFeaturedExperts() async {
-    final response = await _api.get('/api/experts');
+    final response = await _api.get('/api/instructors');
     return response.data as Map<String, dynamic>;
   }
   
-  /// Search for experts
+  /// Search for instructors
   Future<Map<String, dynamic>> searchExperts(String query) async {
     final response = await _api.get(
-      '/api/experts/search',
+      '/api/instructors/search',
       queryParameters: {'q': query},
     );
     return response.data as Map<String, dynamic>;
@@ -75,7 +75,7 @@ class ContentService {
   
   /// Get full expert profile with their content
   Future<Map<String, dynamic>> getExpertProfile(String slug) async {
-    final response = await _api.get('/api/experts/$slug');
+    final response = await _api.get('/api/instructors/$slug');
     return response.data as Map<String, dynamic>;
   }
   

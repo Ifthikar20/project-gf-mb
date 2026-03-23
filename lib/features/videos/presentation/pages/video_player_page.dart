@@ -542,7 +542,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Author row - tappable to view speaker profile
+                      // Author row - tappable to view instructor profile
                       GestureDetector(
                         onTap: () {
                           if (_video != null) {
@@ -556,10 +556,10 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                                 '${AppRouter.speakerProfile}?id=$expertSlug&name=${Uri.encodeComponent(speakerName)}&imageUrl=${Uri.encodeComponent(speakerImageUrl)}',
                               );
                             } else {
-                              // Show snackbar if no expert profile available
+                              // Show snackbar if no instructor profile available
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Expert profile not available'),
+                                  content: Text('Instructor profile not available'),
                                   duration: Duration(seconds: 2),
                                 ),
                               );

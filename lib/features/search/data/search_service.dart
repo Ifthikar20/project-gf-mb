@@ -88,7 +88,7 @@ class SearchService {
   Future<List<SearchResult>> _searchExperts({required String query}) async {
     try {
       final response = await _apiClient.get(
-        '/experts',
+        '/instructors',
         queryParameters: {'search': query},
       );
 
@@ -99,7 +99,7 @@ class SearchService {
         if (data is List) {
           items = data;
         } else if (data is Map) {
-          items = data['experts'] ?? data['results'] ?? data['items'] ?? [];
+          items = data['instructors'] ?? data['experts'] ?? data['results'] ?? data['items'] ?? [];
         } else {
           items = [];
         }

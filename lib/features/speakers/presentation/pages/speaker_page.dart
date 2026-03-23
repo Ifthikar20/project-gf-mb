@@ -277,6 +277,74 @@ class _SpeakerPageState extends State<SpeakerPage> {
                       ),
                     ),
 
+                    // ── Fun Fact ──
+                    if (_expert?.funFact != null &&
+                        _expert!.funFact!.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isLight
+                                  ? Colors.amber.withOpacity(0.08)
+                                  : const Color(0xFF2A2518),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isLight
+                                    ? Colors.amber.withOpacity(0.2)
+                                    : const Color(0xFF3D3525),
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: isLight
+                                      ? Colors.amber.shade700
+                                      : const Color(0xFFD4A843),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Fun Fact',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: isLight
+                                              ? Colors.amber.shade700
+                                              : const Color(0xFFD4A843),
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _expert!.funFact!,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: isLight
+                                              ? Colors.grey.shade800
+                                              : Colors.grey.shade300,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
                     // ── Bio ──
                     if ((_expert?.bio ?? _expert?.shortBio) != null)
                       SliverToBoxAdapter(

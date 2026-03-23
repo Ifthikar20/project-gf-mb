@@ -52,10 +52,10 @@ class ApiEndpoints {
   static String get categories => '$apiBase/categories';
   static String categoryById(String id) => '$apiBase/categories/$id';
   
-  // Experts
-  static String get experts => '$apiBase/experts';
-  static String get expertsSearch => '$apiBase/experts/search';
-  static String expertProfile(String slug) => '$apiBase/experts/$slug';
+  // Instructors (formerly Experts)
+  static String get instructors => '$apiBase/instructors';
+  static String get instructorsSearch => '$apiBase/instructors/search';
+  static String instructorProfile(String slug) => '$apiBase/instructors/$slug';
   
   // ============================================
   // Analytics / Tracking (/api/track/)
