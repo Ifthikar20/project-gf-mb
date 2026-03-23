@@ -201,13 +201,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // -- AI Suggestions ("For You") --
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 24),
-                  child: AdvisorSuggestionSection(tabFilter: 'home'),
-                ),
-              ),
 
               // -- Content Recommendations (Videos & Audio) --
               const SliverToBoxAdapter(

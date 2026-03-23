@@ -75,6 +75,7 @@ flutter:
   
   assets:
     - .env
+    - assets/images/
   
   # Uncomment to add custom fonts
   # fonts:

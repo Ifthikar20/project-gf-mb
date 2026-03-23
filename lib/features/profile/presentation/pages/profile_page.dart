@@ -32,294 +32,284 @@ class ProfilePage extends StatelessWidget {
         final textSecondary = ThemeColors.textSecondary(mode);
         final errorColor = ThemeColors.error(mode);
         
-        // Theme-specific gradients and fonts
-        final headerGradient = isLight
-            ? [ThemeColors.lightTextSecondary.withOpacity(0.3), bgColor]
-            : [ThemeColors.darkPrimary.withOpacity(0.3), bgColor];
+        
         
         return Scaffold(
           backgroundColor: bgColor,
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Profile Header
+              // Profile Header with background image
               SliverToBoxAdapter(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: headerGradient,
+                child: Stack(
+                  children: [
+                    // Background image
+                    SizedBox(
+                      width: double.infinity,
+                      height: 220,
+                      child: Image.asset(
+                        'assets/images/bk-1.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
                     ),
-                  ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                      child: Column(
-                        children: [
-                          // Top bar
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Profile',
-                                style: isLight
-                                    ? GoogleFonts.inter(
-                                        color: textColor,
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                      )
-                                    : TextStyle(
-                                        color: textColor,
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                              ),
-                              // Buttons removed as per user request
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // Profile section - Auth aware
-                          BlocBuilder<AuthBloc, AuthState>(
-                            builder: (context, authState) {
-                              final isLoggedIn = authState is AuthAuthenticated;
-                              final user = isLoggedIn ? authState.user : null;
-                              final initials = user?.name?.isNotEmpty == true
-                                  ? user!.name![0].toUpperCase()
-                                  : (user?.email.isNotEmpty == true ? user!.email[0].toUpperCase() : 'G');
-                              
-                              return Row(
-                                children: [
-                                  // Avatar with theme-aware styling
-                                  Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      shape: BoxShape.rectangle,
-                                      border: Border.all(
-                                        color: isLoggedIn ? textColor : textSecondary.withOpacity(0.5),
-                                        width: 2,
-                                      ),
-                                      boxShadow: isLoggedIn ? [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 16,
-                                          offset: const Offset(0, 6),
-                                        ),
-                                      ] : null,
-                                    ),
-                                    child: Container(
-                                      width: 72,
-                                      height: 72,
+                    // Gradient overlay
+                    Container(
+                      height: 220,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            bgColor.withValues(alpha: 0.5),
+                            bgColor,
+                          ],
+                          stops: const [0.0, 0.55, 1.0],
+                        ),
+                      ),
+                    ),
+                    // Content on top of image
+                    SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: Column(
+                          children: [
+                            // Top bar
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Profile',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            // Profile section - Auth aware
+                            BlocBuilder<AuthBloc, AuthState>(
+                              builder: (context, authState) {
+                                final isLoggedIn = authState is AuthAuthenticated;
+                                final user = isLoggedIn ? authState.user : null;
+                                final initials = user?.name?.isNotEmpty == true
+                                    ? user!.name![0].toUpperCase()
+                                    : (user?.email.isNotEmpty == true ? user!.email[0].toUpperCase() : 'G');
+                                
+                                return Row(
+                                  children: [
+                                    // Avatar
+                                    Container(
+                                      padding: const EdgeInsets.all(3),
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(16),
-                                        shape: BoxShape.rectangle,
-                                        gradient: isLoggedIn
-                                            ? LinearGradient(colors: [textColor.withOpacity(0.8), isLight ? ThemeColors.lightTextSecondary : Colors.grey.shade700])
-                                            : null,
-                                        color: isLoggedIn ? null : surfaceColor,
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(alpha: 0.9),
+                                          width: 2,
+                                        ),
+                                        boxShadow: isLoggedIn ? [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.3),
+                                            blurRadius: 16,
+                                            offset: const Offset(0, 6),
+                                          ),
+                                        ] : null,
                                       ),
-                                      child: Center(
-                                        child: isLoggedIn
-                                            ? Text(
-                                                initials,
-                                                style: isLight
-                                                    ? GoogleFonts.inter(
-                                                        color: Colors.white,
-                                                        fontSize: 28,
-                                                        fontWeight: FontWeight.bold,
-                                                      )
-                                                    : const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 28,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                              )
-                                            : Icon(Icons.person_outline, color: textSecondary, size: 36),
+                                      child: Container(
+                                        width: 72,
+                                        height: 72,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(16),
+                                          gradient: isLoggedIn
+                                              ? const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)])
+                                              : null,
+                                          color: isLoggedIn ? null : surfaceColor,
+                                        ),
+                                        child: Center(
+                                          child: isLoggedIn
+                                              ? Text(
+                                                  initials,
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.white,
+                                                    fontSize: 28,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                )
+                                              : Icon(Icons.person_outline, color: textSecondary, size: 36),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  // User info
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          isLoggedIn ? (user?.name ?? 'User') : 'Guest',
-                                          style: isLight
-                                              ? GoogleFonts.inter(
-                                                  color: textColor,
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.bold,
-                                                )
-                                              : TextStyle(
-                                                  color: textColor,
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          isLoggedIn ? user!.email : 'Sign in to sync your progress',
-                                          style: isLight
-                                              ? GoogleFonts.inter(
-                                                  color: textSecondary.withOpacity(0.8),
-                                                  fontSize: 14,
-                                                )
-                                              : TextStyle(
-                                                  color: textSecondary.withOpacity(0.8),
-                                                  fontSize: 14,
-                                                ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        // Login/Logout button
-                                        isLoggedIn
-                                            ? GestureDetector(
-                                                onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  decoration: BoxDecoration(
-                                                    color: errorColor.withOpacity(0.15),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    border: Border.all(color: errorColor.withOpacity(0.3)),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.logout, color: errorColor, size: 14),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        'Sign Out',
-                                                        style: TextStyle(
-                                                          color: errorColor,
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.w500,
+                                    const SizedBox(width: 16),
+                                    // User info
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isLoggedIn ? (user?.name ?? 'User') : 'Guest',
+                                            style: GoogleFonts.inter(
+                                              color: textColor,
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            isLoggedIn ? user!.email : 'Sign in to sync your progress',
+                                            style: GoogleFonts.inter(
+                                              color: textSecondary.withValues(alpha: 0.8),
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          // Login/Logout button
+                                          isLoggedIn
+                                              ? GestureDetector(
+                                                  onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                    decoration: BoxDecoration(
+                                                      color: errorColor.withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(color: errorColor.withValues(alpha: 0.3)),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.logout, color: errorColor, size: 14),
+                                                        const SizedBox(width: 4),
+                                                        Text(
+                                                          'Sign Out',
+                                                          style: TextStyle(
+                                                            color: errorColor,
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w500,
+                                                          ),
                                                         ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                )
+                                              : GestureDetector(
+                                                  onTap: () => context.go('/login'),
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                    decoration: BoxDecoration(
+                                                      gradient: LinearGradient(
+                                                        colors: [primaryColor, isLight ? ThemeColors.lightTextSecondary : ThemeColors.darkSecondary],
                                                       ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              )
-                                            : GestureDetector(
-                                                onTap: () => context.go('/login'),
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      colors: [primaryColor, isLight ? ThemeColors.lightTextSecondary : ThemeColors.darkSecondary],
+                                                      borderRadius: BorderRadius.circular(12),
                                                     ),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
-                                                  child: Text(
-                                                    'Sign In',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
+                                                    child: const Text(
+                                                      'Sign In',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 28),
-                          // Goals Stats Row - Dynamic based on active goals
-                          BlocBuilder<GoalsBloc, GoalsState>(
-                            builder: (context, goalsState) {
-                              if (goalsState is! GoalsLoaded) {
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 28),
+                            // Goals Stats Row
+                            BlocBuilder<GoalsBloc, GoalsState>(
+                              builder: (context, goalsState) {
+                                if (goalsState is! GoalsLoaded) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                    decoration: BoxDecoration(
+                                      color: surfaceColor,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        'Loading goals...',
+                                        style: TextStyle(color: textSecondary, fontSize: 14),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                
+                                final activeGoals = goalsState.goals
+                                    .where((g) => !g.isCompleted)
+                                    .take(3)
+                                    .toList();
+                                
+                                if (activeGoals.isEmpty) {
+                                  return GestureDetector(
+                                    onTap: () => _showGoalPicker(context),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: surfaceColor,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: primaryColor.withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.add_circle_outline, color: textSecondary, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Set Your First Goal',
+                                            style: TextStyle(
+                                              color: textColor,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+                                
                                 return Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                                   decoration: BoxDecoration(
                                     color: surfaceColor,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      'Loading goals...',
-                                      style: TextStyle(color: textSecondary, fontSize: 14),
-                                    ),
-                                  ),
-                                );
-                              }
-                              
-                              final activeGoals = goalsState.goals
-                                  .where((g) => !g.isCompleted)
-                                  .take(3)
-                                  .toList();
-                              
-                              // If no goals, show empty state with "Add Goal" prompt
-                              if (activeGoals.isEmpty) {
-                                return GestureDetector(
-                                  onTap: () => _showGoalPicker(context),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: surfaceColor,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: primaryColor.withOpacity(0.3),
-                                        style: BorderStyle.solid,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.add_circle_outline, color: textSecondary, size: 20),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Set Your First Goal',
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      for (int i = 0; i < activeGoals.length; i++) ...[
+                                        if (i > 0)
+                                          Container(width: 1, height: 45, color: textSecondary.withValues(alpha: 0.2)),
+                                        Expanded(
+                                          child: _buildGoalStatItem(
+                                            activeGoals[i],
+                                            isLight,
+                                            textColor,
+                                            textSecondary,
                                           ),
                                         ),
                                       ],
-                                    ),
+                                    ],
                                   ),
                                 );
-                              }
-                              
-                              // Show up to 3 goals with dividers
-                              return Container(
-                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                                decoration: BoxDecoration(
-                                  color: surfaceColor,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    for (int i = 0; i < activeGoals.length; i++) ...[
-                                      if (i > 0)
-                                        Container(width: 1, height: 45, color: textSecondary.withOpacity(0.2)),
-                                      Expanded(
-                                        child: _buildGoalStatItem(
-                                          activeGoals[i],
-                                          isLight,
-                                          textColor,
-                                          textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
 

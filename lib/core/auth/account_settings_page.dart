@@ -7,9 +7,7 @@ import '../services/auth_service.dart';
 import '../theme/theme_bloc.dart';
 import '../theme/app_theme.dart';
 
-/// Account Settings Page
-/// Allows users to edit their display name, view account info,
-/// and delete their account with confirmation
+/// Account Settings Page — modern hero-header profile design
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key});
 
@@ -25,13 +23,11 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   String? _nameError;
   String? _successMessage;
 
-  // Theme colors
-  static const Color primaryPurple = Color(0xFF8B5CF6);
+  static const _accent = Color(0xFF8B5CF6);
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill with current user's name
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       _nameController.text = authState.user.displayName ?? '';
@@ -44,36 +40,28 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     super.dispose();
   }
 
+  // ─── Logic (unchanged) ─────────────────────────────────────────
   Future<void> _saveName() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() => _nameError = 'Name cannot be empty');
       return;
     }
-
     setState(() {
       _isSavingName = true;
       _nameError = null;
       _successMessage = null;
     });
-
     try {
-      final updatedUser = await AuthService.instance.updateProfile(
-        displayName: name,
-      );
-
+      final updatedUser =
+          await AuthService.instance.updateProfile(displayName: name);
       if (!mounted) return;
-
-      // Update auth state with new user data
       context.read<AuthBloc>().add(AuthUserChanged(updatedUser));
-
       setState(() {
         _isSavingName = false;
         _isEditingName = false;
         _successMessage = 'Name updated successfully';
       });
-
-      // Clear success message after 3 seconds
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) setState(() => _successMessage = null);
       });
@@ -83,7 +71,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         _isSavingName = false;
         _nameError = e.message;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _isSavingName = false;
@@ -97,42 +85,29 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Delete Account',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete Account',
+            style: GoogleFonts.inter(
+                color: Colors.white, fontWeight: FontWeight.w600)),
         content: Text(
-          'This action is permanent and cannot be undone. All your data, preferences, and watch history will be lost.\n\nAre you sure you want to delete your account?',
+          'This action is permanent and cannot be undone. All your data will be lost.\n\nAre you sure?',
           style: GoogleFonts.inter(
-            color: Colors.white70,
-            fontSize: 14,
-            height: 1.5,
-          ),
+              color: Colors.white70, fontSize: 14, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(color: Colors.white54),
-            ),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               _deleteAccount();
             },
-            child: Text(
-              'Delete Account',
-              style: GoogleFonts.inter(
-                color: Colors.red,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: Text('Delete Account',
+                style: GoogleFonts.inter(
+                    color: Colors.red, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -141,511 +116,391 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
   Future<void> _deleteAccount() async {
     setState(() => _isDeletingAccount = true);
-
     try {
       await AuthService.instance.deleteAccount();
-
       if (!mounted) return;
-
-      // Trigger logout in auth bloc (clears state)
       context.read<AuthBloc>().add(AuthLogoutRequested());
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _isDeletingAccount = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (_) {
       if (!mounted) return;
       setState(() => _isDeletingAccount = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to delete account. Please try again.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Failed to delete account. Please try again.'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
     }
   }
 
+  // ─── Build ─────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, themeState) {
         final mode = themeState.mode;
-        final isLight = themeState.isLight;
-        final bgColor = ThemeColors.background(mode);
-        final surfaceColor = ThemeColors.surface(mode);
-        final textColor = ThemeColors.textPrimary(mode);
-        final textSecondary = ThemeColors.textSecondary(mode);
-        final errorColor = ThemeColors.error(mode);
+        final dk = !themeState.isLight;
+        final bg = ThemeColors.background(mode);
+        final card = ThemeColors.surface(mode);
+        final txt = ThemeColors.textPrimary(mode);
+        final sub = ThemeColors.textSecondary(mode);
+        final err = ThemeColors.error(mode);
+        final bdr = dk
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.06);
 
         return BlocBuilder<AuthBloc, AuthState>(
           builder: (context, authState) {
-            final user = authState is AuthAuthenticated ? authState.user : null;
+            final user =
+                authState is AuthAuthenticated ? authState.user : null;
 
             return Scaffold(
-              backgroundColor: bgColor,
-              appBar: AppBar(
-                backgroundColor: bgColor,
-                elevation: 0,
-                leading: IconButton(
-                  icon: Icon(Icons.arrow_back_ios, color: textColor, size: 20),
-                  onPressed: () => context.pop(),
-                ),
-                title: Text(
-                  'Account',
-                  style: isLight
-                      ? GoogleFonts.inter(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        )
-                      : GoogleFonts.poppins(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                ),
-                centerTitle: true,
-              ),
+              backgroundColor: bg,
               body: user == null
                   ? Center(
-                      child: Text(
-                        'Please log in to view account settings.',
-                        style: TextStyle(color: textSecondary),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Success message
-                          if (_successMessage != null) ...[
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
+                      child: Text('Please log in.',
+                          style: TextStyle(color: sub)))
+                  : CustomScrollView(
+                      slivers: [
+                        // ─── Hero header with image ──────────
+                        SliverAppBar(
+                          expandedHeight: 260,
+                          pinned: true,
+                          backgroundColor: bg,
+                          leading: GestureDetector(
+                            onTap: () => context.pop(),
+                            child: Container(
+                              margin: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.12),
+                                color: Colors.black.withValues(alpha: 0.35),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.green.withOpacity(0.3),
-                                ),
                               ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.green,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _successMessage!,
-                                    style: GoogleFonts.inter(
-                                      color: Colors.green,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              child: const Icon(Icons.arrow_back_ios_new,
+                                  color: Colors.white, size: 18),
                             ),
-                            const SizedBox(height: 20),
-                          ],
-
-                          // ─── Profile Avatar ─────────────────────
-                          Center(
-                            child: Column(
+                          ),
+                          flexibleSpace: FlexibleSpaceBar(
+                            background: Stack(
+                              fit: StackFit.expand,
                               children: [
-                                Container(
-                                  width: 80,
-                                  height: 80,
+                                // Background image
+                                Image.asset(
+                                  'assets/images/bk-1.png',
+                                  fit: BoxFit.cover,
+                                ),
+                                // Gradient overlay
+                                DecoratedBox(
                                   decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
                                     gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
                                       colors: [
-                                        primaryPurple,
-                                        primaryPurple.withOpacity(0.6),
+                                        Colors.transparent,
+                                        bg.withValues(alpha: 0.3),
+                                        bg,
                                       ],
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      (user.displayName?.isNotEmpty == true
-                                              ? user.displayName![0]
-                                              : user.email[0])
-                                          .toUpperCase(),
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.white,
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      stops: const [0.0, 0.6, 1.0],
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                                // Subscription badge
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: user.isPremium
-                                        ? Colors.amber.withOpacity(0.15)
-                                        : surfaceColor,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: user.isPremium
-                                          ? Colors.amber.withOpacity(0.4)
-                                          : textSecondary.withOpacity(0.2),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                // Avatar + name overlay
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Column(
                                     children: [
-                                      Icon(
-                                        user.isPremium
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                        size: 14,
-                                        color: user.isPremium
-                                            ? Colors.amber
-                                            : textSecondary,
+                                      // Avatar
+                                      Container(
+                                        width: 90,
+                                        height: 90,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: bg, width: 4),
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFF8B5CF6),
+                                              Color(0xFFA78BFA),
+                                            ],
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: _accent.withValues(alpha: 0.4),
+                                              blurRadius: 20,
+                                              offset: const Offset(0, 6),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            (user.displayName
+                                                        ?.isNotEmpty ==
+                                                    true
+                                                ? user.displayName![0]
+                                                : user.email[0])
+                                                .toUpperCase(),
+                                            style: GoogleFonts.inter(
+                                              color: Colors.white,
+                                              fontSize: 36,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                      const SizedBox(width: 4),
+                                      const SizedBox(height: 10),
+                                      // Name
                                       Text(
-                                        user.subscriptionTier
-                                                .substring(0, 1)
-                                                .toUpperCase() +
-                                            user.subscriptionTier.substring(1) +
-                                            ' Plan',
+                                        user.displayName ??
+                                            user.email.split('@')[0],
                                         style: GoogleFonts.inter(
+                                          color: txt,
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      // Email
+                                      Text(user.email,
+                                          style: GoogleFonts.inter(
+                                              color: sub, fontSize: 13)),
+                                      const SizedBox(height: 8),
+                                      // Plan badge
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 5),
+                                        decoration: BoxDecoration(
                                           color: user.isPremium
                                               ? Colors.amber
-                                              : textSecondary,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // ─── Display Name Section ───────────────
-                          _buildSectionHeader('Display Name', textColor, isLight),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _isEditingName
-                                    ? primaryPurple.withOpacity(0.5)
-                                    : textSecondary.withOpacity(0.15),
-                              ),
-                            ),
-                            child: _isEditingName
-                                ? Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      TextFormField(
-                                        controller: _nameController,
-                                        autofocus: true,
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: 15,
-                                        ),
-                                        decoration: InputDecoration(
-                                          hintText: 'Enter your name',
-                                          hintStyle: TextStyle(
-                                            color: textSecondary.withOpacity(0.5),
-                                          ),
-                                          border: InputBorder.none,
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.zero,
-                                        ),
-                                      ),
-                                      if (_nameError != null) ...[
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          _nameError!,
-                                          style: TextStyle(
-                                            color: errorColor,
-                                            fontSize: 11,
+                                                  .withValues(alpha: 0.15)
+                                              : card,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: user.isPremium
+                                                ? Colors.amber
+                                                    .withValues(alpha: 0.4)
+                                                : bdr,
                                           ),
                                         ),
-                                      ],
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed: _isSavingName
-                                                ? null
-                                                : () {
-                                                    _nameController.text =
-                                                        user.displayName ?? '';
-                                                    setState(() {
-                                                      _isEditingName = false;
-                                                      _nameError = null;
-                                                    });
-                                                  },
-                                            child: Text(
-                                              'Cancel',
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              user.isPremium
+                                                  ? Icons.star_rounded
+                                                  : Icons.star_border_rounded,
+                                              size: 14,
+                                              color: user.isPremium
+                                                  ? Colors.amber
+                                                  : sub,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${user.subscriptionTier[0].toUpperCase()}${user.subscriptionTier.substring(1)} Plan',
                                               style: GoogleFonts.inter(
-                                                color: textSecondary,
-                                                fontSize: 13,
+                                                color: user.isPremium
+                                                    ? Colors.amber
+                                                    : sub,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          ElevatedButton(
-                                            onPressed:
-                                                _isSavingName ? null : _saveName,
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: primaryPurple,
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 20,
-                                                vertical: 10,
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                              elevation: 0,
-                                              minimumSize: Size.zero,
-                                            ),
-                                            child: _isSavingName
-                                                ? const SizedBox(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      color: Colors.white,
-                                                      strokeWidth: 2,
-                                                    ),
-                                                  )
-                                                : Text(
-                                                    'Save',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                  ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          user.displayName ?? 'Not set',
-                                          style: TextStyle(
-                                            color: user.displayName != null
-                                                ? textColor
-                                                : textSecondary,
-                                            fontSize: 15,
-                                          ),
-                                        ),
-                                      ),
-                                      GestureDetector(
-                                        onTap: () =>
-                                            setState(() => _isEditingName = true),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: primaryPurple.withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                          ),
-                                          child: Text(
-                                            'Edit',
-                                            style: GoogleFonts.inter(
-                                              color: primaryPurple,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
+                                          ],
                                         ),
                                       ),
                                     ],
-                                  ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // ─── Email Section ─────────────────────
-                          _buildSectionHeader('Email', textColor, isLight),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: textSecondary.withOpacity(0.15),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.email_outlined,
-                                  color: textSecondary,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  user.email,
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 15,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
+                        ),
 
-                          // ─── Account Info ──────────────────────
-                          _buildSectionHeader(
-                              'Account Info', textColor, isLight),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: textSecondary.withOpacity(0.15),
-                              ),
-                            ),
+                        // ─── Body ────────────────────────────
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildInfoRow(
-                                  'Member Since',
-                                  _formatDate(user.createdAt),
-                                  textColor,
-                                  textSecondary,
+                                // Success toast
+                                if (_successMessage != null) ...[
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green
+                                          .withValues(alpha: 0.12),
+                                      borderRadius:
+                                          BorderRadius.circular(14),
+                                      border: Border.all(
+                                          color: Colors.green
+                                              .withValues(alpha: 0.3)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.check_circle,
+                                            color: Colors.green, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text(_successMessage!,
+                                            style: GoogleFonts.inter(
+                                                color: Colors.green,
+                                                fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+
+                                // ─── Settings list ─────────────
+                                _tile(
+                                  icon: Icons.person_outline_rounded,
+                                  label: 'Display Name',
+                                  value: user.displayName ?? 'Not set',
+                                  trailing: _isEditingName
+                                      ? null
+                                      : _editButton(() => setState(
+                                          () => _isEditingName = true)),
+                                  card: card,
+                                  bdr: bdr,
+                                  txt: txt,
+                                  sub: sub,
+                                  expandedChild: _isEditingName
+                                      ? _nameEditor(user, txt, sub, err)
+                                      : null,
                                 ),
-                                Divider(
-                                  color: textSecondary.withOpacity(0.1),
-                                  height: 24,
+                                const SizedBox(height: 10),
+
+                                _tile(
+                                  icon: Icons.email_outlined,
+                                  label: 'Email',
+                                  value: user.email,
+                                  card: card,
+                                  bdr: bdr,
+                                  txt: txt,
+                                  sub: sub,
                                 ),
-                                _buildInfoRow(
-                                  'Account Status',
-                                  user.isActive ? 'Active' : 'Inactive',
-                                  textColor,
-                                  user.isActive ? Colors.green : errorColor,
+                                const SizedBox(height: 10),
+
+                                _tile(
+                                  icon: Icons.calendar_today_rounded,
+                                  label: 'Member Since',
+                                  value: _formatDate(user.createdAt),
+                                  card: card,
+                                  bdr: bdr,
+                                  txt: txt,
+                                  sub: sub,
                                 ),
-                                Divider(
-                                  color: textSecondary.withOpacity(0.1),
-                                  height: 24,
+                                const SizedBox(height: 10),
+
+                                _tile(
+                                  icon: Icons.verified_outlined,
+                                  label: 'Account Status',
+                                  value:
+                                      user.isActive ? 'Active' : 'Inactive',
+                                  valueColor: user.isActive
+                                      ? const Color(0xFF22C55E)
+                                      : err,
+                                  card: card,
+                                  bdr: bdr,
+                                  txt: txt,
+                                  sub: sub,
                                 ),
-                                _buildInfoRow(
-                                  'Account ID',
-                                  user.id.length > 8
+                                const SizedBox(height: 10),
+
+                                _tile(
+                                  icon: Icons.fingerprint_rounded,
+                                  label: 'Account ID',
+                                  value: user.id.length > 8
                                       ? '${user.id.substring(0, 8)}…'
                                       : user.id,
-                                  textColor,
-                                  textSecondary,
+                                  card: card,
+                                  bdr: bdr,
+                                  txt: txt,
+                                  sub: sub,
+                                ),
+
+                                const SizedBox(height: 36),
+
+                                // ─── Danger zone ───────────────
+                                Text('Danger Zone',
+                                    style: GoogleFonts.inter(
+                                        color: err,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: _isDeletingAccount
+                                      ? null
+                                      : _showDeleteConfirmation,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: err.withValues(alpha: 0.06),
+                                      borderRadius:
+                                          BorderRadius.circular(16),
+                                      border: Border.all(
+                                          color:
+                                              err.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete_forever_rounded,
+                                            color: err, size: 22),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Delete Account',
+                                                  style: GoogleFonts.inter(
+                                                      color: err,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600)),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Permanently remove your account and all data',
+                                                style: GoogleFonts.inter(
+                                                    color: err.withValues(
+                                                        alpha: 0.6),
+                                                    fontSize: 12),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (_isDeletingAccount)
+                                          SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child:
+                                                CircularProgressIndicator(
+                                              color: err,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        else
+                                          Icon(Icons.chevron_right_rounded,
+                                              color: err.withValues(
+                                                  alpha: 0.5),
+                                              size: 20),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 40),
-
-                          // ─── Danger Zone ───────────────────────
-                          _buildSectionHeader(
-                              'Danger Zone', errorColor, isLight),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap:
-                                _isDeletingAccount ? null : _showDeleteConfirmation,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: errorColor.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: errorColor.withOpacity(0.25),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.delete_forever,
-                                    color: errorColor,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Delete Account',
-                                          style: TextStyle(
-                                            color: errorColor,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Permanently remove your account and all data',
-                                          style: TextStyle(
-                                            color: errorColor.withOpacity(0.7),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (_isDeletingAccount)
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        color: errorColor,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  else
-                                    Icon(
-                                      Icons.chevron_right,
-                                      color: errorColor.withOpacity(0.5),
-                                      size: 20,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
             );
           },
@@ -654,43 +509,150 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title, Color color, bool isLight) {
-    return Text(
-      title,
-      style: isLight
-          ? GoogleFonts.inter(
-              color: color,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            )
-          : GoogleFonts.poppins(
-              color: color,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+  // ─── Helper widgets ────────────────────────────────────────────
+
+  Widget _tile({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+    Widget? trailing,
+    Widget? expandedChild,
+    required Color card,
+    required Color bdr,
+    required Color txt,
+    required Color sub,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: bdr),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: _accent, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: GoogleFonts.inter(
+                            color: sub,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 2),
+                    Text(value,
+                        style: GoogleFonts.inter(
+                          color: valueColor ?? txt,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        )),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+          if (expandedChild != null) ...[
+            const SizedBox(height: 12),
+            expandedChild,
+          ],
+        ],
+      ),
     );
   }
 
-  Widget _buildInfoRow(
-    String label,
-    String value,
-    Color labelColor,
-    Color valueColor,
-  ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(color: labelColor.withOpacity(0.7), fontSize: 13),
+  Widget _editButton(VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: _accent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
         ),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            color: valueColor,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+        child: Text('Edit',
+            style: GoogleFonts.inter(
+                color: _accent, fontSize: 12, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  Widget _nameEditor(dynamic user, Color txt, Color sub, Color err) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _nameController,
+          autofocus: true,
+          style: TextStyle(color: txt, fontSize: 15),
+          decoration: InputDecoration(
+            hintText: 'Enter your name',
+            hintStyle: TextStyle(color: sub.withValues(alpha: 0.5)),
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
           ),
+        ),
+        if (_nameError != null) ...[
+          const SizedBox(height: 6),
+          Text(_nameError!, style: TextStyle(color: err, fontSize: 11)),
+        ],
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: _isSavingName
+                  ? null
+                  : () {
+                      _nameController.text = user.displayName ?? '';
+                      setState(() {
+                        _isEditingName = false;
+                        _nameError = null;
+                      });
+                    },
+              child: Text('Cancel',
+                  style: GoogleFonts.inter(color: sub, fontSize: 13)),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _isSavingName ? null : _saveName,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+                minimumSize: Size.zero,
+              ),
+              child: _isSavingName
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text('Save',
+                      style: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+          ],
         ),
       ],
     );
@@ -700,7 +662,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     if (isoDate == null) return 'Unknown';
     try {
       final date = DateTime.parse(isoDate);
-      final months = [
+      const months = [
         'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
       ];

@@ -250,7 +250,7 @@ class MealDetailPage extends StatelessWidget {
                   ),
 
                   // ── Wellness Score ──
-                  if (_wellnessScore != 0 || _wellnessBreakdown != null) ...[
+                  if (_wellnessBreakdown != null) ...[
                     const SizedBox(height: 16),
                     _wellnessCard(dk, cardBg, bdr, txt, sub),
                   ],
