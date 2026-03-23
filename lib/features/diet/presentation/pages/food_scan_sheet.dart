@@ -183,6 +183,15 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
 
     // Build all meals first, then log as single batch (1 reload instead of N)
     final imageUrlFromApi = _result!.imageUrl;
+    final wellness = _result!.mealWellness;
+    final wellnessBreakdown = wellness != null
+        ? jsonEncode({
+            'label': wellness.label,
+            'per_item': wellness.perItem.map((i) => {'name': i.name, 'score': i.score}).toList(),
+            'positive': wellness.positiveFactors.map((f) => {'label': f.label, 'points': f.points, 'reason': f.reason}).toList(),
+            'negative': wellness.negativeFactors.map((f) => {'label': f.label, 'points': f.points, 'reason': f.reason}).toList(),
+          })
+        : null;
     final meals = _result!.items.map((item) => MealLog(
           name: item.name,
           calories: item.calories * _servings,
@@ -218,6 +227,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                     'detail': c.detail,
                   }).toList())
               : null,
+          wellnessScore: wellness?.overallScore ?? 0,
+          wellnessBreakdownJson: wellnessBreakdown,
           mealType: mealType,
           timestamp: now,
           imagePath: imagePath,

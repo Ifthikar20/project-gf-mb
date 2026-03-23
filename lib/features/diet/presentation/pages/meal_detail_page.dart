@@ -21,6 +21,14 @@ class MealDetailPage extends StatelessWidget {
   int get _totalFiber => items.fold(0, (s, m) => s + m.fiberGrams);
   int get _totalSodium => items.fold(0, (s, m) => s + m.sodiumMg);
   int get _totalCaffeine => items.fold(0, (s, m) => s + m.caffeineMg);
+  int get _wellnessScore => _p.safeWellnessScore;
+
+  Map<String, dynamic>? get _wellnessBreakdown {
+    final json = _p.wellnessBreakdownJson;
+    if (json == null) return null;
+    try { return Map<String, dynamic>.from(jsonDecode(json) as Map); }
+    catch (_) { return null; }
+  }
 
   bool get _hasLocalImage =>
       _p.imagePath != null && File(_p.imagePath!).existsSync();
@@ -241,6 +249,12 @@ class MealDetailPage extends StatelessWidget {
                     ],
                   ),
 
+                  // ── Wellness Score ──
+                  if (_wellnessScore != 0 || _wellnessBreakdown != null) ...[
+                    const SizedBox(height: 16),
+                    _wellnessCard(dk, cardBg, bdr, txt, sub),
+                  ],
+
                   // ── Items ──
                   if (items.length > 1) ...[
                     const SizedBox(height: 24),
@@ -427,6 +441,146 @@ class MealDetailPage extends StatelessWidget {
             fontSize: 18, fontWeight: FontWeight.w700, color: color));
   }
 
+  Widget _wellnessCard(bool dk, Color cardBg, Color bdr, Color txt, Color sub) {
+    final score = _wellnessScore;
+    final bd = _wellnessBreakdown;
+    final label = bd?['label'] as String? ?? (score > 0 ? 'Good' : score < -20 ? 'Poor' : 'Okay');
+
+    // Score color
+    final Color accent;
+    final Color bgColor;
+    if (score >= 10) {
+      accent = const Color(0xFF22C55E);
+      bgColor = dk ? const Color(0xFF0D1F12) : const Color(0xFFF0FDF4);
+    } else if (score >= -10) {
+      accent = const Color(0xFFF59E0B);
+      bgColor = dk ? const Color(0xFF1C1A0E) : const Color(0xFFFFFBEB);
+    } else {
+      accent = const Color(0xFFEF4444);
+      bgColor = dk ? const Color(0xFF1C1111) : const Color(0xFFFEF2F2);
+    }
+
+    final perItem = (bd?['per_item'] as List<dynamic>?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+    final positive = (bd?['positive'] as List<dynamic>?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+    final negative = (bd?['negative'] as List<dynamic>?)
+        ?.map((e) => Map<String, dynamic>.from(e as Map))
+        .toList() ?? [];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: score badge + label
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  score > 0 ? '+$score' : '$score',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Wellness Impact',
+                      style: GoogleFonts.inter(
+                          fontSize: 15, fontWeight: FontWeight.w700, color: txt)),
+                  Text(label,
+                      style: GoogleFonts.inter(fontSize: 13, color: accent, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ],
+          ),
+
+          // Per-item scores
+          if (perItem.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            ...perItem.map((item) {
+              final s = item['score'] as int? ?? 0;
+              final c = s >= 0 ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(item['name'] as String? ?? '',
+                          style: GoogleFonts.inter(fontSize: 13, color: txt)),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: c.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        s >= 0 ? '+$s' : '$s',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: c),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+
+          // Positive factors
+          if (positive.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...positive.map((f) => _factorRow(f, true, dk)),
+          ],
+
+          // Negative factors
+          if (negative.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            ...negative.map((f) => _factorRow(f, false, dk)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _factorRow(Map<String, dynamic> f, bool isPositive, bool dk) {
+    final pts = f['points'] as int? ?? 0;
+    final c = isPositive ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(isPositive ? Icons.add_circle_rounded : Icons.remove_circle_rounded,
+              size: 14, color: c),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(f['label'] as String? ?? '',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500,
+                    color: dk ? Colors.white70 : Colors.black54)),
+          ),
+          Text(pts > 0 ? '+$pts' : '$pts',
+              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: c)),
+        ],
+      ),
+    );
+  }
+
   Widget _itemTile(
       MealLog m, Color cardBg, Color bdr, Color txt, Color sub) {
     return Container(
@@ -505,68 +659,41 @@ class MealDetailPage extends StatelessWidget {
       const Color(0xFF60A5FA),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.4,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
-      itemCount: benefits.length,
-      itemBuilder: (_, i) {
-        final b = benefits[i];
+    return Column(
+      children: benefits.asMap().entries.map((entry) {
+        final i = entry.key;
+        final b = entry.value;
         final c = colors[i % colors.length];
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: dk ? const Color(0xFF161616) : Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: c.withValues(alpha: 0.2)),
-            boxShadow: [
-              BoxShadow(
-                color: c.withValues(alpha: dk ? 0.08 : 0.05),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: c.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  _benefitIcon(b['icon'] as String? ?? ''),
-                  color: c,
-                  size: 18,
+              Icon(_benefitIcon(b['icon'] as String? ?? ''), size: 16, color: c),
+              const SizedBox(width: 8),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: b['title'] as String? ?? '',
+                        style: GoogleFonts.inter(
+                            fontSize: 13, fontWeight: FontWeight.w600, color: txt),
+                      ),
+                      if ((b['detail'] as String?)?.isNotEmpty == true) ...[
+                        TextSpan(
+                          text: ' — ${b['detail']}',
+                          style: GoogleFonts.inter(fontSize: 13, color: sub),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              const Spacer(),
-              Text(b['title'] as String? ?? '',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: txt,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 2),
-              Text(b['detail'] as String? ?? '',
-                  style: GoogleFonts.inter(
-                      fontSize: 11, color: sub, height: 1.25),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
             ],
           ),
         );
-      },
+      }).toList(),
     );
   }
 

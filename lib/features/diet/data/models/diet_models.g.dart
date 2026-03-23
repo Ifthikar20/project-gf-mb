@@ -37,13 +37,15 @@ class MealLogAdapter extends TypeAdapter<MealLog> {
       imageUrl: fields[17] as String?,
       benefitsJson: fields[18] as String?,
       calorieBurnJson: fields[19] as String?,
+      wellnessScore: fields[20] == null ? 0 : fields[20] as int?,
+      wellnessBreakdownJson: fields[21] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MealLog obj) {
     writer
-      ..writeByte(20)
+      ..writeByte(22)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -83,7 +85,11 @@ class MealLogAdapter extends TypeAdapter<MealLog> {
       ..writeByte(18)
       ..write(obj.benefitsJson)
       ..writeByte(19)
-      ..write(obj.calorieBurnJson);
+      ..write(obj.calorieBurnJson)
+      ..writeByte(20)
+      ..write(obj.wellnessScore)
+      ..writeByte(21)
+      ..write(obj.wellnessBreakdownJson);
   }
 
   @override

@@ -107,6 +107,12 @@ class MealLog extends HiveObject {
   @HiveField(19)
   final String? calorieBurnJson; // JSON-encoded calorie burn array
 
+  @HiveField(20, defaultValue: 0)
+  final int? wellnessScore; // -100 to +100
+
+  @HiveField(21)
+  final String? wellnessBreakdownJson; // JSON-encoded wellness factors
+
   MealLog({
     required this.name,
     required this.calories,
@@ -128,12 +134,15 @@ class MealLog extends HiveObject {
     this.imageUrl,
     this.benefitsJson,
     this.calorieBurnJson,
+    this.wellnessScore = 0,
+    this.wellnessBreakdownJson,
   });
 
   bool get isLiquidOrBeverage => (itemType ?? 'solid') == 'liquid' || (itemType ?? 'solid') == 'beverage';
   bool get isBeverage => (itemType ?? 'solid') == 'beverage';
   bool get hasCaffeine => caffeineMg > 0;
   String get safeItemType => itemType ?? 'solid';
+  int get safeWellnessScore => wellnessScore ?? 0;
 
   /// Check if this meal was logged today
   bool get isToday {

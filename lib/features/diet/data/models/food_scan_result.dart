@@ -8,6 +8,7 @@ class FoodScanResult {
   final String? scanId; // UUID from backend (for audit trail)
   final String? mealName; // Display name: "Burger", "Chicken Salad", etc.
   final String? imageUrl; // S3 pre-signed URL of the captured food image
+  final MealWellness? mealWellness; // Wellness scoring from backend
 
   const FoodScanResult({
     required this.items,
@@ -16,6 +17,7 @@ class FoodScanResult {
     this.scanId,
     this.mealName,
     this.imageUrl,
+    this.mealWellness,
   });
 
   double get totalProtein =>
@@ -39,6 +41,9 @@ class FoodScanResult {
       scanId: json['scan_id'] as String?,
       mealName: json['meal_name'] as String?,
       imageUrl: json['image_url'] as String?,
+      mealWellness: json['meal_wellness'] != null
+          ? MealWellness.fromJson(json['meal_wellness'] as Map<String, dynamic>)
+          : null,
     );
   }
 }
@@ -195,6 +200,82 @@ class CalorieBurn {
       icon: json['icon'] as String? ?? 'walking',
       steps: (json['steps'] as num?)?.toInt(),
       detail: json['detail'] as String? ?? '',
+    );
+  }
+}
+
+/// Wellness scoring for an entire meal.
+class MealWellness {
+  final int overallScore; // -100 to +100
+  final String label; // 'Excellent', 'Good', 'Okay', 'Poor'
+  final List<ItemWellnessScore> perItem; // Per-item scores
+  final List<WellnessFactor> positiveFactors; // What helped
+  final List<WellnessFactor> negativeFactors; // What hurt
+
+  const MealWellness({
+    required this.overallScore,
+    required this.label,
+    this.perItem = const [],
+    this.positiveFactors = const [],
+    this.negativeFactors = const [],
+  });
+
+  bool get isPositive => overallScore > 0;
+  bool get isNegative => overallScore < 0;
+  bool get isNeutral => overallScore == 0;
+
+  factory MealWellness.fromJson(Map<String, dynamic> json) {
+    return MealWellness(
+      overallScore: (json['overall_score'] as num?)?.toInt() ?? 0,
+      label: json['label'] as String? ?? 'Unknown',
+      perItem: (json['per_item'] as List<dynamic>?)
+              ?.map((e) => ItemWellnessScore.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      positiveFactors: (json['positive_factors'] as List<dynamic>?)
+              ?.map((e) => WellnessFactor.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      negativeFactors: (json['negative_factors'] as List<dynamic>?)
+              ?.map((e) => WellnessFactor.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+/// Per-item wellness score.
+class ItemWellnessScore {
+  final String name;
+  final int score;
+
+  const ItemWellnessScore({required this.name, required this.score});
+
+  factory ItemWellnessScore.fromJson(Map<String, dynamic> json) {
+    return ItemWellnessScore(
+      name: json['name'] as String? ?? '',
+      score: (json['score'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// A single factor that influenced the wellness score.
+class WellnessFactor {
+  final String label; // "High Protein", "Excess Sugar"
+  final int points; // +12 or -20
+  final String reason; // "Supports muscle recovery"
+
+  const WellnessFactor({
+    required this.label,
+    required this.points,
+    required this.reason,
+  });
+
+  factory WellnessFactor.fromJson(Map<String, dynamic> json) {
+    return WellnessFactor(
+      label: json['label'] as String? ?? '',
+      points: (json['points'] as num?)?.toInt() ?? 0,
+      reason: json['reason'] as String? ?? '',
     );
   }
 }
