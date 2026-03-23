@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/diet_models.dart';
+import '../pages/meal_detail_page.dart';
 
 /// Expandable meal card that shows a grouped scan as one card.
 /// Collapsed: photo + meal name + total calories + macro badges.
@@ -46,8 +47,10 @@ class _MealGroupCardState extends State<MealGroupCard>
     return '${_primary.mealType.label} · ${widget.items.length} items';
   }
 
-  bool get _hasImage =>
+  bool get _hasLocalImage =>
       _primary.imagePath != null && File(_primary.imagePath!).existsSync();
+  bool get _hasRemoteImage => _primary.imageUrl != null;
+  bool get _hasImage => _hasLocalImage || _hasRemoteImage;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +60,14 @@ class _MealGroupCardState extends State<MealGroupCard>
     final isSingle = widget.items.length == 1;
 
     return GestureDetector(
-      onTap: isSingle ? null : () => setState(() => _expanded = !_expanded),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MealDetailPage(items: widget.items),
+          ),
+        );
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -82,11 +92,17 @@ class _MealGroupCardState extends State<MealGroupCard>
                     child: SizedBox(
                       width: 52,
                       height: 52,
-                      child: _hasImage
+                      child: _hasLocalImage
                           ? Image.file(File(_primary.imagePath!),
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
-                                  _emojiPlaceholder(isDark))
+                                  _hasRemoteImage
+                                      ? Image.network(_primary.imageUrl!, fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark))
+                                      : _emojiPlaceholder(isDark))
+                          : _hasRemoteImage
+                              ? Image.network(_primary.imageUrl!, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark))
                           : _emojiPlaceholder(isDark),
                     ),
                   ),

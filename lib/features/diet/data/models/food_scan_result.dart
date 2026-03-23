@@ -7,6 +7,7 @@ class FoodScanResult {
   final String? mealType; // breakfast, lunch, dinner, snack
   final String? scanId; // UUID from backend (for audit trail)
   final String? mealName; // Display name: "Burger", "Chicken Salad", etc.
+  final String? imageUrl; // S3 pre-signed URL of the captured food image
 
   const FoodScanResult({
     required this.items,
@@ -14,6 +15,7 @@ class FoodScanResult {
     this.mealType,
     this.scanId,
     this.mealName,
+    this.imageUrl,
   });
 
   double get totalProtein =>
@@ -36,6 +38,7 @@ class FoodScanResult {
       mealType: json['meal_type'] as String?,
       scanId: json['scan_id'] as String?,
       mealName: json['meal_name'] as String?,
+      imageUrl: json['image_url'] as String?,
     );
   }
 }
@@ -55,6 +58,8 @@ class DetectedFoodItem {
   final String type; // 'solid', 'liquid', 'beverage'
   final int? liquidVolumeMl; // estimated ml for liquids/beverages
   final List<FoodWarning> warnings;
+  final List<FoodBenefit> benefits;
+  final List<CalorieBurn> calorieBurn;
 
   const DetectedFoodItem({
     required this.name,
@@ -71,6 +76,8 @@ class DetectedFoodItem {
     this.type = 'solid',
     this.liquidVolumeMl,
     this.warnings = const [],
+    this.benefits = const [],
+    this.calorieBurn = const [],
   });
 
   bool get isLiquid => type == 'liquid';
@@ -78,6 +85,8 @@ class DetectedFoodItem {
   bool get isLiquidOrBeverage => type == 'liquid' || type == 'beverage';
   bool get hasCaffeine => caffeineMg > 0;
   bool get hasWarnings => warnings.isNotEmpty;
+  bool get hasBenefits => benefits.isNotEmpty;
+  bool get hasCalorieBurn => calorieBurn.isNotEmpty;
 
   /// Display string for volume: "350 ml" or null for solids
   String? get volumeDisplay =>
@@ -100,6 +109,14 @@ class DetectedFoodItem {
       liquidVolumeMl: (json['liquid_volume_ml'] as num?)?.toInt(),
       warnings: (json['warnings'] as List<dynamic>?)
               ?.map((w) => FoodWarning.fromJson(w as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      benefits: (json['benefits'] as List<dynamic>?)
+              ?.map((b) => FoodBenefit.fromJson(b as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      calorieBurn: (json['calorie_burn'] as List<dynamic>?)
+              ?.map((c) => CalorieBurn.fromJson(c as Map<String, dynamic>))
               .toList() ??
           const [],
     );
@@ -129,6 +146,54 @@ class FoodWarning {
       type: json['type'] as String? ?? 'unknown',
       severity: json['severity'] as String? ?? 'low',
       label: json['label'] as String? ?? '',
+      detail: json['detail'] as String? ?? '',
+    );
+  }
+}
+
+/// Nutritional benefit of a food item.
+class FoodBenefit {
+  final String icon; // protein, fiber, vitamins, antioxidants, etc.
+  final String title; // "Rich in Calcium"
+  final String detail; // Explanation
+
+  const FoodBenefit({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  factory FoodBenefit.fromJson(Map<String, dynamic> json) {
+    return FoodBenefit(
+      icon: json['icon'] as String? ?? 'vitamins',
+      title: json['title'] as String? ?? '',
+      detail: json['detail'] as String? ?? '',
+    );
+  }
+}
+
+/// Calorie burn suggestion for a food item.
+class CalorieBurn {
+  final String activity; // "Walking", "Running", "Cycling"
+  final String duration; // "90 minutes"
+  final String icon; // walking, running, cycling, etc.
+  final int? steps; // step count for walking/running
+  final String detail; // How this exercise burns calories
+
+  const CalorieBurn({
+    required this.activity,
+    required this.duration,
+    required this.icon,
+    this.steps,
+    required this.detail,
+  });
+
+  factory CalorieBurn.fromJson(Map<String, dynamic> json) {
+    return CalorieBurn(
+      activity: json['activity'] as String? ?? '',
+      duration: json['duration'] as String? ?? '',
+      icon: json['icon'] as String? ?? 'walking',
+      steps: (json['steps'] as num?)?.toInt(),
       detail: json['detail'] as String? ?? '',
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
@@ -181,15 +182,46 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     final mealName = _result!.mealName; // e.g. "Burger", "Chicken Salad"
 
     // Build all meals first, then log as single batch (1 reload instead of N)
+    final imageUrlFromApi = _result!.imageUrl;
     final meals = _result!.items.map((item) => MealLog(
           name: item.name,
           calories: item.calories * _servings,
           proteinGrams: (item.proteinG * _servings).round(),
           carbsGrams: (item.carbsG * _servings).round(),
           fatGrams: (item.fatG * _servings).round(),
+          sugarGrams: (item.sugarG * _servings).round(),
+          fiberGrams: (item.fiberG * _servings).round(),
+          sodiumMg: (item.sodiumMg * _servings),
+          caffeineMg: (item.caffeineMg * _servings),
+          itemType: item.type,
+          warningsJson: item.warnings.isNotEmpty
+              ? jsonEncode(item.warnings.map((w) => {
+                    'type': w.type,
+                    'severity': w.severity,
+                    'label': w.label,
+                    'detail': w.detail,
+                  }).toList())
+              : null,
+          benefitsJson: item.benefits.isNotEmpty
+              ? jsonEncode(item.benefits.map((b) => {
+                    'icon': b.icon,
+                    'title': b.title,
+                    'detail': b.detail,
+                  }).toList())
+              : null,
+          calorieBurnJson: item.calorieBurn.isNotEmpty
+              ? jsonEncode(item.calorieBurn.map((c) => {
+                    'activity': c.activity,
+                    'duration': c.duration,
+                    'icon': c.icon,
+                    'steps': c.steps,
+                    'detail': c.detail,
+                  }).toList())
+              : null,
           mealType: mealType,
           timestamp: now,
           imagePath: imagePath,
+          imageUrl: imageUrlFromApi,
           scanId: scanId,
           mealName: mealName,
           notes:

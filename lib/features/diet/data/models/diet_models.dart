@@ -80,6 +80,33 @@ class MealLog extends HiveObject {
   @HiveField(10)
   final String? mealName; // Display name: "Burger", "Chicken Salad"
 
+  @HiveField(11, defaultValue: 0)
+  final int sugarGrams;
+
+  @HiveField(12, defaultValue: 0)
+  final int fiberGrams;
+
+  @HiveField(13, defaultValue: 0)
+  final int sodiumMg;
+
+  @HiveField(14, defaultValue: 0)
+  final int caffeineMg;
+
+  @HiveField(15, defaultValue: 'solid')
+  final String? itemType; // 'solid', 'liquid', 'beverage'
+
+  @HiveField(16)
+  final String? warningsJson; // JSON-encoded warnings array
+
+  @HiveField(17)
+  final String? imageUrl; // S3 pre-signed URL of captured food photo
+
+  @HiveField(18)
+  final String? benefitsJson; // JSON-encoded benefits array
+
+  @HiveField(19)
+  final String? calorieBurnJson; // JSON-encoded calorie burn array
+
   MealLog({
     required this.name,
     required this.calories,
@@ -92,7 +119,21 @@ class MealLog extends HiveObject {
     this.imagePath,
     this.scanId,
     this.mealName,
+    this.sugarGrams = 0,
+    this.fiberGrams = 0,
+    this.sodiumMg = 0,
+    this.caffeineMg = 0,
+    this.itemType = 'solid',
+    this.warningsJson,
+    this.imageUrl,
+    this.benefitsJson,
+    this.calorieBurnJson,
   });
+
+  bool get isLiquidOrBeverage => (itemType ?? 'solid') == 'liquid' || (itemType ?? 'solid') == 'beverage';
+  bool get isBeverage => (itemType ?? 'solid') == 'beverage';
+  bool get hasCaffeine => caffeineMg > 0;
+  String get safeItemType => itemType ?? 'solid';
 
   /// Check if this meal was logged today
   bool get isToday {
