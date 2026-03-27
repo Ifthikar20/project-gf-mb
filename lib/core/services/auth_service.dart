@@ -102,7 +102,7 @@ class AuthService {
     required String fullName,
   }) async {
     debugPrint('\n${'=' * 60}');
-    debugPrint(' [AUTH SERVICE] Registering: $email');
+    debugPrint('[AUTH SERVICE] Register initiated');
     debugPrint('=' * 60);
     
     try {
@@ -145,7 +145,7 @@ class AuthService {
     required String password,
   }) async {
     debugPrint('\n${'=' * 60}');
-    debugPrint(' [AUTH SERVICE] Logging in: $email');
+    debugPrint('[AUTH SERVICE] Login initiated');
     debugPrint('=' * 60);
     
     try {
@@ -261,7 +261,7 @@ class AuthService {
             return null;
           }
           debugPrint(' Server verification failed, using cached user: $e');
-        } catch (e) {
+        } on DioException catch (e) {
           debugPrint(' Server verification failed, using cached user: $e');
         }
         

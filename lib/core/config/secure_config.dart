@@ -3,6 +3,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Secure storage for sensitive data like API keys, tokens, and secrets
 /// Uses platform-specific secure storage (Keychain on iOS, Keystore on Android)
 class SecureConfig {
+  // DEPRECATION NOTICE: Use TokenStorage for all token operations.
+  // SecureConfig is retained only for Hive encryption key management.
+  // Do NOT add new token storage methods here.
+
   static SecureConfig? _instance;
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
