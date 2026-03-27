@@ -103,4 +103,14 @@ class TokenStorage {
     final accessToken = await getAccessToken();
     return accessToken != null && accessToken.isNotEmpty;
   }
+
+  /// Write an arbitrary secure value by key
+  Future<void> write({required String key, required String value}) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  /// Read an arbitrary secure value by key
+  Future<String?> read({required String key}) async {
+    return await _storage.read(key: key);
+  }
 }
