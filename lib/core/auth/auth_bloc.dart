@@ -167,7 +167,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     debugPrint('[AuthBloc] Login event received');
     
     emit(AuthLoading());
-    
+
     try {
       final user = await _authService.login(
         email: event.email,
