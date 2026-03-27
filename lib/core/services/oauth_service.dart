@@ -144,15 +144,24 @@ class OAuthService {
       _pendingState = null;
 
       final uri = Uri.parse(resultUrl);
+      final returnedState = uri.queryParameters['state'];
       final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
-      
+
+      // Validate CSRF state (FIX 6)
+      if (returnedState != _pendingState) {
+        _pendingState = null;
+        onAuthError?.call('OAuth state mismatch — possible CSRF attack');
+        return;
+      }
+      _pendingState = null;
+
       if (error != null) {
         debugPrint(' OAuth error: $error');
         onAuthError?.call(error);
         return;
       }
-      
+
       if (token != null) {
         debugPrint(' OAuth token received');
         await _completeOAuthLogin(token);
@@ -160,6 +169,7 @@ class OAuthService {
         onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
+      _pendingState = null;
       debugPrint(' Google OAuth cancelled or failed: $e');
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');
@@ -202,15 +212,24 @@ class OAuthService {
       _pendingState = null;
 
       final uri = Uri.parse(resultUrl);
+      final returnedState = uri.queryParameters['state'];
       final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
-      
+
+      // Validate CSRF state (FIX 6)
+      if (returnedState != _pendingState) {
+        _pendingState = null;
+        onAuthError?.call('OAuth state mismatch — possible CSRF attack');
+        return;
+      }
+      _pendingState = null;
+
       if (error != null) {
         debugPrint(' OAuth error: $error');
         onAuthError?.call(error);
         return;
       }
-      
+
       if (token != null) {
         debugPrint(' OAuth token received');
         await _completeOAuthLogin(token);
@@ -218,6 +237,7 @@ class OAuthService {
         onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
+      _pendingState = null;
       debugPrint(' Apple OAuth cancelled or failed: $e');
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');

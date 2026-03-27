@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/fitness_profile_model.dart';
 import '../../data/recovery_suggestions.dart';
+import '../../../../core/config/secure_config.dart';
 
 /// Suggestions feed for the home page.
 /// Shows recovery/nutrition/rest suggestions based on the previous workout.
@@ -27,7 +28,10 @@ class _SuggestionsFeedState extends State<SuggestionsFeed> {
 
   Future<void> _loadSuggestions() async {
     try {
-      final box = await Hive.openBox('workout_feedback');
+      final box = await Hive.openBox(
+        'workout_feedback',
+        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+      );
       final category = box.get('last_workout_category') as String?;
       final intensityIdx = box.get('last_workout_intensity') as int?;
       final dateStr = box.get('last_workout_date') as String?;
