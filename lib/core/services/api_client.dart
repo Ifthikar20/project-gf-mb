@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import '../config/environment_config.dart';
 import 'app_logger.dart';
@@ -11,6 +13,10 @@ class ApiClient {
   
   // Store DRF auth token for Authorization header
   String? _accessToken;
+
+  // Token refresh lock — prevents concurrent 401 retries from racing
+  bool _isRefreshing = false;
+  final List<RequestOptions> _pendingRequests = [];
   
   static ApiClient get instance {
     _instance ??= ApiClient._();
@@ -19,10 +25,17 @@ class ApiClient {
   
   ApiClient._() {
     _dio = Dio(_baseOptions);
-    
+
+    // Reject bad/self-signed certificates — no escape hatch
+    (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+      final client = HttpClient();
+      client.badCertificateCallback = (cert, host, port) => false;
+      return client;
+    };
+
     // Add auth interceptor
     _dio.interceptors.add(_authInterceptor);
-    
+
     // Note: AppLogger handles request/response logging in the auth interceptor.
     // No extra LogInterceptor needed — it was duplicating every call.
   }
@@ -81,6 +94,24 @@ class ApiClient {
         debugPrint('🔥 $statusCode $path — server error');
       } else {
         debugPrint('⛔ ${statusCode ?? '?'} $path — $responseData');
+      }
+
+      // Token refresh lock — prevents concurrent 401 responses from racing
+      if (statusCode == 401) {
+        if (_isRefreshing) {
+          // Another refresh is already in flight — queue this request
+          _pendingRequests.add(error.requestOptions);
+          return handler.next(error);
+        }
+        _isRefreshing = true;
+        try {
+          // TODO: Implement token refresh here (call /auth/refresh with refresh token).
+          // On success: update _accessToken, retry _pendingRequests.
+          // On failure: clear token, emit unauthenticated state to AuthBloc.
+        } finally {
+          _isRefreshing = false;
+          _pendingRequests.clear();
+        }
       }
 
       return handler.next(error);
