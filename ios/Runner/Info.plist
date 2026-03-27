@@ -83,13 +83,13 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Great Feel can save your workout sessions to Apple Health so all your fitness data stays in one place.</string>
 
-	<!-- App Transport Security for media streaming -->
+	<!-- App Transport Security -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<false/>
 		<key>NSAllowsArbitraryLoadsForMedia</key>
-		<true/>
+		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>

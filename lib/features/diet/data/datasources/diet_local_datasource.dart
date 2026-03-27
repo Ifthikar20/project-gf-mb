@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/diet_models.dart';
+import '../../../../core/config/secure_config.dart';
 
 /// Local data source for diet/meal logging using Hive
 class DietLocalDataSource {
@@ -9,7 +10,10 @@ class DietLocalDataSource {
 
   Future<Box<MealLog>> get _openBox async {
     if (_box != null && _box!.isOpen) return _box!;
-    _box = await Hive.openBox<MealLog>(_boxName);
+    _box = await Hive.openBox<MealLog>(
+      _boxName,
+      encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+    );
     return _box!;
   }
 

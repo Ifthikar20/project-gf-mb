@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../config/secure_config.dart';
 import '../../features/wellness_goals/data/models/wellness_checkin_model.dart';
 import '../../features/wellness_goals/data/models/fitness_profile_model.dart';
 import '../../features/diet/data/models/diet_models.dart';
@@ -108,7 +109,10 @@ class WellnessContextCollector {
     // ── Check-in ──
     int? mood, energy, sleepQuality;
     try {
-      final box = await Hive.openBox<WellnessCheckInModel>('wellness_checkins');
+      final box = await Hive.openBox<WellnessCheckInModel>(
+        'wellness_checkins',
+        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+      );
       if (box.isNotEmpty) {
         // Get latest check-in
         final entries = box.values.toList()
@@ -125,7 +129,10 @@ class WellnessContextCollector {
     // ── Fitness profile ──
     String? bodyType, fitnessGoal, intensityPref;
     try {
-      final box = await Hive.openBox('fitness_profile');
+      final box = await Hive.openBox(
+        'fitness_profile',
+        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+      );
       final profile = box.get('profile') as FitnessProfileModel?;
       if (profile != null && profile.isSetUp) {
         bodyType = profile.bodyTypeLabel.toLowerCase();
@@ -139,7 +146,10 @@ class WellnessContextCollector {
     // ── Diet ──
     int todayCalories = 0, todayProtein = 0, todayMealCount = 0;
     try {
-      final box = await Hive.openBox<MealLog>('diet_logs');
+      final box = await Hive.openBox<MealLog>(
+        'diet_logs',
+        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+      );
       final todayMeals = box.values.where((m) =>
           m.timestamp.year == today.year &&
           m.timestamp.month == today.month &&
@@ -157,8 +167,10 @@ class WellnessContextCollector {
     bool meditatedToday = false;
     int? lastMeditationMood;
     try {
-      final box =
-          await Hive.openBox<MeditationJournalEntry>('meditation_journal');
+      final box = await Hive.openBox<MeditationJournalEntry>(
+        'meditation_journal',
+        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+      );
       if (box.isNotEmpty) {
         final entries = box.values.toList()
           ..sort((a, b) => b.date.compareTo(a.date));

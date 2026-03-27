@@ -91,6 +91,7 @@ local_config.dart
 
 # Obfuscation debug info (keep for crash symbolication but don't commit)
 /debug-info/
+build/debug-info/
 *.symbols
 *.map.json
 

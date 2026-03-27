@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/goal_model.dart';
+import '../../../../core/config/secure_config.dart';
 
 class GoalsLocalDataSource {
   static const String _boxName = 'goals_box';
@@ -9,7 +10,10 @@ class GoalsLocalDataSource {
   Future<void> _ensureInitialized() async {
     if (!_initialized) {
       if (!Hive.isBoxOpen(_boxName)) {
-        await Hive.openBox<GoalModel>(_boxName);
+        await Hive.openBox<GoalModel>(
+          _boxName,
+          encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+        );
       }
       _initialized = true;
     }
