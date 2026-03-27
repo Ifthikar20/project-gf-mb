@@ -75,7 +75,9 @@ flutter:
   uses-material-design: true
   
   assets:
-    - .env
+    # SECURITY: .env must NOT be listed here — bundling it in the app binary
+    # exposes secrets to anyone who unpacks the IPA/APK. Load it at runtime
+    # via a build-time injection mechanism or a secure backend endpoint.
     - assets/images/
   
   # Uncomment to add custom fonts

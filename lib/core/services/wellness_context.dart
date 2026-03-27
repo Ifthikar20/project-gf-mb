@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../config/secure_config.dart';
@@ -5,6 +6,7 @@ import '../../features/wellness_goals/data/models/wellness_checkin_model.dart';
 import '../../features/wellness_goals/data/models/fitness_profile_model.dart';
 import '../../features/diet/data/models/diet_models.dart';
 import '../../features/meditation/data/models/journal_models.dart';
+import '../config/secure_config.dart';
 
 /// Snapshot of the user's current wellness state — built from local Hive data.
 /// Sent to the AI advisor endpoint or consumed by the local rule engine.
@@ -106,13 +108,15 @@ class WellnessContextCollector {
       'Friday', 'Saturday', 'Sunday'
     ];
 
+    // Obtain the shared encryption key for sensitive Hive boxes (FIX 9)
+    final keyList = await SecureConfig.instance.getEncryptionKey();
+    final cipher = HiveAesCipher(Uint8List.fromList(keyList));
+
     // ── Check-in ──
     int? mood, energy, sleepQuality;
     try {
-      final box = await Hive.openBox<WellnessCheckInModel>(
-        'wellness_checkins',
-        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
-      );
+      final box = await Hive.openBox<WellnessCheckInModel>('wellness_checkins',
+          encryptionCipher: cipher);
       if (box.isNotEmpty) {
         // Get latest check-in
         final entries = box.values.toList()
@@ -146,10 +150,8 @@ class WellnessContextCollector {
     // ── Diet ──
     int todayCalories = 0, todayProtein = 0, todayMealCount = 0;
     try {
-      final box = await Hive.openBox<MealLog>(
-        'diet_logs',
-        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
-      );
+      final box = await Hive.openBox<MealLog>('diet_logs',
+          encryptionCipher: cipher);
       final todayMeals = box.values.where((m) =>
           m.timestamp.year == today.year &&
           m.timestamp.month == today.month &&
@@ -167,10 +169,8 @@ class WellnessContextCollector {
     bool meditatedToday = false;
     int? lastMeditationMood;
     try {
-      final box = await Hive.openBox<MeditationJournalEntry>(
-        'meditation_journal',
-        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
-      );
+      final box = await Hive.openBox<MeditationJournalEntry>('meditation_journal',
+          encryptionCipher: cipher);
       if (box.isNotEmpty) {
         final entries = box.values.toList()
           ..sort((a, b) => b.date.compareTo(a.date));

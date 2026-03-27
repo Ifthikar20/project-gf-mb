@@ -164,19 +164,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    final emailPreview = event.email.length > 3 ? '${event.email.substring(0, 3)}***' : '***';
-    debugPrint('[AUTH BLOC] Login event received');
-    debugPrint('[AUTH BLOC] Email: $emailPreview');
+    debugPrint('[AuthBloc] Login event received');
     
     emit(AuthLoading());
-    
+
     try {
       final user = await _authService.login(
         email: event.email,
         password: event.password,
       );
       
-      debugPrint('[AUTH BLOC] Login successful, checking onboarding...');
+      debugPrint('[AuthBloc] Login successful, checking onboarding...');
       await _emitAuthenticatedOrOnboarding(user, emit);
     } on AuthException catch (e) {
       final friendlyMessage = ErrorMessages.formatAuthError(
@@ -239,7 +237,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       // If check fails, let them through (don't block on optional onboarding)
-      debugPrint('[AUTH BLOC] Onboarding check failed, proceeding');
+      debugPrint('[AuthBloc] Onboarding check failed, proceeding');
       emit(AuthAuthenticated(user));
     }
   }
