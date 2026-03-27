@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/wellness_checkin_model.dart';
+import '../../../../core/config/secure_config.dart';
 
 /// Full-screen daily wellness check-in page.
 /// Asks: mood, energy level, optional notes.
@@ -42,7 +43,10 @@ class _WellnessCheckInPageState extends State<WellnessCheckInPage> {
   }
 
   Future<void> _saveCheckIn() async {
-    final box = await Hive.openBox<WellnessCheckInModel>('wellness_checkins');
+    final box = await Hive.openBox<WellnessCheckInModel>(
+      'wellness_checkins',
+      encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+    );
     final today = DateTime.now();
     final key = '${today.year}-${today.month}-${today.day}';
 

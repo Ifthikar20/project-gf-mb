@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Secure storage for sensitive data like API keys, tokens, and secrets
@@ -6,7 +8,7 @@ class SecureConfig {
   static SecureConfig? _instance;
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
   );
   
   // Storage keys
@@ -115,17 +117,19 @@ class SecureConfig {
   /// Get or generate encryption key for local database
   Future<List<int>> getEncryptionKey() async {
     final storedKey = await _storage.read(key: _keyEncryptionKey);
-    
+
     if (storedKey != null) {
-      // Decode stored key
-      return storedKey.codeUnits;
+      return base64Decode(storedKey);
     }
-    
-    // Generate new key (32 bytes for AES-256)
-    final newKey = List<int>.generate(32, (i) => DateTime.now().microsecondsSinceEpoch % 256);
-    await _storage.write(key: _keyEncryptionKey, value: String.fromCharCodes(newKey));
+
+    // Generate new key (32 bytes for AES-256) using a CSPRNG
+    final newKey = List<int>.generate(32, (_) => Random.secure().nextInt(256));
+    await _storage.write(key: _keyEncryptionKey, value: base64Encode(newKey));
     return newKey;
   }
+
+  /// Static convenience wrapper for use in Hive box openers
+  static Future<List<int>> getHiveEncryptionKey() => instance.getEncryptionKey();
   
   // ============================================
   // Firebase/Push Notifications

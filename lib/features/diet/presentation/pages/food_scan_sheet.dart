@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:image/image.dart' as img;
 import '../../../../core/services/food_scanner_service.dart';
 import '../../data/models/food_scan_result.dart';
 import '../../data/models/diet_models.dart';
@@ -61,6 +62,15 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     }
   }
 
+  Future<File> _stripExifMetadata(File imageFile) async {
+    final bytes = await imageFile.readAsBytes();
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) return imageFile;
+    final stripped = img.encodeJpg(decoded, quality: 90);
+    await imageFile.writeAsBytes(stripped);
+    return imageFile;
+  }
+
   Future<void> _analyzeImage() async {
     if (_capturedImage == null) return;
     setState(() {
@@ -70,7 +80,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     });
 
     try {
-      final bytes = await _capturedImage!.readAsBytes();
+      final strippedFile = await _stripExifMetadata(_capturedImage!);
+      final bytes = await strippedFile.readAsBytes();
       final result = await FoodScannerService.instance.analyzeImage(bytes);
       
       if (mounted) {

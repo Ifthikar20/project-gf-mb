@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/services/api_client.dart';
+import '../../../../core/config/secure_config.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../workouts/presentation/pages/workout_check_page.dart';
 import '../../data/models/wellness_checkin_model.dart';
@@ -49,7 +50,7 @@ class SuggestionBadgeState extends State<SuggestionBadge> {
                   ?.map((e) => Map<String, dynamic>.from(e as Map))
                   .toList() ??
               [];
-          final box = await Hive.openBox('smart_suggestions');
+          final box = await Hive.openBox('smart_suggestions', encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()));
           await box.put('cached', jsonEncode(list));
           if (mounted) setState(() { _suggestions = list; _loading = false; });
           return;
@@ -64,7 +65,7 @@ class SuggestionBadgeState extends State<SuggestionBadge> {
 
   Future<void> _loadCached() async {
     try {
-      final box = await Hive.openBox('smart_suggestions');
+      final box = await Hive.openBox('smart_suggestions', encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()));
       final raw = box.get('cached') as String?;
       if (raw != null) {
         final list = (jsonDecode(raw) as List)
@@ -87,10 +88,10 @@ class SuggestionBadgeState extends State<SuggestionBadge> {
     final h = now.hour;
 
     try {
-      final box = await Hive.openBox('smart_suggestions');
+      final box = await Hive.openBox('smart_suggestions', encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()));
 
       // Check-in
-      final ci = await Hive.openBox<WellnessCheckInModel>('wellness_checkins');
+      final ci = await Hive.openBox<WellnessCheckInModel>('wellness_checkins', encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()));
       if (ci.get(_todayKey) == null) {
         s.add({'id':'daily_checkin','type':'checkin','priority':1,'title':'Check In','icon':'favorite','color':'#F59E0B','action_target':'/checkin','subtitle':'How are you feeling today?','reason':"You haven't checked in today"});
       }
@@ -106,7 +107,7 @@ class SuggestionBadgeState extends State<SuggestionBadge> {
       }
 
       // High HR
-      final fb = await Hive.openBox('workout_feedback');
+      final fb = await Hive.openBox('workout_feedback', encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()));
       if (fb.get('high_heart_rate_today') == true && box.get('calm_breathe_$_todayKey') != true) {
         s.add({'id':'calm_breathe_$_todayKey','type':'breathing','priority':1,'title':'Calm','icon':'air','color':'#EF4444','action_target':'/breathing-exercise','subtitle':'High heart rate detected','reason':'Take a moment to breathe'});
       }
@@ -129,7 +130,7 @@ class SuggestionBadgeState extends State<SuggestionBadge> {
   Future<void> _dismiss(String id) async {
     setState(() => _suggestions.removeWhere((s) => s['id'] == id));
     try {
-      final box = await Hive.openBox('smart_suggestions');
+      final box = await Hive.openBox('smart_suggestions', encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()));
       await box.put(id, true);
       final raw = box.get('cached') as String?;
       if (raw != null) {
