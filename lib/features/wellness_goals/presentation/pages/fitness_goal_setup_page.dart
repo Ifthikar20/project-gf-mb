@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/fitness_profile_model.dart';
+import '../../../../core/config/secure_config.dart';
 import '../../../workouts/presentation/bloc/workout_bloc.dart';
 
 import '../../../workouts/presentation/bloc/workout_state.dart';
@@ -111,7 +112,10 @@ class _FitnessGoalSetupPageState extends State<FitnessGoalSetupPage> {
   }
 
   Future<void> _save() async {
-    final box = await Hive.openBox<FitnessProfileModel>('fitness_profile');
+    final box = await Hive.openBox<FitnessProfileModel>(
+      'fitness_profile',
+      encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+    );
     final profile = FitnessProfileModel(
       bodyTypeIndex: _bodyType,
       fitnessGoalIndex: _fitnessGoal,

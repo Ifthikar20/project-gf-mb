@@ -158,8 +158,12 @@ class AppRouter {
         GoRoute(
           path: resetPassword,
           builder: (context, state) {
-            final email = state.uri.queryParameters['email'] ?? '';
-            return ResetPasswordPage(email: Uri.decodeComponent(email));
+            final email = Uri.decodeComponent(state.uri.queryParameters['email'] ?? '');
+            final emailRegex = RegExp(r'^[\w\-\.]+@[\w\-]+\.[a-z]{2,}$');
+            if (!emailRegex.hasMatch(email)) {
+              return const LandingPage();
+            }
+            return ResetPasswordPage(email: email);
           },
         ),
 
@@ -204,6 +208,15 @@ class AppRouter {
           path: videoPlayer,
           pageBuilder: (context, state) {
             final videoId = state.uri.queryParameters['id'] ?? '';
+            if (videoId.isEmpty || int.tryParse(videoId) == null) {
+              return CustomTransitionPage(
+                key: state.pageKey,
+                child: const LandingPage(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+                transitionDuration: const Duration(milliseconds: 120),
+              );
+            }
             return CustomTransitionPage(
               key: state.pageKey,
               child: VideoPlayerPage(videoId: videoId),
@@ -222,6 +235,9 @@ class AppRouter {
           path: meditationCategory,
           builder: (context, state) {
             final categoryId = state.uri.queryParameters['id'] ?? '';
+            if (categoryId.isEmpty || int.tryParse(categoryId) == null) {
+              return const LandingPage();
+            }
             final categoryName = state.uri.queryParameters['name'] ?? 'Meditation';
             return MeditationCategoryPage(
               categoryId: categoryId,
@@ -233,6 +249,9 @@ class AppRouter {
           path: audioPlayer,
           builder: (context, state) {
             final audioId = state.uri.queryParameters['id'] ?? '';
+            if (audioId.isEmpty || int.tryParse(audioId) == null) {
+              return const LandingPage();
+            }
             return AudioPlayerPage(audioId: audioId);
           },
         ),
@@ -248,12 +267,18 @@ class AppRouter {
           path: speakerProfile,
           builder: (context, state) {
             final speakerId = state.uri.queryParameters['id'] ?? '';
+            if (speakerId.isEmpty || int.tryParse(speakerId) == null) {
+              return const LandingPage();
+            }
             final speakerName = state.uri.queryParameters['name'] ?? 'Speaker';
-            final speakerImageUrl = state.uri.queryParameters['imageUrl'] ?? '';
+            final rawImageUrl = Uri.decodeComponent(state.uri.queryParameters['imageUrl'] ?? '');
+            final speakerImageUrl = rawImageUrl.isNotEmpty && !rawImageUrl.startsWith('https://')
+                ? ''
+                : rawImageUrl;
             return SpeakerPage(
               speakerId: speakerId,
               speakerName: Uri.decodeComponent(speakerName),
-              speakerImageUrl: Uri.decodeComponent(speakerImageUrl),
+              speakerImageUrl: speakerImageUrl,
             );
           },
         ),
@@ -269,6 +294,9 @@ class AppRouter {
           path: programEnroll,
           builder: (context, state) {
             final seriesId = state.uri.queryParameters['seriesId'] ?? '';
+            if (seriesId.isEmpty || int.tryParse(seriesId) == null) {
+              return const LandingPage();
+            }
             return ProgramEnrollPage(seriesId: seriesId);
           },
         ),

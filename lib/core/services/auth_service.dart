@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'api_client.dart';
+import 'analytics_service.dart';
+import 'recently_viewed_service.dart';
 import 'token_storage.dart';
 import 'streaming_service.dart';
 
@@ -101,10 +103,8 @@ class AuthService {
     required String password,
     required String fullName,
   }) async {
-    debugPrint('\n${'=' * 60}');
     debugPrint('[AUTH SERVICE] Register initiated');
-    debugPrint('=' * 60);
-    
+
     try {
       final response = await _api.post('/auth/register', data: {
         'email': email,
@@ -144,10 +144,8 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    debugPrint('\n${'=' * 60}');
     debugPrint('[AUTH SERVICE] Login initiated');
-    debugPrint('=' * 60);
-    
+
     try {
       final response = await _api.post('/auth/login', data: {
         'email': email,
@@ -190,7 +188,11 @@ class AuthService {
       _currentUser = null;
       _api.setAccessToken(null);
       await _tokenStorage.clearAll();
-      
+
+      // Clear cross-account data to prevent leaking data between users
+      await RecentlyViewedService.instance.clearAll();
+      AnalyticsService.instance.setUserId(null);
+
       // Clear streaming URL cache
       try {
         StreamingService.instance.clearCache();
@@ -249,6 +251,11 @@ class AuthService {
           final user = await getCurrentUser();
           if (user != null) {
             debugPrint(' Session verified with server');
+            // Record successful verification time for offline grace period
+            await _tokenStorage.write(
+              key: 'last_server_verified_at',
+              value: DateTime.now().toIso8601String(),
+            );
             return user;
           }
         } on DioException catch (e) {
@@ -260,13 +267,19 @@ class AuthService {
             await _tokenStorage.clearAll();
             return null;
           }
-          debugPrint(' Server verification failed, using cached user: $e');
-        } on DioException catch (e) {
-          debugPrint(' Server verification failed, using cached user: $e');
+          // Network error — allow offline access with 24h grace period
+          final lastVerified = await _tokenStorage.read(key: 'last_server_verified_at');
+          if (lastVerified != null) {
+            final lastVerifiedTime = DateTime.parse(lastVerified);
+            final hoursSince = DateTime.now().difference(lastVerifiedTime).inHours;
+            if (hoursSince > 24) {
+              debugPrint('[Auth] Offline grace period expired — forcing re-authentication');
+              await logout();
+              return null;
+            }
+          }
+          debugPrint('[Auth] Server verification failed (network), using cached session');
         }
-        
-        // Return cached user if server check failed (offline mode)
-        return _currentUser;
       }
       
       return null;

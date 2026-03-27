@@ -1,7 +1,16 @@
+import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+// DEPRECATION NOTICE: This class is retained ONLY for Hive encryption key management.
+// All token read/write operations must go through TokenStorage instead.
+// Do NOT add new token operations here — use TokenStorage for all auth tokens.
 
 /// Secure storage for sensitive data like API keys, tokens, and secrets
 /// Uses platform-specific secure storage (Keychain on iOS, Keystore on Android)
+@Deprecated(
+  'Use TokenStorage for all token operations. '
+  'SecureConfig is retained only for Hive encryption key management.',
+)
 class SecureConfig {
   // DEPRECATION NOTICE: Use TokenStorage for all token operations.
   // SecureConfig is retained only for Hive encryption key management.
@@ -10,7 +19,7 @@ class SecureConfig {
   static SecureConfig? _instance;
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
   );
   
   // Storage keys
@@ -33,15 +42,11 @@ class SecureConfig {
   // API Key Management
   // ============================================
   
-  /// Get API key (set during build via environment)
+  /// Get API key from secure storage only.
+  // NOTE: No compile-time fallback. API key must be provisioned via secure server-authenticated
+  // flow on first launch. String.fromEnvironment embeds secrets into the binary — never use it.
   Future<String?> getApiKey() async {
-    // First try to get from secure storage (for dynamic updates)
-    final storedKey = await _storage.read(key: _keyApiKey);
-    if (storedKey != null) return storedKey;
-    
-    // Fall back to build-time environment variable
-    const buildKey = String.fromEnvironment('API_KEY');
-    return buildKey.isNotEmpty ? buildKey : null;
+    return await _storage.read(key: _keyApiKey);
   }
   
   /// Set API key (for dynamic updates from backend)
@@ -119,17 +124,20 @@ class SecureConfig {
   /// Get or generate encryption key for local database
   Future<List<int>> getEncryptionKey() async {
     final storedKey = await _storage.read(key: _keyEncryptionKey);
-    
+
     if (storedKey != null) {
-      // Decode stored key
-      return storedKey.codeUnits;
+      return base64Decode(storedKey);
     }
     
-    // Generate new key (32 bytes for AES-256)
-    final newKey = List<int>.generate(32, (i) => DateTime.now().microsecondsSinceEpoch % 256);
+    // Generate new key (32 bytes for AES-256) using cryptographically secure RNG
+    final rng = Random.secure();
+    final newKey = List<int>.generate(32, (_) => rng.nextInt(256));
     await _storage.write(key: _keyEncryptionKey, value: String.fromCharCodes(newKey));
     return newKey;
   }
+
+  /// Static convenience wrapper for use in Hive box openers
+  static Future<List<int>> getHiveEncryptionKey() => instance.getEncryptionKey();
   
   // ============================================
   // Firebase/Push Notifications
