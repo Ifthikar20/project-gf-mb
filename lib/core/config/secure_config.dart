@@ -12,6 +12,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
   'SecureConfig is retained only for Hive encryption key management.',
 )
 class SecureConfig {
+  // DEPRECATION NOTICE: Use TokenStorage for all token operations.
+  // SecureConfig is retained only for Hive encryption key management.
+  // Do NOT add new token storage methods here.
+
   static SecureConfig? _instance;
   static const FlutterSecureStorage _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
