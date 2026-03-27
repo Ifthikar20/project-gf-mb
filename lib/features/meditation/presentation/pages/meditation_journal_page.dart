@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -48,10 +49,10 @@ class _MeditationJournalPageState extends State<MeditationJournalPage> {
     );
 
     try {
-      final box = await Hive.openBox<MeditationJournalEntry>(
-        'meditation_journal',
-        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
-      );
+      final keyList = await SecureConfig.instance.getEncryptionKey();
+      final cipher = HiveAesCipher(Uint8List.fromList(keyList));
+      final box = await Hive.openBox<MeditationJournalEntry>('meditation_journal',
+          encryptionCipher: cipher);
       await box.add(entry);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

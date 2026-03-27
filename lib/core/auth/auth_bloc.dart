@@ -164,9 +164,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    debugPrint('[AUTH BLOC] Login event received');
-    debugPrint('Email: ${event.email.length > 3 ? event.email.substring(0, 3) : event.email.substring(0, 1)}***');
-
+    debugPrint('[AuthBloc] Login event received');
+    
     emit(AuthLoading());
 
     try {
@@ -174,8 +173,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
       );
-
-      debugPrint('[AUTH BLOC] Login successful, checking onboarding...');
+      
+      debugPrint('[AuthBloc] Login successful, checking onboarding...');
       await _emitAuthenticatedOrOnboarding(user, emit);
     } on AuthException catch (e) {
       final friendlyMessage = ErrorMessages.formatAuthError(
@@ -237,10 +236,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthNeedsOnboarding(user));
       }
     } catch (e) {
-      // Onboarding check failed — surface the error rather than silently bypassing
-      // the check, which could allow unintended access if the failure is induced.
-      debugPrint('⚠ [AUTH BLOC] Onboarding check failed: $e');
-      emit(AuthError('Unable to verify account setup. Please try again.'));
+      // If check fails, let them through (don't block on optional onboarding)
+      debugPrint('[AuthBloc] Onboarding check failed, proceeding');
+      emit(AuthAuthenticated(user));
     }
   }
 }

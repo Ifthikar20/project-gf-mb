@@ -21,7 +21,7 @@ class OAuthService {
   Function(User user)? onAuthSuccess;
   Function(String error)? onAuthError;
 
-  // CSRF protection — stores the state value sent with the most recent OAuth request
+  // CSRF protection: pending state nonce for CSRF validation
   String? _pendingState;
   
   static OAuthService get instance {
@@ -115,13 +115,14 @@ class OAuthService {
   Future<void> signInWithGoogle() async {
     const callbackScheme = 'betterbliss';
 
-    // Generate CSRF state token (FIX 6)
-    final state = base64Url.encode(List.generate(16, (_) => Random.secure().nextInt(256)));
+    // Generate state nonce for CSRF protection
+    final stateBytes = List<int>.generate(16, (_) => Random.secure().nextInt(256));
+    final state = base64Url.encode(stateBytes);
     _pendingState = state;
 
     final authUrl = '$_baseUrl/auth/google?redirect=$callbackScheme://auth/callback&prompt=select_account&state=$state';
 
-    debugPrint(' Launching Google OAuth');
+    debugPrint('[OAuth] Launching Google OAuth');
 
     try {
       final resultUrl = await FlutterWebAuth2.authenticate(
@@ -130,9 +131,17 @@ class OAuthService {
         options: const FlutterWebAuth2Options(
           preferEphemeral: false,
         ),
-      ).timeout(const Duration(minutes: 5)); // FIX 7
+      );
 
-      debugPrint(' OAuth callback received');
+      debugPrint('[OAuth] Callback received successfully');
+
+      // Validate state nonce to prevent CSRF
+      final callbackState = Uri.parse(resultUrl).queryParameters['state'];
+      if (callbackState != _pendingState) {
+        _pendingState = null;
+        throw Exception('OAuth state mismatch — possible CSRF attack');
+      }
+      _pendingState = null;
 
       final uri = Uri.parse(resultUrl);
       final returnedState = uri.queryParameters['state'];
@@ -174,13 +183,14 @@ class OAuthService {
   Future<void> signInWithApple() async {
     const callbackScheme = 'betterbliss';
 
-    // Generate CSRF state token (FIX 6)
-    final state = base64Url.encode(List.generate(16, (_) => Random.secure().nextInt(256)));
+    // Generate state nonce for CSRF protection
+    final stateBytes = List<int>.generate(16, (_) => Random.secure().nextInt(256));
+    final state = base64Url.encode(stateBytes);
     _pendingState = state;
 
     final authUrl = '$_baseUrl/auth/apple?redirect=$callbackScheme://auth/callback&state=$state';
 
-    debugPrint(' Launching Apple OAuth');
+    debugPrint('[OAuth] Launching Apple OAuth');
 
     try {
       final resultUrl = await FlutterWebAuth2.authenticate(
@@ -189,9 +199,17 @@ class OAuthService {
         options: const FlutterWebAuth2Options(
           preferEphemeral: false,
         ),
-      ).timeout(const Duration(minutes: 5)); // FIX 7
+      );
 
-      debugPrint(' OAuth callback received');
+      debugPrint('[OAuth] Callback received successfully');
+
+      // Validate state nonce to prevent CSRF
+      final callbackState = Uri.parse(resultUrl).queryParameters['state'];
+      if (callbackState != _pendingState) {
+        _pendingState = null;
+        throw Exception('OAuth state mismatch — possible CSRF attack');
+      }
+      _pendingState = null;
 
       final uri = Uri.parse(resultUrl);
       final returnedState = uri.queryParameters['state'];
