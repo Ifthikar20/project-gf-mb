@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -300,13 +301,11 @@ class AnalyticsService {
     }
     
     try {
-      // SECURITY NOTE: GA4 Measurement Protocol requires api_secret as a URL query
-      // parameter and does not support request headers as an alternative. To keep this
-      // secret out of client-side network logs, proxy these requests through your own
-      // backend server (e.g. POST /api/analytics/event) which appends api_secret
-      // server-side before forwarding to GA4.
+      // SECURITY: GA4 Measurement Protocol requires api_secret as a query param by spec.
+      // TODO: Proxy all analytics calls through backend (/api/analytics/event) to prevent
+      // api_secret exposure in URLs. This is a known GA4 limitation — track in security backlog.
       final url = Uri.parse('$_baseUrl?measurement_id=$_measurementId&api_secret=$_apiSecret');
-      
+
       final body = {
         'client_id': _clientId,
         if (_userId != null) 'user_id': _userId,
@@ -326,13 +325,15 @@ class AnalyticsService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
-      );
-      
+      ).timeout(const Duration(seconds: 8));
+
       if (response.statusCode == 204 || response.statusCode == 200) {
         debugPrint(' GA4: $eventName sent ');
       } else {
         debugPrint(' GA4 error ${response.statusCode}: ${response.body}');
       }
+    } on TimeoutException {
+      debugPrint('[Analytics] GA4 event send timed out');
     } catch (e) {
       debugPrint(' GA4 send failed: $e');
       // Don't throw - analytics failures shouldn't break the app
@@ -350,8 +351,11 @@ class AnalyticsService {
     }
     
     try {
+      // SECURITY: GA4 Measurement Protocol requires api_secret as a query param by spec.
+      // TODO: Proxy all analytics calls through backend (/api/analytics/event) to prevent
+      // api_secret exposure in URLs. This is a known GA4 limitation — track in security backlog.
       final url = Uri.parse('$_debugUrl?measurement_id=$_measurementId&api_secret=$_apiSecret');
-      
+
       final body = {
         'client_id': _clientId,
         'events': [
@@ -361,14 +365,16 @@ class AnalyticsService {
           },
         ],
       };
-      
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
-      );
-      
+      ).timeout(const Duration(seconds: 8));
+
       return jsonDecode(response.body);
+    } on TimeoutException {
+      return {'error': 'Request timed out'};
     } catch (e) {
       return {'error': e.toString()};
     }

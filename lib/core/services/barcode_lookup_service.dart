@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -18,7 +19,7 @@ class BarcodeLookupService {
           'https://world.openfoodfacts.org/api/v2/product/$barcode.json');
       final response = await http.get(url, headers: {
         'User-Agent': 'BetterBliss Wellness App/1.0',
-      });
+      }).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         debugPrint('🔍 OpenFoodFacts API returned ${response.statusCode}');
@@ -71,6 +72,9 @@ class BarcodeLookupService {
         totalCalories: calories.round(),
         mealType: _guessMealType(),
       );
+    } on TimeoutException {
+      debugPrint('[Barcode] Lookup timed out');
+      return null;
     } catch (e) {
       debugPrint('🔍 Barcode lookup failed: $e');
       return null;

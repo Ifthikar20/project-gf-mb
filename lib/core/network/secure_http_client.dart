@@ -34,37 +34,33 @@ class SecureHttpClient {
   }
   
   /// Validate certificate against pinned hashes
+  // TODO: Add SHA-256 SPKI hashes for api.betterandbliss.app before production release
   bool _validateCertificate(X509Certificate cert, String host, int port) {
-    // In debug mode, allow all certificates for easier development
-    if (kDebugMode) {
-      return true;
-    }
-    
-    // Skip pinning for non-pinned hosts
+    // Skip pinning for non-pinned hosts — reject bad certs by returning false
     if (!_pinnedHosts.any((pinnedHost) => host.contains(pinnedHost))) {
-      return true;
+      return false;
     }
-    
-    // If no certificates are pinned, allow all (but log warning)
+
+    // If no certificates are pinned yet, reject — do not allow unverified connections
     if (_pinnedCertificates.isEmpty) {
-      debugPrint(' WARNING: No certificates pinned for $host');
-      return true;
+      debugPrint('WARNING: No certificates pinned for $host — connection rejected');
+      return false;
     }
-    
+
     // Compute certificate fingerprint
     final certFingerprint = _computeFingerprint(cert);
-    
+
     // Check against pinned certificates
     final isValid = _pinnedCertificates.any(
       (pinned) => pinned.toUpperCase() == certFingerprint.toUpperCase()
     );
-    
+
     if (!isValid) {
-      debugPrint(' Certificate pinning failed for $host');
-      debugPrint('   Expected: ${_pinnedCertificates.join(", ")}');
-      debugPrint('   Got: $certFingerprint');
+      debugPrint('Certificate pinning failed for $host');
+      debugPrint('  Expected: ${_pinnedCertificates.join(", ")}');
+      debugPrint('  Got: $certFingerprint');
     }
-    
+
     return isValid;
   }
   
