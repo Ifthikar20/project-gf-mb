@@ -120,10 +120,9 @@ class SecureConfig {
   /// Get or generate encryption key for local database
   Future<List<int>> getEncryptionKey() async {
     final storedKey = await _storage.read(key: _keyEncryptionKey);
-    
+
     if (storedKey != null) {
-      // Decode stored key
-      return storedKey.codeUnits;
+      return base64Decode(storedKey);
     }
     
     // Generate new key (32 bytes for AES-256) using cryptographically secure RNG
@@ -132,6 +131,9 @@ class SecureConfig {
     await _storage.write(key: _keyEncryptionKey, value: String.fromCharCodes(newKey));
     return newKey;
   }
+
+  /// Static convenience wrapper for use in Hive box openers
+  static Future<List<int>> getHiveEncryptionKey() => instance.getEncryptionKey();
   
   // ============================================
   // Firebase/Push Notifications

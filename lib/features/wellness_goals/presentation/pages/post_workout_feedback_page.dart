@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/fitness_profile_model.dart';
 import '../../data/recovery_suggestions.dart';
+import '../../../../core/config/secure_config.dart';
 
 /// Shown after completing a workout.
 /// Asks about intensity and generates recovery suggestions.
@@ -62,7 +63,10 @@ class _PostWorkoutFeedbackPageState extends State<PostWorkoutFeedbackPage> {
     final intensity = WorkoutIntensity.values[_selectedIntensity];
 
     // Save the last workout intensity for home page suggestions
-    final box = await Hive.openBox('workout_feedback');
+    final box = await Hive.openBox(
+      'workout_feedback',
+      encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+    );
     await box.put('last_workout_category', widget.workoutCategory);
     await box.put('last_workout_intensity', _selectedIntensity);
     await box.put('last_workout_date', DateTime.now().toIso8601String());

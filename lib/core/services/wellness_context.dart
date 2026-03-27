@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../config/secure_config.dart';
 import '../../features/wellness_goals/data/models/wellness_checkin_model.dart';
 import '../../features/wellness_goals/data/models/fitness_profile_model.dart';
 import '../../features/diet/data/models/diet_models.dart';
@@ -132,7 +133,10 @@ class WellnessContextCollector {
     // ── Fitness profile ──
     String? bodyType, fitnessGoal, intensityPref;
     try {
-      final box = await Hive.openBox('fitness_profile');
+      final box = await Hive.openBox(
+        'fitness_profile',
+        encryptionCipher: HiveAesCipher(await SecureConfig.getHiveEncryptionKey()),
+      );
       final profile = box.get('profile') as FitnessProfileModel?;
       if (profile != null && profile.isSetUp) {
         bodyType = profile.bodyTypeLabel.toLowerCase();
