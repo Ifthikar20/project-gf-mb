@@ -1,7 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../data/models/journal_models.dart';
+import '../../../../core/config/secure_config.dart';
 
 /// Post-session journal page for reflecting after meditation/breathing
 class MeditationJournalPage extends StatefulWidget {
@@ -47,8 +49,10 @@ class _MeditationJournalPageState extends State<MeditationJournalPage> {
     );
 
     try {
-      final box =
-          await Hive.openBox<MeditationJournalEntry>('meditation_journal');
+      final keyList = await SecureConfig.instance.getEncryptionKey();
+      final cipher = HiveAesCipher(Uint8List.fromList(keyList));
+      final box = await Hive.openBox<MeditationJournalEntry>('meditation_journal',
+          encryptionCipher: cipher);
       await box.add(entry);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

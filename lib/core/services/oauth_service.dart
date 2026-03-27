@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:app_links/app_links.dart';
@@ -19,6 +20,9 @@ class OAuthService {
   // Callback for when OAuth completes
   Function(User user)? onAuthSuccess;
   Function(String error)? onAuthError;
+
+  // CSRF protection — stores the state value sent with the most recent OAuth request
+  String? _pendingState;
   
   static OAuthService get instance {
     _instance ??= OAuthService._(ApiClient.instance);
@@ -110,11 +114,15 @@ class OAuthService {
   /// Launch Google Sign In
   Future<void> signInWithGoogle() async {
     const callbackScheme = 'betterbliss';
-    
-    final authUrl = '$_baseUrl/auth/google?redirect=$callbackScheme://auth/callback&prompt=select_account';
-    
-    debugPrint(' Launching Google OAuth: $authUrl');
-    
+
+    // Generate CSRF state token (FIX 6)
+    final state = base64Url.encode(List.generate(16, (_) => Random.secure().nextInt(256)));
+    _pendingState = state;
+
+    final authUrl = '$_baseUrl/auth/google?redirect=$callbackScheme://auth/callback&prompt=select_account&state=$state';
+
+    debugPrint(' Launching Google OAuth');
+
     try {
       final resultUrl = await FlutterWebAuth2.authenticate(
         url: authUrl,
@@ -122,20 +130,29 @@ class OAuthService {
         options: const FlutterWebAuth2Options(
           preferEphemeral: false,
         ),
-      );
-      
-      debugPrint(' OAuth callback received: $resultUrl');
-      
+      ).timeout(const Duration(minutes: 5)); // FIX 7
+
+      debugPrint(' OAuth callback received');
+
       final uri = Uri.parse(resultUrl);
+      final returnedState = uri.queryParameters['state'];
       final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
-      
+
+      // Validate CSRF state (FIX 6)
+      if (returnedState != _pendingState) {
+        _pendingState = null;
+        onAuthError?.call('OAuth state mismatch — possible CSRF attack');
+        return;
+      }
+      _pendingState = null;
+
       if (error != null) {
         debugPrint(' OAuth error: $error');
         onAuthError?.call(error);
         return;
       }
-      
+
       if (token != null) {
         debugPrint(' OAuth token received');
         await _completeOAuthLogin(token);
@@ -143,6 +160,7 @@ class OAuthService {
         onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
+      _pendingState = null;
       debugPrint(' Google OAuth cancelled or failed: $e');
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');
@@ -155,11 +173,15 @@ class OAuthService {
   /// Launch Apple Sign In
   Future<void> signInWithApple() async {
     const callbackScheme = 'betterbliss';
-    
-    final authUrl = '$_baseUrl/auth/apple?redirect=$callbackScheme://auth/callback';
-    
-    debugPrint(' Launching Apple OAuth: $authUrl');
-    
+
+    // Generate CSRF state token (FIX 6)
+    final state = base64Url.encode(List.generate(16, (_) => Random.secure().nextInt(256)));
+    _pendingState = state;
+
+    final authUrl = '$_baseUrl/auth/apple?redirect=$callbackScheme://auth/callback&state=$state';
+
+    debugPrint(' Launching Apple OAuth');
+
     try {
       final resultUrl = await FlutterWebAuth2.authenticate(
         url: authUrl,
@@ -167,20 +189,29 @@ class OAuthService {
         options: const FlutterWebAuth2Options(
           preferEphemeral: false,
         ),
-      );
-      
-      debugPrint(' OAuth callback received: $resultUrl');
-      
+      ).timeout(const Duration(minutes: 5)); // FIX 7
+
+      debugPrint(' OAuth callback received');
+
       final uri = Uri.parse(resultUrl);
+      final returnedState = uri.queryParameters['state'];
       final token = uri.queryParameters['token'];
       final error = uri.queryParameters['error'];
-      
+
+      // Validate CSRF state (FIX 6)
+      if (returnedState != _pendingState) {
+        _pendingState = null;
+        onAuthError?.call('OAuth state mismatch — possible CSRF attack');
+        return;
+      }
+      _pendingState = null;
+
       if (error != null) {
         debugPrint(' OAuth error: $error');
         onAuthError?.call(error);
         return;
       }
-      
+
       if (token != null) {
         debugPrint(' OAuth token received');
         await _completeOAuthLogin(token);
@@ -188,6 +219,7 @@ class OAuthService {
         onAuthError?.call('No token received from sign in');
       }
     } catch (e) {
+      _pendingState = null;
       debugPrint(' Apple OAuth cancelled or failed: $e');
       if (e.toString().contains('CANCELED') || e.toString().contains('cancel')) {
         debugPrint('User cancelled OAuth');

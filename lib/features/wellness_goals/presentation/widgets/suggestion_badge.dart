@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/services/api_client.dart';
+import '../../../../core/config/secure_config.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../workouts/presentation/pages/workout_check_page.dart';
 import '../../data/models/wellness_checkin_model.dart';
@@ -90,7 +92,10 @@ class SuggestionBadgeState extends State<SuggestionBadge> {
       final box = await Hive.openBox('smart_suggestions');
 
       // Check-in
-      final ci = await Hive.openBox<WellnessCheckInModel>('wellness_checkins');
+      final keyList = await SecureConfig.instance.getEncryptionKey();
+      final cipher = HiveAesCipher(Uint8List.fromList(keyList));
+      final ci = await Hive.openBox<WellnessCheckInModel>('wellness_checkins',
+          encryptionCipher: cipher);
       if (ci.get(_todayKey) == null) {
         s.add({'id':'daily_checkin','type':'checkin','priority':1,'title':'Check In','icon':'favorite','color':'#F59E0B','action_target':'/checkin','subtitle':'How are you feeling today?','reason':"You haven't checked in today"});
       }

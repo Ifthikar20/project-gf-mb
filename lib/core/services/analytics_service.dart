@@ -300,6 +300,11 @@ class AnalyticsService {
     }
     
     try {
+      // SECURITY NOTE: GA4 Measurement Protocol requires api_secret as a URL query
+      // parameter and does not support request headers as an alternative. To keep this
+      // secret out of client-side network logs, proxy these requests through your own
+      // backend server (e.g. POST /api/analytics/event) which appends api_secret
+      // server-side before forwarding to GA4.
       final url = Uri.parse('$_baseUrl?measurement_id=$_measurementId&api_secret=$_apiSecret');
       
       final body = {

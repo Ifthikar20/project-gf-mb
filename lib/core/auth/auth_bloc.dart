@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../services/auth_service.dart';
@@ -163,18 +164,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    print('\n [AUTH BLOC] Login event received');
-    print(' Email: ${event.email}');
-    
+    debugPrint('[AUTH BLOC] Login event received');
+    debugPrint('Email: ${event.email.length > 3 ? event.email.substring(0, 3) : event.email.substring(0, 1)}***');
+
     emit(AuthLoading());
-    
+
     try {
       final user = await _authService.login(
         email: event.email,
         password: event.password,
       );
-      
-      print(' [AUTH BLOC] Login successful, checking onboarding...');
+
+      debugPrint('[AUTH BLOC] Login successful, checking onboarding...');
       await _emitAuthenticatedOrOnboarding(user, emit);
     } on AuthException catch (e) {
       final friendlyMessage = ErrorMessages.formatAuthError(
@@ -236,9 +237,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthNeedsOnboarding(user));
       }
     } catch (e) {
-      // If check fails, let them through (don't block on optional onboarding)
-      print(' Onboarding check failed, proceeding');
-      emit(AuthAuthenticated(user));
+      // Onboarding check failed — surface the error rather than silently bypassing
+      // the check, which could allow unintended access if the failure is induced.
+      debugPrint('⚠ [AUTH BLOC] Onboarding check failed: $e');
+      emit(AuthError('Unable to verify account setup. Please try again.'));
     }
   }
 }

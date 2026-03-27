@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Secure storage for sensitive data like API keys, tokens, and secrets
@@ -121,8 +122,8 @@ class SecureConfig {
       return storedKey.codeUnits;
     }
     
-    // Generate new key (32 bytes for AES-256)
-    final newKey = List<int>.generate(32, (i) => DateTime.now().microsecondsSinceEpoch % 256);
+    // Generate new key (32 bytes for AES-256) using a cryptographically secure RNG
+    final newKey = List<int>.generate(32, (_) => Random.secure().nextInt(256));
     await _storage.write(key: _keyEncryptionKey, value: String.fromCharCodes(newKey));
     return newKey;
   }
