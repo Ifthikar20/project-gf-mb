@@ -129,14 +129,34 @@ class ApiEndpoints {
   static String get favorites => '$engagementBase/favorites';
   
   // ============================================
-  // Subscriptions / Premium
+  // Subscriptions (Stripe)
   // ============================================
-  static String get subscriptionBase => '$baseUrl/subscriptions';
-  static String get currentSubscription => '$subscriptionBase/current';
-  static String get subscriptionPlans => '$subscriptionBase/plans';
-  static String get createSubscription => '$subscriptionBase/create';
-  static String get cancelSubscription => '$subscriptionBase/cancel';
-  static String get restorePurchases => '$subscriptionBase/restore';
+  static String get subscriptionBase => '$apiBase/subscriptions';
+  static String get subscriptionCheckout => '$subscriptionBase/checkout/';
+  static String get subscriptionPortal => '$subscriptionBase/portal/';
+  static String get subscriptionStatus => '$subscriptionBase/status/';
+
+  // ============================================
+  // Creator Marketplace
+  // ============================================
+  static String get marketplaceBase => '$apiBase/marketplace';
+  static String get marketplacePrograms => '$marketplaceBase/programs/';
+  static String marketplaceProgramDetail(String id) => '$marketplaceBase/programs/$id/';
+  static String marketplaceProgramPurchase(String id) => '$marketplaceBase/programs/$id/purchase/';
+  static String marketplaceProgramContent(String id) => '$marketplaceBase/programs/$id/content/';
+  static String get marketplacePurchases => '$marketplaceBase/purchases/';
+
+  // ============================================
+  // Live Coaching (Cal.com + LiveKit)
+  // ============================================
+  static String get coachingBase => '$apiBase/coaching';
+  static String get coaches => '$coachingBase/coaches/';
+  static String coachDetail(String id) => '$coachingBase/coaches/$id/';
+  static String coachBookingUrl(String id) => '$coachingBase/coaches/$id/booking-url/';
+  static String get coachingSessions => '$coachingBase/sessions/';
+  static String coachingSessionDetail(String id) => '$coachingBase/sessions/$id/';
+  static String coachingSessionJoin(String id) => '$coachingBase/sessions/$id/join/';
+  static String coachingSessionCancel(String id) => '$coachingBase/sessions/$id/cancel/';
   
   // ============================================
   // Utility

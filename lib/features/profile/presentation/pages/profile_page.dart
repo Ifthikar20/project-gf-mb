@@ -12,6 +12,7 @@ import '../../../wellness_goals/presentation/bloc/goals_state.dart';
 
 import '../../../wellness_goals/domain/entities/goal_entity.dart';
 import '../../../wellness_goals/presentation/widgets/goal_picker_sheet.dart';
+import '../../../subscription/presentation/bloc/subscription_bloc.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -388,7 +389,7 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
-              // Membership Section
+              // Membership Section (dynamic based on subscription)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -397,104 +398,214 @@ class ProfilePage extends StatelessWidget {
                     children: [
                       _buildSectionTitle('Membership', textColor, primaryColor, isLight),
                       const SizedBox(height: 12),
-                      // Free Plan Card - Darker style
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: isLight
-                                ? [const Color(0xFF3D3D3D), const Color(0xFF2A2A2A), const Color(0xFF1F1F1F)]
-                                : [const Color(0xFF404040), const Color(0xFF2D2D2D), const Color(0xFF1A1A1A)],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.star, color: Colors.white, size: 24),
+                      BlocBuilder<SubscriptionBloc, SubscriptionState>(
+                        builder: (context, subState) {
+                          final sub = context.read<SubscriptionBloc>().lastStatus;
+                          final tier = sub?.tier ?? 'free';
+                          final isFree = tier == 'free';
+                          final planName = '${tier[0].toUpperCase()}${tier.substring(1)} Plan';
+                          final planDescription = isFree
+                              ? 'Limited access to content'
+                              : tier == 'basic'
+                                  ? '720p streaming, food scanner, 1 coaching session/mo'
+                                  : 'Full HD, wearable sync, unlimited coaching';
+
+                          return GestureDetector(
+                            onTap: () => context.push(AppRouter.subscriptionPlans),
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: isFree
+                                      ? (isLight
+                                          ? [const Color(0xFF3D3D3D), const Color(0xFF2A2A2A), const Color(0xFF1F1F1F)]
+                                          : [const Color(0xFF404040), const Color(0xFF2D2D2D), const Color(0xFF1A1A1A)])
+                                      : tier == 'basic'
+                                          ? [const Color(0xFF1E40AF), const Color(0xFF1D4ED8)]
+                                          : [const Color(0xFF7C3AED), const Color(0xFF6D28D9)],
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      Text(
-                                        'Free Plan',
-                                        style: isLight
-                                            ? GoogleFonts.inter(
-                                                color: Colors.white,
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                              )
-                                            : const TextStyle(
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          isFree ? Icons.star : Icons.workspace_premium,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              planName,
+                                              style: GoogleFonts.inter(
                                                 color: Colors.white,
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.bold,
                                               ),
-                                      ),
-                                      Text(
-                                        'Limited access to content',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.8),
-                                          fontSize: 13,
+                                            ),
+                                            Text(
+                                              planDescription,
+                                              style: TextStyle(
+                                                color: Colors.white.withOpacity(0.8),
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Divider(color: Colors.white.withOpacity(0.3)),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Upgrade to unlock all content, exclusive features & ad-free experience',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      height: 1.4,
-                                    ),
+                                  const SizedBox(height: 16),
+                                  Divider(color: Colors.white.withOpacity(0.3)),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          isFree
+                                              ? 'Upgrade to unlock all content, exclusive features & ad-free experience'
+                                              : 'Manage your subscription, upgrade, or view billing',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          isFree ? 'Upgrade' : 'Manage',
+                                          style: const TextStyle(
+                                            color: Color(0xFF1A1A1A),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(width: 12),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Marketplace & Coaching Quick Access
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => context.push(AppRouter.marketplace),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: surfaceColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
+                            ),
+                            child: Column(
+                              children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: const Color(0xFFF59E0B).withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text(
-                                    'Upgrade',
-                                    style: TextStyle(
-                                      color: const Color(0xFF1A1A1A),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
+                                  child: const Icon(Icons.storefront_outlined, color: Color(0xFFF59E0B), size: 24),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Marketplace',
+                                  style: GoogleFonts.inter(
+                                    color: textColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                   ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Browse programs',
+                                  style: TextStyle(color: textSecondary, fontSize: 11),
                                 ),
                               ],
                             ),
-                          ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => context.push(AppRouter.coaches),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: surfaceColor,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF8B5CF6).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.video_camera_front_outlined, color: Color(0xFF8B5CF6), size: 24),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Live Coaching',
+                                  style: GoogleFonts.inter(
+                                    color: textColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '1:1 video sessions',
+                                  style: TextStyle(color: textSecondary, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
