@@ -14,6 +14,10 @@ import '../../../videos/domain/entities/video_entity.dart';
 import '../../../meditation/presentation/bloc/meditation_bloc.dart';
 import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
+import '../../../coaching/presentation/bloc/coaching_bloc.dart';
+import '../../../../core/services/coaching_service.dart';
+import '../../../marketplace/presentation/bloc/marketplace_bloc.dart';
+import '../../../../core/services/marketplace_service.dart';
 
 /// Glo-style Explore / For You feed.
 /// Horizontal scrolling cards with thumbnails, level badges,
@@ -38,6 +42,9 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
     if (meditationState is MeditationInitial) {
       context.read<MeditationBloc>().add(LoadMeditationAudios());
     }
+    // Load coaches and marketplace programs for explore sections
+    context.read<CoachingBloc>().add(const LoadCoaches());
+    context.read<MarketplaceBloc>().add(const LoadPrograms());
   }
 
   @override
@@ -187,6 +194,50 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
                 child: SizedBox(
                   height: 240,
                   child: _buildTrendingRow(
+                    isLight: isLight,
+                    surfaceColor: surfaceColor,
+                    textColor: textColor,
+                    textSecondary: textSecondary,
+                    borderColor: borderColor,
+                    primaryColor: primaryColor,
+                  ),
+                ),
+              ),
+
+              // ── Live Coaching ──
+              _buildSectionTitleWithAction(
+                'Live Coaching',
+                'See All',
+                textColor,
+                textSecondary,
+                () => context.push(AppRouter.coaches),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 200,
+                  child: _buildCoachesRow(
+                    isLight: isLight,
+                    surfaceColor: surfaceColor,
+                    textColor: textColor,
+                    textSecondary: textSecondary,
+                    borderColor: borderColor,
+                    primaryColor: primaryColor,
+                  ),
+                ),
+              ),
+
+              // ── Marketplace Programs ──
+              _buildSectionTitleWithAction(
+                'Programs',
+                'Browse All',
+                textColor,
+                textSecondary,
+                () => context.push(AppRouter.marketplace),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 230,
+                  child: _buildMarketplaceRow(
                     isLight: isLight,
                     surfaceColor: surfaceColor,
                     textColor: textColor,
@@ -566,6 +617,392 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitleWithAction(
+    String title,
+    String actionText,
+    Color textColor,
+    Color textSecondary,
+    VoidCallback onAction,
+  ) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
+            ),
+            GestureDetector(
+              onTap: onAction,
+              child: Text(
+                actionText,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────
+  // Live Coaching row
+  // ─────────────────────────────────
+  Widget _buildCoachesRow({
+    required bool isLight,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
+    return BlocBuilder<CoachingBloc, CoachingState>(
+      builder: (context, state) {
+        if (state is CoachesLoaded && state.coaches.isNotEmpty) {
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: state.coaches.length,
+            itemBuilder: (context, index) {
+              final coach = state.coaches[index];
+              return _buildCoachCard(
+                coach: coach,
+                isLight: isLight,
+                surfaceColor: surfaceColor,
+                textColor: textColor,
+                textSecondary: textSecondary,
+                borderColor: borderColor,
+                primaryColor: primaryColor,
+              );
+            },
+          );
+        }
+        if (state is CoachingLoading) {
+          return Center(
+            child: CircularProgressIndicator(
+                color: primaryColor, strokeWidth: 2),
+          );
+        }
+        // Empty or error — show placeholder
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.video_camera_front_outlined,
+                    color: textSecondary, size: 36),
+                const SizedBox(height: 8),
+                Text(
+                  'Book 1:1 sessions with expert coaches',
+                  style: GoogleFonts.inter(
+                      color: textSecondary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCoachCard({
+    required Coach coach,
+    required bool isLight,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
+    return GestureDetector(
+      onTap: () =>
+          context.push('${AppRouter.coachDetail}?id=${coach.id}'),
+      child: Container(
+        width: 160,
+        margin: const EdgeInsets.only(right: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isLight ? Colors.white : const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isLight ? 0.04 : 0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: primaryColor.withOpacity(0.15),
+              backgroundImage: coach.expert.avatarUrl != null
+                  ? CachedNetworkImageProvider(coach.expert.avatarUrl!)
+                  : null,
+              child: coach.expert.avatarUrl == null
+                  ? Text(
+                      coach.expert.name[0],
+                      style: GoogleFonts.inter(
+                        color: primaryColor,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 10),
+            // Name
+            Text(
+              coach.expert.name,
+              style: GoogleFonts.inter(
+                color: textColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+            if (coach.expert.title != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                coach.expert.title!,
+                style: GoogleFonts.inter(
+                  color: textSecondary,
+                  fontSize: 11,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
+            const Spacer(),
+            // Price + live indicator
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF22C55E),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  coach.discountedRate != null
+                      ? '\$${coach.discountedRate}/hr'
+                      : '\$${coach.hourlyRate}/hr',
+                  style: GoogleFonts.inter(
+                    color: coach.discountedRate != null
+                        ? const Color(0xFF22C55E)
+                        : textColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────
+  // Marketplace Programs row
+  // ─────────────────────────────────
+  Widget _buildMarketplaceRow({
+    required bool isLight,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
+    return BlocBuilder<MarketplaceBloc, MarketplaceState>(
+      builder: (context, state) {
+        if (state is MarketplaceProgramsLoaded && state.programs.isNotEmpty) {
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: state.programs.length,
+            itemBuilder: (context, index) {
+              final program = state.programs[index];
+              return _buildProgramCard(
+                program: program,
+                isLight: isLight,
+                surfaceColor: surfaceColor,
+                textColor: textColor,
+                textSecondary: textSecondary,
+                borderColor: borderColor,
+                primaryColor: primaryColor,
+              );
+            },
+          );
+        }
+        if (state is MarketplaceLoading) {
+          return Center(
+            child: CircularProgressIndicator(
+                color: primaryColor, strokeWidth: 2),
+          );
+        }
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.storefront_outlined,
+                    color: textSecondary, size: 36),
+                const SizedBox(height: 8),
+                Text(
+                  'Creator programs coming soon',
+                  style: GoogleFonts.inter(
+                      color: textSecondary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProgramCard({
+    required MarketplaceProgram program,
+    required bool isLight,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
+    return GestureDetector(
+      onTap: () =>
+          context.push('${AppRouter.marketplaceDetail}?id=${program.id}'),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cover image
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: program.coverImageUrl ?? '',
+                      fit: BoxFit.cover,
+                      memCacheHeight: 300,
+                      memCacheWidth: 400,
+                      placeholder: (_, __) =>
+                          Container(color: surfaceColor),
+                      errorWidget: (_, __, ___) => Container(
+                        color: surfaceColor,
+                        child: Icon(Icons.image_outlined,
+                            color: textSecondary, size: 36),
+                      ),
+                    ),
+                    // Price badge
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '\$${program.price}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Purchased badge
+                    if (program.isPurchased)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF22C55E),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Owned',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Title
+            Text(
+              program.title,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            // Creator + lessons
+            Text(
+              '${program.creator.displayName} • ${program.contentCount} lessons',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

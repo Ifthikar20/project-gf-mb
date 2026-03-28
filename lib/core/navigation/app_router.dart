@@ -28,6 +28,14 @@ import '../../features/meditation/presentation/pages/breathing_exercise_page.dar
 import '../../features/workouts/presentation/pages/workout_check_page.dart';
 import '../../features/explore/presentation/pages/program_enroll_page.dart';
 
+import '../../features/subscription/presentation/pages/subscription_plans_page.dart';
+import '../../features/marketplace/presentation/pages/marketplace_page.dart';
+import '../../features/marketplace/presentation/pages/program_detail_page.dart';
+import '../../features/marketplace/presentation/pages/my_purchases_page.dart';
+import '../../features/coaching/presentation/pages/coaches_page.dart';
+import '../../features/coaching/presentation/pages/coach_detail_page.dart';
+import '../../features/coaching/presentation/pages/coaching_sessions_page.dart';
+
 class AppRouter {
   static const String home = '/';
   static const String landing = '/landing';
@@ -56,6 +64,15 @@ class AppRouter {
   static const String breathingExercise = '/breathing-exercise';
   static const String articleDetail = '/article-detail';
   static const String programEnroll = '/program-enroll';
+
+  // Monetization routes
+  static const String subscriptionPlans = '/subscription-plans';
+  static const String marketplace = '/marketplace';
+  static const String marketplaceDetail = '/marketplace-detail';
+  static const String myPurchases = '/my-purchases';
+  static const String coaches = '/coaches';
+  static const String coachDetail = '/coach-detail';
+  static const String coachingSessions = '/coaching-sessions';
 
   // Public routes that don't require authentication
   static const List<String> _publicRoutes = [
@@ -299,6 +316,46 @@ class AppRouter {
             }
             return ProgramEnrollPage(seriesId: seriesId);
           },
+        ),
+
+        // ============================================
+        // Monetization Routes
+        // ============================================
+        GoRoute(
+          path: subscriptionPlans,
+          builder: (context, state) => const SubscriptionPlansPage(),
+        ),
+        GoRoute(
+          path: marketplace,
+          builder: (context, state) => const MarketplacePage(),
+        ),
+        GoRoute(
+          path: marketplaceDetail,
+          builder: (context, state) {
+            final id = state.uri.queryParameters['id'] ?? '';
+            if (id.isEmpty) return const LandingPage();
+            return ProgramDetailPage(programId: id);
+          },
+        ),
+        GoRoute(
+          path: myPurchases,
+          builder: (context, state) => const MyPurchasesPage(),
+        ),
+        GoRoute(
+          path: coaches,
+          builder: (context, state) => const CoachesPage(),
+        ),
+        GoRoute(
+          path: coachDetail,
+          builder: (context, state) {
+            final id = state.uri.queryParameters['id'] ?? '';
+            if (id.isEmpty) return const LandingPage();
+            return CoachDetailPage(coachId: id);
+          },
+        ),
+        GoRoute(
+          path: coachingSessions,
+          builder: (context, state) => const CoachingSessionsPage(),
         ),
       ],
     );

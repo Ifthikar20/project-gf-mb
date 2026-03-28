@@ -51,6 +51,9 @@ dependencies:
   # OAuth / Deep Links
   flutter_web_auth_2: ^3.1.2
   app_links: ^4.0.1
+
+  # URL Launcher (Stripe checkout, billing portal, Cal.com booking)
+  url_launcher: ^6.2.1
   
   
   # HealthKit / Health Connect
