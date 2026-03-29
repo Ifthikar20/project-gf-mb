@@ -157,7 +157,23 @@ class ApiEndpoints {
   static String coachingSessionDetail(String id) => '$coachingBase/sessions/$id/';
   static String coachingSessionJoin(String id) => '$coachingBase/sessions/$id/join/';
   static String coachingSessionCancel(String id) => '$coachingBase/sessions/$id/cancel/';
+
+  // My Workout Plan (Premium)
+  static String get myWorkoutPlan => '$coachingBase/my-plan/';
+  static String completePlanDay(String dayId) => '$coachingBase/my-plan/days/$dayId/complete/';
+
+  // Free Consultation (Premium)
+  static String get consultationEligibility => '$coachingBase/consultation/';
+  static String get bookConsultation => '$coachingBase/consultation/book/';
+
+  // Food Sharing Toggle (Premium)
+  static String get foodSharing => '$coachingBase/food-sharing/';
   
+  // ============================================
+  // AntiGravity Wellness Chat
+  // ============================================
+  static String get wellnessChat => '$apiBase/wellness/chat';
+
   // ============================================
   // Utility
   // ============================================

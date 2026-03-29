@@ -145,52 +145,14 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                             Icon(Icons.payments_outlined,
                                 color: textSecondary, size: 20),
                             const SizedBox(width: 12),
-                            if (coach.discountedRate != null) ...[
-                              Text(
-                                '\$${coach.hourlyRate}',
-                                style: GoogleFonts.inter(
-                                  color: textSecondary,
-                                  fontSize: 16,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
+                            Text(
+                              '\$${coach.hourlyRate}/hr',
+                              style: GoogleFonts.inter(
+                                color: textColor,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '\$${coach.discountedRate}/hr',
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF22C55E),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF22C55E).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${coach.premiumDiscountPercent ?? 20}% off',
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF22C55E),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ] else ...[
-                              Text(
-                                '\$${coach.hourlyRate}/hr',
-                                style: GoogleFonts.inter(
-                                  color: textColor,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
+                            ),
                           ],
                         ),
                       ),

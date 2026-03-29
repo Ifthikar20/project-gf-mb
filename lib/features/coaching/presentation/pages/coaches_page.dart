@@ -237,50 +237,14 @@ class _CoachesPageState extends State<CoachesPage> {
                   // Price row
                   Row(
                     children: [
-                      if (coach.discountedRate != null) ...[
-                        Text(
-                          '\$${coach.hourlyRate}',
-                          style: GoogleFonts.inter(
-                            color: textSecondary,
-                            fontSize: 13,
-                            decoration: TextDecoration.lineThrough,
-                          ),
+                      Text(
+                        '\$${coach.hourlyRate}/hr',
+                        style: GoogleFonts.inter(
+                          color: textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '\$${coach.discountedRate}',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF22C55E),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF22C55E).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Premium',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF22C55E),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ] else
-                        Text(
-                          '\$${coach.hourlyRate}/hr',
-                          style: GoogleFonts.inter(
-                            color: textColor,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                      ),
                       const Spacer(),
                       if (coach.hasCalcom && coach.isAcceptingClients)
                         Container(

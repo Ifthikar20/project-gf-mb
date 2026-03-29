@@ -16,9 +16,10 @@ class User {
   final String role;
   final String subscriptionTier;
   final String status;
+  final bool shareFoodDataWithCoach;
   final String? createdAt;
   final String? updatedAt;
-  
+
   User({
     required this.id,
     required this.email,
@@ -27,10 +28,11 @@ class User {
     required this.role,
     required this.subscriptionTier,
     this.status = 'active',
+    this.shareFoodDataWithCoach = false,
     this.createdAt,
     this.updatedAt,
   });
-  
+
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] ?? '',
@@ -40,11 +42,12 @@ class User {
       role: json['role'] ?? 'free_user',
       subscriptionTier: json['subscription_tier'] ?? 'free',
       status: json['status'] ?? 'active',
+      shareFoodDataWithCoach: json['share_food_data_with_coach'] ?? false,
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
     );
   }
-  
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'email': email,
@@ -53,13 +56,27 @@ class User {
     'role': role,
     'subscription_tier': subscriptionTier,
     'status': status,
+    'share_food_data_with_coach': shareFoodDataWithCoach,
     'created_at': createdAt,
     'updated_at': updatedAt,
   };
-  
+
+  User copyWith({bool? shareFoodDataWithCoach}) => User(
+    id: id,
+    email: email,
+    displayName: displayName,
+    avatarUrl: avatarUrl,
+    role: role,
+    subscriptionTier: subscriptionTier,
+    status: status,
+    shareFoodDataWithCoach: shareFoodDataWithCoach ?? this.shareFoodDataWithCoach,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
+
   /// Legacy getter for backward compatibility
   String? get name => displayName;
-  
+
   bool get isPremium => subscriptionTier == 'premium';
   bool get isBasic => subscriptionTier == 'basic';
   bool get isFree => subscriptionTier == 'free';
