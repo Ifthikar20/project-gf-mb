@@ -826,7 +826,7 @@ class ProfilePage extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSection(context, 'Support', [
                     _MenuItem(Icons.help_outline, 'Help Center', 'FAQs, tutorials'),
-                    _MenuItem(Icons.chat_bubble_outline, 'Contact Us', 'Get in touch'),
+                    _MenuItem(Icons.chat_bubble_outline, 'Contact Us', 'Get in touch', route: AppRouter.antigravityChat),
                     _MenuItem(Icons.bug_report_outlined, 'Report a Problem', 'Send feedback'),
                     _MenuItem(Icons.info_outline, 'About', 'Version, legal'),
                   ], surfaceColor, textColor, textSecondary, primaryColor, isLight),

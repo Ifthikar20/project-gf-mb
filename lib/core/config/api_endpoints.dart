@@ -159,6 +159,11 @@ class ApiEndpoints {
   static String coachingSessionCancel(String id) => '$coachingBase/sessions/$id/cancel/';
   
   // ============================================
+  // AntiGravity Wellness Chat
+  // ============================================
+  static String get wellnessChat => '$apiBase/wellness/chat';
+
+  // ============================================
   // Utility
   // ============================================
   static String get healthCheck => '$baseUrl/health';
