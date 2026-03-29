@@ -13,6 +13,7 @@ import '../../../wellness_goals/presentation/bloc/goals_state.dart';
 import '../../../wellness_goals/domain/entities/goal_entity.dart';
 import '../../../wellness_goals/presentation/widgets/goal_picker_sheet.dart';
 import '../../../subscription/presentation/bloc/subscription_bloc.dart';
+import '../../../../core/services/workout_plan_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -613,6 +614,60 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
+              // My Workout Plan — Premium only
+              SliverToBoxAdapter(
+                child: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    final user = authState is AuthAuthenticated ? authState.user : null;
+                    if (user == null || !user.isPremium) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      child: GestureDetector(
+                        onTap: () => context.push(AppRouter.myWorkoutPlan),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22C55E).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.fitness_center_rounded, color: Color(0xFF22C55E), size: 24),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'My Workout Plan',
+                                      style: GoogleFonts.inter(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Your personalised plan from your coach',
+                                      style: TextStyle(color: textSecondary.withOpacity(0.7), fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right, color: textSecondary.withOpacity(0.5), size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
               // Library Section
               SliverToBoxAdapter(
                 child: Padding(
@@ -756,6 +811,28 @@ class ProfilePage extends StatelessWidget {
                     _MenuItem(Icons.language_outlined, 'Language', 'English (US)'),
                     _MenuItem(Icons.download_outlined, 'Downloads', 'Offline content'),
                   ], surfaceColor, textColor, textSecondary, primaryColor, isLight),
+                ),
+              ),
+
+              // Food Sharing Toggle — Premium only
+              SliverToBoxAdapter(
+                child: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    final user = authState is AuthAuthenticated ? authState.user : null;
+                    if (user == null || !user.isPremium) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                      child: _FoodSharingTile(
+                        initialValue: user.shareFoodDataWithCoach,
+                        isLight: isLight,
+                        surfaceColor: surfaceColor,
+                        textColor: textColor,
+                        textSecondary: textSecondary,
+                        borderColor: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder,
+                        primaryColor: primaryColor,
+                      ),
+                    );
+                  },
                 ),
               ),
 
@@ -1145,6 +1222,113 @@ class _MenuItem {
   final String title;
   final String subtitle;
   final String? route;
-  
+
   const _MenuItem(this.icon, this.title, this.subtitle, {this.route});
+}
+
+/// Self-contained toggle for sharing food data with a coach.
+/// Manages its own API call and optimistic UI update.
+class _FoodSharingTile extends StatefulWidget {
+  final bool initialValue;
+  final bool isLight;
+  final Color surfaceColor;
+  final Color textColor;
+  final Color textSecondary;
+  final Color borderColor;
+  final Color primaryColor;
+
+  const _FoodSharingTile({
+    required this.initialValue,
+    required this.isLight,
+    required this.surfaceColor,
+    required this.textColor,
+    required this.textSecondary,
+    required this.borderColor,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_FoodSharingTile> createState() => _FoodSharingTileState();
+}
+
+class _FoodSharingTileState extends State<_FoodSharingTile> {
+  late bool _enabled;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = widget.initialValue;
+  }
+
+  Future<void> _toggle(bool value) async {
+    setState(() { _enabled = value; _saving = true; });
+    try {
+      final result = await WorkoutPlanService.instance.setFoodSharing(enabled: value);
+      if (mounted) setState(() { _enabled = result; _saving = false; });
+    } catch (_) {
+      // Revert on failure
+      if (mounted) setState(() { _enabled = !value; _saving = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: widget.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: widget.borderColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: widget.isLight
+                    ? widget.primaryColor.withOpacity(0.1)
+                    : Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(widget.isLight ? 8 : 10),
+              ),
+              child: Icon(Icons.restaurant_outlined,
+                  color: widget.isLight ? widget.primaryColor : Colors.white70, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Share food data with coach',
+                    style: TextStyle(
+                        color: widget.textColor, fontSize: 15, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Let your coach see your food scan history for better meal recommendations.',
+                    style: TextStyle(color: widget.textSecondary.withOpacity(0.6), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _saving
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        color: widget.primaryColor, strokeWidth: 2),
+                  )
+                : Switch.adaptive(
+                    value: _enabled,
+                    onChanged: _toggle,
+                    activeColor: widget.primaryColor,
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
 }

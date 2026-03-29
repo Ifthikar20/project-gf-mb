@@ -6,8 +6,6 @@ class Coach {
   final String id;
   final CoachExpert expert;
   final String hourlyRate;
-  final String? discountedRate;
-  final int? premiumDiscountPercent;
   final String bio;
   final List<String> specialties;
   final bool isAcceptingClients;
@@ -17,8 +15,6 @@ class Coach {
     required this.id,
     required this.expert,
     required this.hourlyRate,
-    this.discountedRate,
-    this.premiumDiscountPercent,
     required this.bio,
     required this.specialties,
     required this.isAcceptingClients,
@@ -30,8 +26,6 @@ class Coach {
       id: json['id'] ?? '',
       expert: CoachExpert.fromJson(json['expert'] ?? {}),
       hourlyRate: json['hourly_rate'] ?? '0.00',
-      discountedRate: json['discounted_rate'],
-      premiumDiscountPercent: json['premium_discount_percent'],
       bio: json['bio'] ?? '',
       specialties: (json['specialties'] as List?)
               ?.map((s) => s.toString())
