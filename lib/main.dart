@@ -105,11 +105,14 @@ void main() async {
   GoalTrackingService.instance.trackDailyUsage();
   debugPrint(' Goal tracking service initialized');
 
-  // Set system UI overlay style
+  // Set system UI overlay style — force dark native chrome so the iOS
+  // window is never white before Flutter's first frame renders.
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF0A0A0A),
+      systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
 
