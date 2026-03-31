@@ -19,6 +19,7 @@ class User {
   final bool shareFoodDataWithCoach;
   final String? createdAt;
   final String? updatedAt;
+  final bool? onboardingCompleted;
 
   User({
     required this.id,
@@ -31,6 +32,7 @@ class User {
     this.shareFoodDataWithCoach = false,
     this.createdAt,
     this.updatedAt,
+    this.onboardingCompleted,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -61,7 +63,7 @@ class User {
     'updated_at': updatedAt,
   };
 
-  User copyWith({bool? shareFoodDataWithCoach}) => User(
+  User copyWith({bool? shareFoodDataWithCoach, bool? onboardingCompleted}) => User(
     id: id,
     email: email,
     displayName: displayName,
@@ -72,6 +74,7 @@ class User {
     shareFoodDataWithCoach: shareFoodDataWithCoach ?? this.shareFoodDataWithCoach,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
   );
 
   /// Legacy getter for backward compatibility
@@ -126,7 +129,7 @@ class AuthService {
       final response = await _api.post('/auth/register', data: {
         'email': email,
         'password': password,
-        'full_name': fullName,
+        'display_name': fullName,
       });
       
       if (response.data['success'] == true) {
@@ -137,11 +140,14 @@ class AuthService {
           await _tokenStorage.saveAccessToken(token);
           debugPrint(' DRF token saved');
         }
-        
-        // Parse user data
-        _currentUser = User.fromJson(response.data['user']);
+
+        // Parse user data with onboarding status from API
+        final onboardingCompleted = response.data['onboarding_completed'] as bool?;
+        _currentUser = User.fromJson(response.data['user']).copyWith(
+          onboardingCompleted: onboardingCompleted,
+        );
         await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
-        
+
         debugPrint(' Registered as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
@@ -177,11 +183,14 @@ class AuthService {
           await _tokenStorage.saveAccessToken(token);
           debugPrint(' DRF token saved');
         }
-        
-        // Parse user data
-        _currentUser = User.fromJson(response.data['user']);
+
+        // Parse user data with onboarding status from API
+        final onboardingCompleted = response.data['onboarding_completed'] as bool?;
+        _currentUser = User.fromJson(response.data['user']).copyWith(
+          onboardingCompleted: onboardingCompleted,
+        );
         await _tokenStorage.saveUserData(jsonEncode(_currentUser!.toJson()));
-        
+
         debugPrint(' Logged in as: ${_currentUser!.email}');
         return _currentUser!;
       } else {
@@ -276,9 +285,10 @@ class AuthService {
             return user;
           }
         } on DioException catch (e) {
-          if (e.response?.statusCode == 401) {
-            // Token expired — clear everything
-            debugPrint('⏰ Token expired, clearing session');
+          final status = e.response?.statusCode;
+          if (status == 401 || status == 403) {
+            // Token expired or forbidden — clear everything
+            debugPrint('⏰ Token invalid ($status), clearing session');
             _currentUser = null;
             _api.setAccessToken(null);
             await _tokenStorage.clearAll();
@@ -354,7 +364,7 @@ class AuthService {
     
     try {
       await _api.post('/auth/reset-password', data: {
-        'token': token,
+        'reset_token': token,
         'new_password': newPassword,
       });
       debugPrint(' Password reset successful');

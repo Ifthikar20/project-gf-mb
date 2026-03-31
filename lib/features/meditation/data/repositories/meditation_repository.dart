@@ -1,7 +1,16 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/services/api_client.dart';
 import '../../domain/entities/meditation_audio.dart';
 import '../../domain/entities/meditation_type.dart';
+
+/// Thrown when audio streaming fails due to expired auth
+class StreamingAuthException implements Exception {
+  final String message;
+  StreamingAuthException(this.message);
+  @override
+  String toString() => message;
+}
 
 /// Repository for meditation/audio content
 /// Fetches audio content from backend API
@@ -153,18 +162,26 @@ class MeditationRepository {
 
   /// Get streaming URL for audio
   /// GET /api/streaming/content/{id}/stream
+  /// Throws [StreamingAuthException] if session has expired (401).
   Future<String?> getAudioStreamingUrl(String audioId) async {
     try {
       debugPrint(' Fetching streaming URL for audio: $audioId');
       final response = await _api.get('/api/streaming/content/$audioId/stream');
-      
+
       final audioUrl = response.data['audio_url'];
       if (audioUrl != null && audioUrl.toString().isNotEmpty) {
         debugPrint(' Got audio URL: $audioUrl');
         return audioUrl.toString();
       }
-      
+
       debugPrint(' No audio_url in response');
+      return null;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        debugPrint(' Audio streaming 401: session expired');
+        throw StreamingAuthException('Your session has expired. Please log in again.');
+      }
+      debugPrint(' Failed to get streaming URL: ${e.response?.statusCode}');
       return null;
     } catch (_) {
       debugPrint(' Failed to get streaming URL');

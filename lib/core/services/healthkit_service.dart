@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -7,6 +8,12 @@ class HeartRatePoint {
   final DateTime time;
   final double bpm;
   const HeartRatePoint({required this.time, required this.bpm});
+
+  Map<String, dynamic> toJson() => {'time': time.toIso8601String(), 'bpm': bpm};
+  factory HeartRatePoint.fromJson(Map<String, dynamic> json) => HeartRatePoint(
+        time: DateTime.parse(json['time']),
+        bpm: (json['bpm'] as num).toDouble(),
+      );
 }
 
 /// Daily workout summary
@@ -21,10 +28,24 @@ class DailyWorkoutSummary {
     this.caloriesBurned = 0,
     this.workoutCount = 0,
   });
+
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String(),
+        'totalMinutes': totalMinutes,
+        'caloriesBurned': caloriesBurned,
+        'workoutCount': workoutCount,
+      };
+  factory DailyWorkoutSummary.fromJson(Map<String, dynamic> json) =>
+      DailyWorkoutSummary(
+        date: DateTime.parse(json['date']),
+        totalMinutes: json['totalMinutes'] ?? 0,
+        caloriesBurned: (json['caloriesBurned'] as num?)?.toDouble() ?? 0,
+        workoutCount: json['workoutCount'] ?? 0,
+      );
 }
 
 /// HealthKit service — reads Apple Watch data via the `health` package.
-/// On-device only (Pattern 1): data is read from HealthKit and cached locally.
+/// On-device only: data is read from HealthKit and cached locally in Hive.
 /// Falls back to simulated data on simulator or when permissions are denied.
 class HealthKitService {
   static HealthKitService? _instance;
@@ -40,6 +61,10 @@ class HealthKitService {
   bool _checkedAvailability = false;
   bool _isAvailable = false;
 
+  /// Whether the user has opted in to health data collection in profile settings
+  bool _isEnabled = false;
+  bool get isEnabled => _isEnabled;
+
   /// HealthKit data types we need
   static const _readTypes = [
     HealthDataType.HEART_RATE,
@@ -47,6 +72,143 @@ class HealthKitService {
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.WORKOUT,
   ];
+
+  // Hive box name for health data cache
+  static const _boxName = 'health_data';
+
+  // ──────────────────────────────────
+  // Initialization
+  // ──────────────────────────────────
+
+  /// Load saved preferences (call at app startup)
+  Future<void> init() async {
+    final box = await Hive.openBox('healthkit_prefs');
+    _isAuthorized = box.get('authorized', defaultValue: false) as bool;
+    _isEnabled = box.get('enabled', defaultValue: false) as bool;
+  }
+
+  // ──────────────────────────────────
+  // Enable / Disable Toggle
+  // ──────────────────────────────────
+
+  /// Enable or disable health data collection.
+  /// When enabled: requests HealthKit permissions, reads & caches data.
+  /// When disabled: clears cached health data.
+  Future<bool> setEnabled(bool enabled) async {
+    if (enabled) {
+      final granted = await requestPermissions();
+      if (!granted) return false;
+      _isEnabled = true;
+      final box = await Hive.openBox('healthkit_prefs');
+      await box.put('enabled', true);
+      // Do initial data fetch & cache
+      await refreshAndCache();
+      return true;
+    } else {
+      _isEnabled = false;
+      final box = await Hive.openBox('healthkit_prefs');
+      await box.put('enabled', false);
+      // Clear cached health data
+      await _clearCachedData();
+      return true;
+    }
+  }
+
+  /// Refresh all health data from HealthKit and save to local cache
+  Future<void> refreshAndCache() async {
+    if (!_isEnabled || !_isAuthorized) return;
+    try {
+      final hr = await getHeartRateData(days: 2);
+      final workouts = await getWorkoutSummaries(days: 7);
+      final steps = await getStepCount(days: 1);
+      final effort = await getEffortScore(days: 7);
+
+      final box = await Hive.openBox(_boxName);
+      await box.put('heart_rate', jsonEncode(hr.map((e) => e.toJson()).toList()));
+      await box.put('workouts', jsonEncode(workouts.map((e) => e.toJson()).toList()));
+      await box.put('steps', steps);
+      await box.put('effort_score', effort);
+      await box.put('last_sync', DateTime.now().toIso8601String());
+      debugPrint('Health data cached: ${hr.length} HR points, ${workouts.length} days, $steps steps');
+    } catch (e) {
+      debugPrint('Failed to cache health data: $e');
+    }
+  }
+
+  Future<void> _clearCachedData() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      await box.clear();
+    } catch (_) {}
+  }
+
+  // ──────────────────────────────────
+  // Cached Data Getters
+  // ──────────────────────────────────
+
+  /// Get cached heart rate data (from Hive, no HealthKit call)
+  Future<List<HeartRatePoint>> getCachedHeartRate() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final raw = box.get('heart_rate') as String?;
+      if (raw == null) return [];
+      final list = jsonDecode(raw) as List;
+      return list.map((e) => HeartRatePoint.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Get cached workout summaries
+  Future<List<DailyWorkoutSummary>> getCachedWorkouts() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final raw = box.get('workouts') as String?;
+      if (raw == null) return [];
+      final list = jsonDecode(raw) as List;
+      return list.map((e) => DailyWorkoutSummary.fromJson(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Get cached step count
+  Future<int> getCachedSteps() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      return box.get('steps', defaultValue: 0) as int;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Get cached effort score
+  Future<double> getCachedEffortScore() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      return (box.get('effort_score', defaultValue: 0.0) as num).toDouble();
+    } catch (_) {
+      return 0.0;
+    }
+  }
+
+  /// Get latest cached heart rate BPM (for the live card)
+  Future<int> getLatestHeartRate() async {
+    final data = await getCachedHeartRate();
+    if (data.isEmpty) return 0;
+    return data.last.bpm.round();
+  }
+
+  /// Last sync time
+  Future<DateTime?> getLastSyncTime() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final raw = box.get('last_sync') as String?;
+      return raw != null ? DateTime.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   // ──────────────────────────────────
   // Availability & Permissions
@@ -57,8 +219,6 @@ class HealthKitService {
     if (_checkedAvailability) return _isAvailable;
     try {
       _isAvailable = await Health().hasPermissions(_readTypes) ?? false;
-      // If hasPermissions returns null, HealthKit may still be available
-      // but permissions haven't been requested yet
       _isAvailable = true;
     } catch (e) {
       debugPrint('HealthKit not available: $e');
@@ -72,7 +232,6 @@ class HealthKitService {
   bool get isAuthorized => _isAuthorized;
 
   /// Request HealthKit permissions
-  /// Returns true if all requested permissions were granted
   Future<bool> requestPermissions() async {
     try {
       final granted = await _health.requestAuthorization(
@@ -83,7 +242,6 @@ class HealthKitService {
       _isAvailable = true;
       _checkedAvailability = true;
 
-      // Persist auth state
       final box = await Hive.openBox('healthkit_prefs');
       await box.put('authorized', granted);
 
@@ -112,7 +270,6 @@ class HealthKitService {
   // ──────────────────────────────────
 
   /// Get heart rate data for the last [days] days
-  /// Returns empty list if HealthKit is not available or not authorized
   Future<List<HeartRatePoint>> getHeartRateData({int days = 2}) async {
     if (!_isAuthorized) return [];
 
@@ -126,7 +283,6 @@ class HealthKitService {
         endTime: now,
       );
 
-      // Remove duplicates
       final cleaned = Health().removeDuplicates(dataPoints);
 
       return cleaned.map((dp) {
@@ -154,25 +310,21 @@ class HealthKitService {
       final now = DateTime.now();
       final start = now.subtract(Duration(days: days));
 
-      // Get active energy data
       final energyData = await _health.getHealthDataFromTypes(
         types: [HealthDataType.ACTIVE_ENERGY_BURNED],
         startTime: start,
         endTime: now,
       );
 
-      // Get workout sessions
       final workoutData = await _health.getHealthDataFromTypes(
         types: [HealthDataType.WORKOUT],
         startTime: start,
         endTime: now,
       );
 
-      // Clean duplicates
       final cleanedEnergy = Health().removeDuplicates(energyData);
       final cleanedWorkouts = Health().removeDuplicates(workoutData);
 
-      // Group by day
       final Map<String, DailyWorkoutSummary> dailyMap = {};
 
       for (var i = 0; i < days; i++) {
@@ -181,7 +333,6 @@ class HealthKitService {
         dailyMap[key] = DailyWorkoutSummary(date: day);
       }
 
-      // Add workout minutes
       for (final wp in cleanedWorkouts) {
         final key = '${wp.dateFrom.year}-${wp.dateFrom.month}-${wp.dateFrom.day}';
         if (dailyMap.containsKey(key)) {
@@ -196,7 +347,6 @@ class HealthKitService {
         }
       }
 
-      // Add calories
       for (final ep in cleanedEnergy) {
         final key = '${ep.dateFrom.year}-${ep.dateFrom.month}-${ep.dateFrom.day}';
         if (dailyMap.containsKey(key)) {
@@ -245,7 +395,6 @@ class HealthKitService {
   // ──────────────────────────────────
 
   /// Calculate an effort score (0.0–1.0) based on the last [days] days
-  /// Combines workout minutes + calories vs a target
   Future<double> getEffortScore({int days = 7}) async {
     final summaries = await getWorkoutSummaries(days: days);
     if (summaries.isEmpty) return 0.0;
@@ -253,14 +402,12 @@ class HealthKitService {
     final totalMinutes = summaries.fold<int>(0, (sum, s) => sum + s.totalMinutes);
     final totalCalories = summaries.fold<double>(0, (sum, s) => sum + s.caloriesBurned);
 
-    // Target: 150 min/week recommended + ~2000 cal/week active
     const targetMinutes = 150;
     const targetCalories = 2000.0;
 
     final minuteScore = (totalMinutes / targetMinutes).clamp(0.0, 1.0);
     final calorieScore = (totalCalories / targetCalories).clamp(0.0, 1.0);
 
-    // Weighted average: 60% minutes, 40% calories
     return (minuteScore * 0.6 + calorieScore * 0.4).clamp(0.0, 1.0);
   }
 
@@ -268,7 +415,6 @@ class HealthKitService {
   // Simulated data (fallback for simulator)
   // ──────────────────────────────────
 
-  /// Simulated heart rate data for when HealthKit is unavailable
   static List<HeartRatePoint> get simulatedHeartRate {
     final now = DateTime.now();
     const hrValues = [72, 85, 110, 135, 152, 148, 138, 120, 95, 78];
@@ -280,7 +426,6 @@ class HealthKitService {
     });
   }
 
-  /// Simulated weekly workout data for when HealthKit is unavailable
   static List<DailyWorkoutSummary> get simulatedWeekly {
     final now = DateTime.now();
     const minutes = [45, 0, 30, 60, 20, 90, 0];

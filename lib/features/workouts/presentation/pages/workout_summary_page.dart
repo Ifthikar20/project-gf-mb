@@ -143,29 +143,7 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                       ],
                     ),
 
-                    // Apple Health extras
-                    if (widget.workout.heartRateAvg != null || widget.workout.distanceMeters != null) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (widget.workout.heartRateAvg != null)
-                            _buildStatChip(
-                              ' ${widget.workout.heartRateAvg}',
-                              'avg HR',
-                              Icons.favorite,
-                            ),
-                          if (widget.workout.heartRateAvg != null && widget.workout.distanceMeters != null)
-                            const SizedBox(width: 16),
-                          if (widget.workout.distanceMeters != null)
-                            _buildStatChip(
-                              '${(widget.workout.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                              'distance',
-                              Icons.straighten,
-                            ),
-                        ],
-                      ),
-                    ],
+                    // (Apple Health extras removed — health data is local-only)
                   ],
                 ),
               ),

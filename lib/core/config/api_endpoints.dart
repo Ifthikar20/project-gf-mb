@@ -110,8 +110,6 @@ class ApiEndpoints {
   static String get bodyProfile => '$workoutsBase/body-profile';
   static String get calorieEstimate => '$workoutsBase/estimate';
   static String get logManual => '$workoutsBase/log/manual';
-  static String get logAppleHealth => '$workoutsBase/log/apple-health';
-  static String get logAppleHealthBatch => '$workoutsBase/log/apple-health/batch';
   static String get workoutHistory => '$workoutsBase/history';
   static String get workoutStats => '$workoutsBase/stats';
   static String get workoutGoals => '$workoutsBase/goals';

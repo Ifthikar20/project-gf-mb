@@ -127,13 +127,21 @@ class SecureConfig {
     final storedKey = await _storage.read(key: _keyEncryptionKey);
 
     if (storedKey != null) {
-      return base64Decode(storedKey);
+      // Try base64 first (new format), fall back to raw chars (legacy format)
+      try {
+        return base64Decode(storedKey);
+      } catch (_) {
+        // Legacy key stored with String.fromCharCodes — migrate to base64
+        final legacyKey = storedKey.codeUnits;
+        await _storage.write(key: _keyEncryptionKey, value: base64Encode(legacyKey));
+        return legacyKey;
+      }
     }
-    
+
     // Generate new key (32 bytes for AES-256) using cryptographically secure RNG
     final rng = Random.secure();
     final newKey = List<int>.generate(32, (_) => rng.nextInt(256));
-    await _storage.write(key: _keyEncryptionKey, value: String.fromCharCodes(newKey));
+    await _storage.write(key: _keyEncryptionKey, value: base64Encode(newKey));
     return newKey;
   }
 

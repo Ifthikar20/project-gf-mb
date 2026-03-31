@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/auth/auth_bloc.dart';
+import '../../../../core/services/healthkit_service.dart';
 
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -836,6 +837,21 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
+              // Apple Health Data Toggle
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: _AppleHealthTile(
+                    isLight: isLight,
+                    surfaceColor: surfaceColor,
+                    textColor: textColor,
+                    textSecondary: textSecondary,
+                    borderColor: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder,
+                    primaryColor: primaryColor,
+                  ),
+                ),
+              ),
+
               // Wellness Setup Section
               SliverToBoxAdapter(
                 child: Padding(
@@ -1249,6 +1265,214 @@ class _FoodSharingTile extends StatefulWidget {
 
   @override
   State<_FoodSharingTile> createState() => _FoodSharingTileState();
+}
+
+/// Apple Health data collection toggle.
+/// Manages HealthKit permissions and local data storage.
+class _AppleHealthTile extends StatefulWidget {
+  final bool isLight;
+  final Color surfaceColor;
+  final Color textColor;
+  final Color textSecondary;
+  final Color borderColor;
+  final Color primaryColor;
+
+  const _AppleHealthTile({
+    required this.isLight,
+    required this.surfaceColor,
+    required this.textColor,
+    required this.textSecondary,
+    required this.borderColor,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_AppleHealthTile> createState() => _AppleHealthTileState();
+}
+
+class _AppleHealthTileState extends State<_AppleHealthTile> {
+  bool _enabled = false;
+  bool _saving = false;
+  int _steps = 0;
+  DateTime? _lastSync;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = HealthKitService.instance.isEnabled;
+    _loadCachedStats();
+  }
+
+  Future<void> _loadCachedStats() async {
+    if (!_enabled) return;
+    final service = HealthKitService.instance;
+    final steps = await service.getCachedSteps();
+    final lastSync = await service.getLastSyncTime();
+    if (mounted) {
+      setState(() {
+        _steps = steps;
+        _lastSync = lastSync;
+      });
+    }
+  }
+
+  Future<void> _toggle(bool value) async {
+    setState(() => _saving = true);
+    final success = await HealthKitService.instance.setEnabled(value);
+    if (mounted) {
+      setState(() {
+        _enabled = success ? value : _enabled;
+        _saving = false;
+      });
+      if (value && success) {
+        _loadCachedStats();
+      }
+    }
+  }
+
+  String _formatLastSync() {
+    if (_lastSync == null) return 'Never synced';
+    final diff = DateTime.now().difference(_lastSync!);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: widget.surfaceColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: widget.borderColor),
+          ),
+          child: Column(
+            children: [
+              // Toggle row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(widget.isLight ? 8 : 10),
+                      ),
+                      child: const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Apple Health',
+                            style: TextStyle(
+                                color: widget.textColor, fontSize: 15, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Read steps, heart rate & workout data',
+                            style: TextStyle(color: widget.textSecondary.withOpacity(0.6), fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _saving
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                color: widget.primaryColor, strokeWidth: 2),
+                          )
+                        : Switch.adaptive(
+                            value: _enabled,
+                            onChanged: _toggle,
+                            activeColor: widget.primaryColor,
+                          ),
+                  ],
+                ),
+              ),
+              // Privacy info
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: widget.isLight
+                        ? const Color(0xFFEFF6FF)
+                        : Colors.white.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.shield_outlined,
+                              color: widget.textSecondary.withOpacity(0.5), size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Privacy',
+                            style: TextStyle(
+                              color: widget.textSecondary.withOpacity(0.7),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Health data is stored only on your device. It is never uploaded to our servers or shared with third parties. Disabling this will delete all locally cached health data.',
+                        style: TextStyle(
+                          color: widget.textSecondary.withOpacity(0.5),
+                          fontSize: 11,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (_enabled && _steps > 0) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.directions_walk,
+                                color: widget.primaryColor.withOpacity(0.7), size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$_steps steps today',
+                              style: TextStyle(
+                                color: widget.textColor.withOpacity(0.7),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Synced ${_formatLastSync()}',
+                              style: TextStyle(
+                                color: widget.textSecondary.withOpacity(0.4),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _FoodSharingTileState extends State<_FoodSharingTile> {

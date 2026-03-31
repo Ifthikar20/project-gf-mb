@@ -159,7 +159,7 @@ if $USE_DEVICECTL && command -v xcrun &>/dev/null; then
   ok "App installed! Launching..."
   xcrun devicectl device process launch \
     --device "$DEVICECTL_ID" \
-    "com.betterbliss.betterbliss" 2>&1 || \
+    "com.ifthikar.wellnessapp2024" 2>&1 || \
   xcrun devicectl device process launch \
     --device "$DEVICECTL_ID" \
     "$(defaults read "$(pwd)/$APP_PATH/Info" CFBundleIdentifier 2>/dev/null || echo 'com.betterbliss.betterbliss')"

@@ -9,6 +9,7 @@ import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_event.dart';
 import '../../data/repositories/meditation_repository.dart';
 import '../../domain/entities/meditation_audio.dart';
+// StreamingAuthException is exported from meditation_repository.dart
 import '../../../../core/services/goal_tracking_service.dart';
 
 class AudioPlayerPage extends StatefulWidget {
@@ -156,20 +157,28 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
         // Fetch the streaming URL from the backend API
         debugPrint(' Fetching streaming URL for audio: ${audio.id}');
-        final audioUrl = await repository.getAudioStreamingUrl(audio.id);
-        
-        if (audioUrl != null && audioUrl.isNotEmpty) {
-          debugPrint(' Got streaming URL: $audioUrl');
-          await _audioPlayer.setUrl(audioUrl);
-          setState(() => _isLoading = false);
-          await _audioPlayer.play();
-        } else {
-          // Fallback: If no streaming URL, show error
-          debugPrint(' No streaming URL available for audio');
+        try {
+          final audioUrl = await repository.getAudioStreamingUrl(audio.id);
+
+          if (audioUrl != null && audioUrl.isNotEmpty) {
+            debugPrint(' Got streaming URL: $audioUrl');
+            await _audioPlayer.setUrl(audioUrl);
+            setState(() => _isLoading = false);
+            await _audioPlayer.play();
+          } else {
+            debugPrint(' No streaming URL available for audio');
+            setState(() {
+              _hasError = true;
+              _isLoading = false;
+            });
+          }
+        } on StreamingAuthException {
+          // Session expired — show error locally, don't trigger global logout
           setState(() {
             _hasError = true;
             _isLoading = false;
           });
+          return;
         }
       } else {
         debugPrint(' Audio not found: ${widget.audioId}');
