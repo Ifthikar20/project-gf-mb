@@ -106,7 +106,7 @@ class _HealthOverviewCardState extends State<HealthOverviewCard> {
     final textColor = isDark ? Colors.white : Colors.black;
     final textSecondary = isDark ? Colors.white54 : Colors.black54;
     final surfaceColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF5F5F5);
-    final cardBorder = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final cardBorder = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05);
 
     if (_isLoading) {
       return Container(
@@ -136,7 +136,7 @@ class _HealthOverviewCardState extends State<HealthOverviewCard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFF22C55E).withOpacity(0.12),
+                color: const Color(0xFF22C55E).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Row(
@@ -360,21 +360,44 @@ class _HealthOverviewCardState extends State<HealthOverviewCard> {
 
   Future<void> _connectAppleHealth() async {
     setState(() => _connecting = true);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Turn ON all categories in the next screen, then tap Allow'),
-          backgroundColor: const Color(0xFF8B5CF6),
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
-    await Future.delayed(const Duration(milliseconds: 500));
-    final success = await HealthKitService.instance.setEnabled(true);
-    if (success && mounted) {
-      await _loadData();
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Turn ON all categories in the next screen, then tap Allow'),
+            backgroundColor: const Color(0xFF8B5CF6),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+      await Future.delayed(const Duration(milliseconds: 500));
+      final success = await HealthKitService.instance.setEnabled(true);
+      if (success && mounted) {
+        await _loadData();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not connect: ${HealthKitService.instance.lastError ?? "Permission denied"}. Check Settings > Health > Data Access.'),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error connecting: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
     }
     if (mounted) setState(() => _connecting = false);
   }
@@ -393,7 +416,7 @@ class _HealthOverviewCardState extends State<HealthOverviewCard> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withOpacity(0.1),
+              color: const Color(0xFFEF4444).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 24),
@@ -455,7 +478,7 @@ class _HRRangePainter extends CustomPainter {
     // Track
     canvas.drawRRect(
       RRect.fromRectAndRadius(Rect.fromLTWH(0, y - 4, size.width, 8), const Radius.circular(4)),
-      Paint()..color = isDark ? Colors.white10 : Colors.black.withOpacity(0.06),
+      Paint()..color = isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
     );
 
     // Active range (min to max)
@@ -509,7 +532,7 @@ class _ActivityGraphPainter extends CustomPainter {
       if (calH > 0) {
         canvas.drawRRect(
           RRect.fromRectAndRadius(Rect.fromLTWH(x + 2, chartHeight - calH, barWidth - 8, calH.clamp(3, chartHeight)), const Radius.circular(5)),
-          Paint()..color = const Color(0xFFFF6B6B).withOpacity(0.25),
+          Paint()..color = const Color(0xFFFF6B6B).withValues(alpha: 0.25),
         );
       }
 
@@ -581,7 +604,7 @@ class _HRTrendPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [const Color(0xFFEF4444).withOpacity(0.12), const Color(0xFFEF4444).withOpacity(0.0)],
+        colors: [const Color(0xFFEF4444).withValues(alpha: 0.12), const Color(0xFFEF4444).withValues(alpha: 0.0)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)));
 
     // Latest value label

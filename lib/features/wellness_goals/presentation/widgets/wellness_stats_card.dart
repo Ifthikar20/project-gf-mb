@@ -33,22 +33,25 @@ class _WellnessStatsCardState extends State<WellnessStatsCard> {
   Future<void> _loadHealthData() async {
     final hk = HealthKitService.instance;
 
-    // Always try to read steps regardless of flags
     int steps = 0;
-    if (hk.isAuthorized || hk.isEnabled) {
+    bool connected = false;
+
+    if (hk.isEnabled && hk.isAuthorized) {
+      // Read cached data first (no permission prompts)
       steps = await hk.getCachedSteps();
       if (steps == 0) {
+        // Try live fetch without re-requesting permissions
         try {
-          await hk.requestPermissions();
           steps = await hk.getStepCount(days: 1);
         } catch (_) {}
       }
+      connected = true;
     }
 
     if (mounted) {
       setState(() {
         _steps = steps;
-        _healthConnected = steps > 0;
+        _healthConnected = connected;
       });
     }
   }
@@ -145,7 +148,7 @@ class _WellnessStatsCardState extends State<WellnessStatsCard> {
               color: bg,
               borderRadius: BorderRadius.circular(24),
               boxShadow: isDark ? [] : [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 4)),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 4)),
               ],
             ),
             child: Column(
@@ -184,7 +187,7 @@ class _WellnessStatsCardState extends State<WellnessStatsCard> {
                 ),
 
                 const SizedBox(height: 16),
-                Divider(color: subtle.withOpacity(0.2), height: 1),
+                Divider(color: subtle.withValues(alpha: 0.2), height: 1),
                 const SizedBox(height: 14),
 
                 // ── Steps + Calories Eaten row ──
@@ -206,7 +209,7 @@ class _WellnessStatsCardState extends State<WellnessStatsCard> {
                       ),
                     ),
                     // Divider
-                    Container(width: 1, height: 20, color: subtle.withOpacity(0.2)),
+                    Container(width: 1, height: 20, color: subtle.withValues(alpha: 0.2)),
                     // Calories eaten
                     Expanded(
                       child: BlocBuilder<DietBloc, DietState>(
@@ -236,9 +239,9 @@ class _WellnessStatsCardState extends State<WellnessStatsCard> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
@@ -292,7 +295,7 @@ class _CircularProgressPainter extends CustomPainter {
     const strokeWidth = 6.0;
 
     canvas.drawCircle(center, radius, Paint()
-      ..color = isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06)
+      ..color = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round);

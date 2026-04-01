@@ -232,8 +232,9 @@ class HealthKitService {
   Future<bool> get isAvailable async {
     if (_checkedAvailability) return _isAvailable;
     try {
-      _isAvailable = await Health().hasPermissions(_readTypes) ?? false;
-      _isAvailable = true;
+      // hasPermissions returns null if HealthKit is not available on the device
+      final result = await Health().hasPermissions(_readTypes);
+      _isAvailable = result != null;
     } catch (e) {
       debugPrint('HealthKit not available: $e');
       _isAvailable = false;
