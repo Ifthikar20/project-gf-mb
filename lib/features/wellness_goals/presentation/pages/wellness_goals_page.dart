@@ -25,6 +25,7 @@ import '../../../advisor/presentation/widgets/advisor_suggestion_section.dart';
 import '../widgets/water_reminder_card.dart';
 import '../widgets/suggestion_badge.dart';
 import '../widgets/content_recommendations.dart';
+// daily_activity_row removed — steps/calories now integrated into WellnessStatsCard
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

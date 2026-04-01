@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -55,6 +56,117 @@ class _CaloriesPageState extends State<CaloriesPage> {
         value: context.read<DietBloc>(),
         child: const LogMealSheet(),
       ),
+    );
+  }
+
+  void _showGoalEditor(BuildContext context, int currentGoal) {
+    final controller = TextEditingController(text: '$currentGoal');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final bg = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+        final text = isDark ? Colors.white : Colors.black;
+        final subtle = isDark ? Colors.white54 : Colors.black54;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Daily Calorie Goal',
+                    style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: text)),
+                const SizedBox(height: 6),
+                Text('How many calories do you want to consume per day?',
+                    style: GoogleFonts.inter(fontSize: 13, color: subtle)),
+                const SizedBox(height: 20),
+                // Quick presets
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [1500, 1800, 2000, 2200, 2500, 3000].map((v) {
+                    final isSelected = controller.text == '$v';
+                    return GestureDetector(
+                      onTap: () => controller.text = '$v',
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF8B5CF6)
+                              : (isDark ? Colors.white10 : const Color(0xFFF0F0F0)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text('$v',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? Colors.white : text,
+                            )),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                // Custom input
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: text),
+                  decoration: InputDecoration(
+                    suffix: Text('cal', style: GoogleFonts.inter(fontSize: 16, color: subtle)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: subtle.withOpacity(0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFF8B5CF6), width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Save button
+                GestureDetector(
+                  onTap: () {
+                    final goal = int.tryParse(controller.text) ?? 2000;
+                    final clamped = goal.clamp(500, 10000);
+                    this.context.read<DietBloc>().add(SetCalorieGoal(goal: clamped));
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Center(
+                      child: Text('Set Goal',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          )),
+                    ),
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(ctx).padding.bottom + 8),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -166,7 +278,17 @@ class _CaloriesPageState extends State<CaloriesPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+
+                    // ── Daily Calorie Goal Card ──
+                    if (state is DietLoaded)
+                      _CalorieGoalCard(
+                        summary: state.summary,
+                        isLight: isLight,
+                        onEditGoal: () => _showGoalEditor(context, state.summary.calorieGoal),
+                      ),
+
+                    const SizedBox(height: 20),
 
                     // ── Charts ──
                     if (state is DietLoaded) ...[
@@ -333,7 +455,7 @@ class _CaloriesPageState extends State<CaloriesPage> {
     return widgets;
   }
 
-  Widget _rangePill(String label, int days, Color text, Color subtle, bool isLight) {
+  Widget _rangePill(String label, int days, Color txtColor, Color subtle, bool isLight) {
     final active = _mealListDays == days;
     return GestureDetector(
       onTap: () => _setMealRange(days),
@@ -354,6 +476,77 @@ class _CaloriesPageState extends State<CaloriesPage> {
                   ? (isLight ? Colors.white : Colors.black)
                   : subtle,
             )),
+      ),
+    );
+  }
+}
+
+/// Compact calorie goal bar — Cal.ai style
+class _CalorieGoalCard extends StatelessWidget {
+  final DailyNutritionSummary summary;
+  final bool isLight;
+  final VoidCallback onEditGoal;
+
+  const _CalorieGoalCard({
+    required this.summary,
+    required this.isLight,
+    required this.onEditGoal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final consumed = summary.totalCalories;
+    final goal = summary.calorieGoal;
+    final remaining = (goal - consumed).clamp(0, goal);
+    final progress = summary.calorieProgress.clamp(0.0, 1.0);
+    final isOver = consumed > goal;
+
+    final bg = isLight ? Colors.white : const Color(0xFF1A1A1A);
+    final text = isLight ? Colors.black : Colors.white;
+    final subtle = isLight ? Colors.black45 : Colors.white38;
+    final border = isLight ? const Color(0xFFE8E8EC) : const Color(0xFF2A2A2A);
+    final accentColor = isOver ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
+
+    return GestureDetector(
+      onTap: onEditGoal,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border),
+        ),
+        child: Column(
+          children: [
+            // Top row: label + remaining
+            Row(
+              children: [
+                Icon(Icons.local_fire_department, color: accentColor, size: 16),
+                const SizedBox(width: 6),
+                Text('$consumed', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: text)),
+                Text(' / $goal cal', style: GoogleFonts.inter(fontSize: 13, color: subtle)),
+                const Spacer(),
+                Text(
+                  isOver ? '+${consumed - goal}' : '$remaining left',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.edit_outlined, size: 12, color: subtle),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: isLight ? Colors.black.withOpacity(0.06) : Colors.white10,
+                valueColor: AlwaysStoppedAnimation(accentColor),
+                minHeight: 6,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

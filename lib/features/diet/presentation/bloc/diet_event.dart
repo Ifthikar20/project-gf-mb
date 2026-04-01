@@ -65,3 +65,11 @@ class LoadMealList extends DietEvent {
   @override
   List<Object?> get props => [days];
 }
+
+/// Set the daily calorie goal
+class SetCalorieGoal extends DietEvent {
+  final int goal;
+  const SetCalorieGoal({required this.goal});
+  @override
+  List<Object?> get props => [goal];
+}

@@ -12,6 +12,7 @@ import 'body_profile_page.dart';
 import 'goals_setup_page.dart';
 import '../widgets/workout_stats_graphs.dart';
 import '../widgets/heart_rate_monitor_card.dart';
+import '../widgets/health_overview_card.dart';
 
 /// Workout Hub — main tab page showing weekly stats, daily chart, and recent workouts
 class WorkoutHubPage extends StatefulWidget {
@@ -172,6 +173,14 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
                 ],
               ),
             ),
+          ),
+        ),
+
+        // ── Health Overview (Apple Health data) ──
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: HealthOverviewCard(),
           ),
         ),
 

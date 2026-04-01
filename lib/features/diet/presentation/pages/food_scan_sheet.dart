@@ -39,7 +39,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
   @override
   void initState() {
     super.initState();
-    // Auto-open camera on load
+    // Auto-open camera when scanner loads
     WidgetsBinding.instance.addPostFrameCallback((_) => _capturePhoto());
   }
 
@@ -58,7 +58,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
       });
       _analyzeImage();
     } else if (mounted && _capturedImage == null) {
-      Navigator.pop(context);
+      // User cancelled camera — stay on scanner screen (don't pop)
     }
   }
 
@@ -135,6 +135,23 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
       _servings = 1;
     });
     _capturePhoto();
+  }
+
+  /// Pick an image from the photo gallery for scanning
+  Future<void> _pickFromGallery() async {
+    final XFile? file = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (file != null && mounted) {
+      setState(() {
+        _capturedImage = File(file.path);
+        _error = null;
+      });
+      _analyzeImage();
+    }
   }
 
   MealType _guessMealType() {
@@ -318,8 +335,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               ),
             ),
 
-          // ── Corner brackets overlay (only when NOT scanning) ──
-          if (!hasResult && _capturedImage != null && !_scanning)
+          // ── Corner brackets overlay ──
+          if (!hasResult && _capturedImage != null)
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
@@ -328,7 +345,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               ),
             ),
 
-          // ── Top bar: X — AI Scanner ──
+          // ── Top bar ──
           _buildTopBar(),
 
           // ── Scanning indicator ──
@@ -340,12 +357,9 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
           // ── Results panel (slides up from bottom) ──
           if (hasResult) _buildResultsPanel(),
 
-          // ── Retake button (after error or when viewing captured image) ──
-          if (_capturedImage != null &&
-              !_scanning &&
-              !hasResult &&
-              _error == null)
-            _buildRetakeButton(),
+          // ── Retake / Gallery / Barcode buttons (after capture, before result) ──
+          if (_capturedImage != null && !_scanning && !hasResult && _error == null)
+            _buildRetakeBar(),
         ],
       ),
     );
@@ -367,7 +381,6 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Close button
             GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -377,43 +390,24 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                   color: Colors.black.withValues(alpha: 0.4),
                   shape: BoxShape.circle,
                 ),
-                child:
-                    const Icon(Icons.close, color: Colors.white, size: 20),
+                child: const Icon(Icons.close, color: Colors.white, size: 20),
               ),
             ),
-            // Title
             Text(
-              'Calorie Scanner',
-              style: GoogleFonts.inter(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+              'Scan Food',
+              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
             ),
-            // Barcode scan button
+            // Barcode button
             GestureDetector(
               onTap: _switchToBarcode,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.circle,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.qr_code_scanner_rounded,
-                        color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Barcode',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 18),
               ),
             ),
           ],
@@ -422,13 +416,80 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     );
   }
 
-  // ─── Scanning overlay (animated text, no spinner) ───
+  // ─── Retake / Gallery bar (after capture, before results) ───
+  Widget _buildRetakeBar() {
+    return Positioned(
+      bottom: MediaQuery.of(context).padding.bottom + 24,
+      left: 0,
+      right: 0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          GestureDetector(
+            onTap: _retakePhoto,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text('Retake', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: _pickFromGallery,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.photo_library_outlined, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text('Gallery', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Scanning overlay — food image visible behind with animated scan line ───
   Widget _buildScanningOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.55),
-        child: const Center(
-          child: _ScanningTextAnimation(),
+        color: Colors.black.withValues(alpha: 0.3),
+        child: const Stack(
+          children: [
+            // Animated scan line
+            _ScanLineAnimation(),
+            // Corner brackets during scan
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _AnimatedCornerBrackets(),
+              ),
+            ),
+            // Text at bottom center
+            Positioned(
+              bottom: 140,
+              left: 0,
+              right: 0,
+              child: Center(child: _ScanningTextAnimation()),
+            ),
+          ],
         ),
       ),
     );
@@ -499,42 +560,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     );
   }
 
-  // ─── Retake button ───
-  Widget _buildRetakeButton() {
-    return Positioned(
-      bottom: 50,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: GestureDetector(
-          onTap: _retakePhoto,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.camera_alt_rounded,
-                    color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Retake',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // (Retake is now handled by the bottom toolbar scan button)
 
   // ─── Results Panel (matching the mockup) ───
   Widget _buildResultsPanel() {
@@ -1126,31 +1152,29 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
 // ─────────────────────────────────────────────
 class _CornerBracketsPainter extends CustomPainter {
   final bool scanning;
-  _CornerBracketsPainter({this.scanning = false});
+  final double glowOpacity;
+  _CornerBracketsPainter({this.scanning = false, this.glowOpacity = 1.0});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height * 0.42);
-    final radius = size.width * 0.38;
-    final bracketLen = 30.0;
-    final cornerRadius = 12.0;
+    final rectSize = size.width * 0.72;
+    final bracketLen = 35.0;
+    final cornerRadius = 14.0;
 
-    // Semi-transparent dark overlay
-    final overlayPaint = Paint()..color = Colors.black.withValues(alpha: 0.35);
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), overlayPaint);
+    // Bracket rectangle (not circle — matches reference UI)
+    final rect = Rect.fromCenter(center: center, width: rectSize, height: rectSize);
 
-    // Clear the circle
-    final circlePaint = Paint()..blendMode = BlendMode.clear;
-    canvas.drawCircle(center, radius, circlePaint);
+    // White bracket corners (with glow when scanning)
+    final bracketColor = scanning
+        ? Color.fromRGBO(139, 92, 246, glowOpacity) // Purple glow
+        : Colors.white.withOpacity(0.8);
 
-    // White bracket corners
     final bracketPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 3.0
+      ..color = bracketColor
+      ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-
-    final rect = Rect.fromCircle(center: center, radius: radius);
 
     // Top-left corner
     _drawCorner(canvas, bracketPaint, rect.left, rect.top, bracketLen,
@@ -1207,12 +1231,123 @@ class _CornerBracketsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CornerBracketsPainter old) =>
-      scanning != old.scanning;
+      scanning != old.scanning || glowOpacity != old.glowOpacity;
 }
 
 // ─────────────────────────────────────────────
 // Animated scanning text ─ cycles through messages
 // ─────────────────────────────────────────────
+/// Animated scanning line that sweeps vertically over the food image
+class _ScanLineAnimation extends StatefulWidget {
+  const _ScanLineAnimation();
+
+  @override
+  State<_ScanLineAnimation> createState() => _ScanLineAnimationState();
+}
+
+class _ScanLineAnimationState extends State<_ScanLineAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final screenH = MediaQuery.of(context).size.height;
+        final top = _controller.value * screenH * 0.6 + screenH * 0.15;
+        return Positioned(
+          top: top,
+          left: 40,
+          right: 40,
+          child: Container(
+            height: 2,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  const Color(0xFF8B5CF6).withOpacity(0.8),
+                  const Color(0xFF6366F1),
+                  const Color(0xFF8B5CF6).withOpacity(0.8),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.5),
+                  blurRadius: 12,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Animated corner brackets that pulse during scanning
+class _AnimatedCornerBrackets extends StatefulWidget {
+  const _AnimatedCornerBrackets();
+
+  @override
+  State<_AnimatedCornerBrackets> createState() => _AnimatedCornerBracketsState();
+}
+
+class _AnimatedCornerBracketsState extends State<_AnimatedCornerBrackets>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final opacity = 0.4 + _controller.value * 0.6;
+        return CustomPaint(
+          painter: _CornerBracketsPainter(
+            scanning: true,
+            glowOpacity: opacity,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Scanning text with cycling messages
 class _ScanningTextAnimation extends StatefulWidget {
   const _ScanningTextAnimation();
 
@@ -1253,64 +1388,64 @@ class _ScanningTextAnimationState extends State<_ScanningTextAnimation> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Pulsing icon
-        TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.85, end: 1.0),
-          duration: const Duration(milliseconds: 1200),
-          builder: (context, value, child) {
-            return Transform.scale(
-              scale: value,
-              child: child,
-            );
-          },
-          onEnd: () {
-            if (mounted) setState(() {});
-          },
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
-              border: Border.all(
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
-                width: 1.5,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Pulsing icon
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.85, end: 1.0),
+            duration: const Duration(milliseconds: 1200),
+            builder: (context, value, child) {
+              return Transform.scale(scale: value, child: child);
+            },
+            onEnd: () {
+              if (mounted) setState(() {});
+            },
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF8B5CF6).withOpacity(0.2),
+              ),
+              child: const Icon(
+                Icons.restaurant_menu_rounded,
+                color: Color(0xFF8B5CF6),
+                size: 24,
               ),
             ),
-            child: const Icon(
-              Icons.restaurant_menu_rounded,
-              color: Color(0xFF8B5CF6),
-              size: 28,
+          ),
+          const SizedBox(height: 12),
+          // Main message
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: Text(
+              _messages[_index],
+              key: ValueKey(_index),
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 20),
-        // Main message
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          child: Text(
-            _messages[_index],
-            key: ValueKey(_index),
+          const SizedBox(height: 6),
+          // Subtitle with dots
+          Text(
+            'Scanning${'.' * _dotCount}',
             style: GoogleFonts.inter(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+              fontSize: 12,
+              color: Colors.white54,
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        // Subtitle with dots
-        Text(
-          'Scanning${'.' * _dotCount}',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            color: Colors.white54,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

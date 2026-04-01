@@ -19,6 +19,16 @@ class DietBloc extends Bloc<DietEvent, DietState> {
     on<ChangeDateFilter>(_onChangeDateFilter);
     on<LoadMealsForRange>(_onLoadMealsForRange);
     on<LoadMealList>(_onLoadMealList);
+    on<SetCalorieGoal>(_onSetCalorieGoal);
+  }
+
+  Future<void> _onSetCalorieGoal(
+      SetCalorieGoal event, Emitter<DietState> emit) async {
+    await _dataSource.setCalorieGoal(event.goal);
+    // Reload to reflect new goal
+    final currentDate =
+        state is DietLoaded ? (state as DietLoaded).selectedDate : DateTime.now();
+    add(LoadMeals(date: currentDate));
   }
 
   Future<void> _onLoadMeals(LoadMeals event, Emitter<DietState> emit) async {
@@ -28,8 +38,9 @@ class DietBloc extends Bloc<DietEvent, DietState> {
 
     emit(DietLoading());
     try {
+      final calorieGoal = await _dataSource.getCalorieGoal();
       final meals = await _dataSource.getMealsForDate(event.date);
-      final summary = DailyNutritionSummary.fromMeals(meals);
+      final summary = DailyNutritionSummary.fromMeals(meals, calorieGoal: calorieGoal);
 
       // Load chart range data
       final rangeData = await _dataSource.getMealsForRange(prevChartDays);

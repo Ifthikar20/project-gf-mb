@@ -86,12 +86,16 @@ class _MealGroupCardState extends State<MealGroupCard>
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // Food image
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 52,
-                      height: 52,
+                  // Food image with color background
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: _mealColor(_primary.mealType).withOpacity(0.15),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
                       child: _hasLocalImage
                           ? Image.file(File(_primary.imagePath!),
                               fit: BoxFit.cover,
@@ -122,50 +126,26 @@ class _MealGroupCardState extends State<MealGroupCard>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Text('${_primary.mealType.emoji} $_timeStr',
-                                style: GoogleFonts.inter(
-                                    fontSize: 12, color: subtleColor)),
-                            if (!isSingle) ...[
-                              const SizedBox(width: 6),
-                              Icon(
-                                _expanded
-                                    ? Icons.expand_less
-                                    : Icons.expand_more,
-                                size: 16,
-                                color: subtleColor,
-                              ),
-                            ],
-                          ],
-                        ),
+                        Text('${_primary.mealType.emoji} $_timeStr',
+                            style: GoogleFonts.inter(
+                                fontSize: 12, color: subtleColor)),
                       ],
                     ),
                   ),
 
-                  // Total calories + macros
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('$_totalCal cal',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF10B981),
-                          )),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _macroBadge('P', _totalP, const Color(0xFF3B82F6), isDark),
-                          const SizedBox(width: 4),
-                          _macroBadge('C', _totalC, const Color(0xFFF59E0B), isDark),
-                          const SizedBox(width: 4),
-                          _macroBadge('F', _totalF, const Color(0xFFEC4899), isDark),
-                        ],
-                      ),
-                    ],
-                  ),
+                  // Total calories only (clean)
+                  Text('$_totalCal',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF10B981),
+                      )),
+                  const SizedBox(width: 2),
+                  Text('cal',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: subtleColor,
+                      )),
                 ],
               ),
             ),
@@ -227,34 +207,23 @@ class _MealGroupCardState extends State<MealGroupCard>
     );
   }
 
-  Widget _emojiPlaceholder(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Text(_primary.mealType.emoji,
-            style: const TextStyle(fontSize: 24)),
-      ),
-    );
+  Color _mealColor(MealType type) {
+    switch (type) {
+      case MealType.breakfast:
+        return const Color(0xFFF59E0B); // warm amber
+      case MealType.lunch:
+        return const Color(0xFF22C55E); // green
+      case MealType.dinner:
+        return const Color(0xFF8B5CF6); // purple
+      case MealType.snack:
+        return const Color(0xFF3B82F6); // blue
+    }
   }
 
-  Widget _macroBadge(String label, int grams, Color color, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.12 : 0.08),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text('$label${grams}g',
-          style: GoogleFonts.inter(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
-            color: color,
-          )),
+  Widget _emojiPlaceholder(bool isDark) {
+    return Center(
+      child: Text(_primary.mealType.emoji,
+          style: const TextStyle(fontSize: 22)),
     );
   }
 }

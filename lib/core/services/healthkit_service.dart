@@ -60,10 +60,14 @@ class HealthKitService {
   bool _isAuthorized = false;
   bool _checkedAvailability = false;
   bool _isAvailable = false;
+  bool _configured = false;
 
   /// Whether the user has opted in to health data collection in profile settings
   bool _isEnabled = false;
   bool get isEnabled => _isEnabled;
+
+  /// Last error message (for UI feedback)
+  String? lastError;
 
   /// HealthKit data types we need
   static const _readTypes = [
@@ -85,6 +89,16 @@ class HealthKitService {
     final box = await Hive.openBox('healthkit_prefs');
     _isAuthorized = box.get('authorized', defaultValue: false) as bool;
     _isEnabled = box.get('enabled', defaultValue: false) as bool;
+    debugPrint('HealthKit init: enabled=$_isEnabled, authorized=$_isAuthorized');
+
+    // Pre-configure the health plugin
+    try {
+      await _health.configure();
+      _configured = true;
+      debugPrint('HealthKit: configure() success');
+    } catch (e) {
+      debugPrint('HealthKit: configure() failed: $e');
+    }
   }
 
   // ──────────────────────────────────
@@ -231,24 +245,51 @@ class HealthKitService {
   /// Whether the user has granted permissions
   bool get isAuthorized => _isAuthorized;
 
-  /// Request HealthKit permissions
+  /// Ensure Health plugin is configured (required once before any calls)
+  Future<void> _ensureConfigured() async {
+    if (_configured) return;
+    try {
+      await _health.configure();
+      _configured = true;
+      debugPrint('Health plugin configured');
+    } catch (e) {
+      debugPrint('Health configure error: $e');
+    }
+  }
+
+  /// Request HealthKit permissions.
   Future<bool> requestPermissions() async {
     try {
+      await _ensureConfigured();
+
+      debugPrint('HealthKit: requesting authorization...');
       final granted = await _health.requestAuthorization(
         _readTypes,
         permissions: _readTypes.map((_) => HealthDataAccess.READ).toList(),
       );
+      debugPrint('HealthKit: requestAuthorization returned $granted');
+
       _isAuthorized = granted;
       _isAvailable = true;
       _checkedAvailability = true;
+      lastError = null;
 
       final box = await Hive.openBox('healthkit_prefs');
       await box.put('authorized', granted);
 
-      debugPrint('HealthKit authorization: $granted');
+      if (granted) {
+        // Verify we can actually read data
+        final testSteps = await getStepCount(days: 1);
+        debugPrint('HealthKit verification: $testSteps steps today');
+      } else {
+        debugPrint('HealthKit: authorization denied');
+        lastError = 'Permission denied';
+      }
+
       return granted;
     } catch (e) {
       debugPrint('HealthKit permission error: $e');
+      lastError = e.toString();
       _isAuthorized = false;
       return false;
     }
@@ -272,6 +313,7 @@ class HealthKitService {
   /// Get heart rate data for the last [days] days
   Future<List<HeartRatePoint>> getHeartRateData({int days = 2}) async {
     if (!_isAuthorized) return [];
+    await _ensureConfigured();
 
     try {
       final now = DateTime.now();
@@ -305,6 +347,7 @@ class HealthKitService {
   /// Get daily workout summaries for the last [days] days
   Future<List<DailyWorkoutSummary>> getWorkoutSummaries({int days = 7}) async {
     if (!_isAuthorized) return [];
+    await _ensureConfigured();
 
     try {
       final now = DateTime.now();
@@ -374,16 +417,39 @@ class HealthKitService {
   // Steps
   // ──────────────────────────────────
 
-  /// Get total step count for the last [days] days
+  /// Get total step count for the last [days] days.
+  /// Uses getTotalStepsInInterval first, falls back to summing STEPS data points.
   Future<int> getStepCount({int days = 1}) async {
-    if (!_isAuthorized) return 0;
+    if (!_isAuthorized) {
+      debugPrint('HealthKit steps: not authorized');
+      return 0;
+    }
+    await _ensureConfigured();
 
     try {
       final now = DateTime.now();
-      final start = now.subtract(Duration(days: days));
+      final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
 
+      debugPrint('HealthKit steps: querying $start to $now');
+
+      // Method 1: getTotalStepsInInterval
       final steps = await _health.getTotalStepsInInterval(start, now);
-      return steps ?? 0;
+      debugPrint('HealthKit steps (total): $steps');
+      if (steps != null && steps > 0) return steps;
+
+      // Method 2: Sum individual STEPS data points
+      final dataPoints = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.STEPS],
+        startTime: start,
+        endTime: now,
+      );
+      final cleaned = Health().removeDuplicates(dataPoints);
+      int sum = 0;
+      for (final dp in cleaned) {
+        sum += (dp.value as NumericHealthValue).numericValue.toInt();
+      }
+      debugPrint('HealthKit steps (summed ${cleaned.length} points): $sum');
+      return sum;
     } catch (e) {
       debugPrint('HealthKit steps fetch error: $e');
       return 0;
