@@ -60,45 +60,12 @@ class _LogWorkoutSheetState extends State<LogWorkoutSheet> {
 
   void _completeWorkout() {
     if (_selectedTypeId == null) return;
-
+    // Dispatch log event — BlocListener handles navigation on success
     context.read<WorkoutBloc>().add(LogManualWorkout(
       workoutTypeId: _selectedTypeId!,
       durationMinutes: _durationMinutes,
       startedAt: _startedAt,
     ));
-
-    // Find workout type details for feedback page
-    final state = context.read<WorkoutBloc>().state;
-    String workoutName = 'Workout';
-    String workoutCategory = 'cardio';
-    int estimatedCalories = 0;
-
-    if (state is WorkoutLoaded) {
-      final type = state.workoutTypes.firstWhere(
-        (t) => t.id == _selectedTypeId,
-        orElse: () => const WorkoutTypeModel(
-          id: '', name: 'Workout', slug: '', metValue: 5, iconName: 'fitness_center', category: 'cardio',
-        ),
-      );
-      workoutName = type.name;
-      workoutCategory = type.category;
-      // Rough calorie estimate: MET * weight(kg) * hours
-      final hours = _durationMinutes / 60.0;
-      estimatedCalories = (type.metValue * 70 * hours).round();
-    }
-
-    // Close the sheet and open post-workout feedback
-    Navigator.of(context).pop();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PostWorkoutFeedbackPage(
-          workoutName: workoutName,
-          workoutCategory: workoutCategory,
-          caloriesBurned: estimatedCalories,
-          durationMinutes: _durationMinutes,
-        ),
-      ),
-    );
   }
 
   @override

@@ -75,6 +75,12 @@ class HealthKitService {
     HealthDataType.STEPS,
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.WORKOUT,
+    HealthDataType.SLEEP_ASLEEP,
+    HealthDataType.SLEEP_IN_BED,
+    HealthDataType.RESTING_HEART_RATE,
+    HealthDataType.HEART_RATE_VARIABILITY_SDNN,
+    HealthDataType.DISTANCE_WALKING_RUNNING,
+    HealthDataType.FLIGHTS_CLIMBED,
   ];
 
   // Hive box name for health data cache
@@ -136,14 +142,24 @@ class HealthKitService {
       final workouts = await getWorkoutSummaries(days: 7);
       final steps = await getStepCount(days: 1);
       final effort = await getEffortScore(days: 7);
+      final sleep = await getSleepMinutes(days: 1);
+      final restHR = await getRestingHeartRate(days: 7);
+      final hrv = await getHRV(days: 7);
+      final distance = await getDistanceMeters(days: 1);
+      final flights = await getFlightsClimbed(days: 1);
 
       final box = await Hive.openBox(_boxName);
       await box.put('heart_rate', jsonEncode(hr.map((e) => e.toJson()).toList()));
       await box.put('workouts', jsonEncode(workouts.map((e) => e.toJson()).toList()));
       await box.put('steps', steps);
       await box.put('effort_score', effort);
+      await box.put('sleep_minutes', sleep);
+      await box.put('resting_hr', restHR);
+      await box.put('hrv', hrv);
+      await box.put('distance_meters', distance);
+      await box.put('flights_climbed', flights);
       await box.put('last_sync', DateTime.now().toIso8601String());
-      debugPrint('Health data cached: ${hr.length} HR points, ${workouts.length} days, $steps steps');
+      debugPrint('Health data cached: $steps steps, ${sleep}min sleep, ${distance.round()}m distance, $flights flights');
     } catch (e) {
       debugPrint('Failed to cache health data: $e');
     }
@@ -203,6 +219,56 @@ class HealthKitService {
       return (box.get('effort_score', defaultValue: 0.0) as num).toDouble();
     } catch (_) {
       return 0.0;
+    }
+  }
+
+  /// Get cached sleep minutes
+  Future<int> getCachedSleep() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      return box.get('sleep_minutes', defaultValue: 0) as int;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Get cached resting heart rate
+  Future<int> getCachedRestingHR() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      return box.get('resting_hr', defaultValue: 0) as int;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Get cached HRV
+  Future<double> getCachedHRV() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      return (box.get('hrv', defaultValue: 0.0) as num).toDouble();
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Get cached distance in meters
+  Future<double> getCachedDistance() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      return (box.get('distance_meters', defaultValue: 0.0) as num).toDouble();
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Get cached flights climbed
+  Future<int> getCachedFlights() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      return box.get('flights_climbed', defaultValue: 0) as int;
+    } catch (_) {
+      return 0;
     }
   }
 
@@ -458,6 +524,143 @@ class HealthKitService {
   }
 
   // ──────────────────────────────────
+  // Sleep
+  // ──────────────────────────────────
+
+  /// Get total sleep duration in minutes for last night
+  Future<int> getSleepMinutes({int days = 1}) async {
+    if (!_isAuthorized) return 0;
+    await _ensureConfigured();
+    try {
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: days));
+      final dataPoints = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.SLEEP_ASLEEP, HealthDataType.SLEEP_IN_BED],
+        startTime: start,
+        endTime: now,
+      );
+      final cleaned = Health().removeDuplicates(dataPoints);
+      int totalMinutes = 0;
+      for (final dp in cleaned) {
+        totalMinutes += dp.dateTo.difference(dp.dateFrom).inMinutes;
+      }
+      debugPrint('HealthKit sleep: ${totalMinutes}min from ${cleaned.length} segments');
+      return totalMinutes;
+    } catch (e) {
+      debugPrint('HealthKit sleep error: $e');
+      return 0;
+    }
+  }
+
+  // ──────────────────────────────────
+  // Resting Heart Rate
+  // ──────────────────────────────────
+
+  /// Get latest resting heart rate
+  Future<int> getRestingHeartRate({int days = 7}) async {
+    if (!_isAuthorized) return 0;
+    await _ensureConfigured();
+    try {
+      final now = DateTime.now();
+      final start = now.subtract(Duration(days: days));
+      final dataPoints = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.RESTING_HEART_RATE],
+        startTime: start,
+        endTime: now,
+      );
+      final cleaned = Health().removeDuplicates(dataPoints);
+      if (cleaned.isEmpty) return 0;
+      cleaned.sort((a, b) => b.dateFrom.compareTo(a.dateFrom));
+      return (cleaned.first.value as NumericHealthValue).numericValue.round();
+    } catch (e) {
+      debugPrint('HealthKit resting HR error: $e');
+      return 0;
+    }
+  }
+
+  // ──────────────────────────────────
+  // Heart Rate Variability (HRV)
+  // ──────────────────────────────────
+
+  /// Get latest HRV in milliseconds (SDNN)
+  Future<double> getHRV({int days = 7}) async {
+    if (!_isAuthorized) return 0;
+    await _ensureConfigured();
+    try {
+      final now = DateTime.now();
+      final start = now.subtract(Duration(days: days));
+      final dataPoints = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN],
+        startTime: start,
+        endTime: now,
+      );
+      final cleaned = Health().removeDuplicates(dataPoints);
+      if (cleaned.isEmpty) return 0;
+      cleaned.sort((a, b) => b.dateFrom.compareTo(a.dateFrom));
+      return (cleaned.first.value as NumericHealthValue).numericValue.toDouble();
+    } catch (e) {
+      debugPrint('HealthKit HRV error: $e');
+      return 0;
+    }
+  }
+
+  // ──────────────────────────────────
+  // Distance Walking + Running
+  // ──────────────────────────────────
+
+  /// Get total walking + running distance in meters for today
+  Future<double> getDistanceMeters({int days = 1}) async {
+    if (!_isAuthorized) return 0;
+    await _ensureConfigured();
+    try {
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
+      final dataPoints = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.DISTANCE_WALKING_RUNNING],
+        startTime: start,
+        endTime: now,
+      );
+      final cleaned = Health().removeDuplicates(dataPoints);
+      double total = 0;
+      for (final dp in cleaned) {
+        total += (dp.value as NumericHealthValue).numericValue.toDouble();
+      }
+      return total;
+    } catch (e) {
+      debugPrint('HealthKit distance error: $e');
+      return 0;
+    }
+  }
+
+  // ──────────────────────────────────
+  // Flights Climbed
+  // ──────────────────────────────────
+
+  /// Get total flights climbed today
+  Future<int> getFlightsClimbed({int days = 1}) async {
+    if (!_isAuthorized) return 0;
+    await _ensureConfigured();
+    try {
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
+      final dataPoints = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.FLIGHTS_CLIMBED],
+        startTime: start,
+        endTime: now,
+      );
+      final cleaned = Health().removeDuplicates(dataPoints);
+      int total = 0;
+      for (final dp in cleaned) {
+        total += (dp.value as NumericHealthValue).numericValue.toInt();
+      }
+      return total;
+    } catch (e) {
+      debugPrint('HealthKit flights error: $e');
+      return 0;
+    }
+  }
+
+  // ──────────────────────────────────
   // Effort Score (composite metric)
   // ──────────────────────────────────
 
@@ -476,6 +679,21 @@ class HealthKitService {
     final calorieScore = (totalCalories / targetCalories).clamp(0.0, 1.0);
 
     return (minuteScore * 0.6 + calorieScore * 0.4).clamp(0.0, 1.0);
+  }
+
+  // ──────────────────────────────────
+  // Step-based Calorie Estimation
+  // ──────────────────────────────────
+
+  /// Estimate calories burned from steps when HealthKit active energy is unavailable.
+  /// Uses MET 3.5 (walking), ~100 steps/minute pace.
+  /// Falls back to 70kg if no weight provided.
+  static int estimateCaloriesFromSteps(int steps, {double weightKg = 70.0}) {
+    if (steps <= 0) return 0;
+    final activeMinutes = steps / 100; // ~100 steps per minute walking
+    final hours = activeMinutes / 60;
+    final calories = 3.5 * weightKg * hours; // MET formula
+    return calories.round();
   }
 
   // ──────────────────────────────────

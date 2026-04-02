@@ -171,37 +171,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // ── Primary Wellness Stats Card ──
+              // ── Primary Wellness Stats Card (includes calories + goals) ──
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.only(top: 20),
                   child: WellnessStatsCard(),
                 ),
               ),
-
-              // ── Macro Tracking Cards ──
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 16),
-                  child: MacroTrackingCards(),
-                ),
-              ),
-
-              // ── Dot indicator (visual)  ──
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildDot(true),
-                      const SizedBox(width: 6),
-                      _buildDot(false),
-                    ],
-                  ),
-                ),
-              ),
-
 
               // -- Content Recommendations (Videos & Audio) --
               const SliverToBoxAdapter(

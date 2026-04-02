@@ -15,6 +15,7 @@ import '../auth/auth_bloc.dart';
 import '../../features/videos/presentation/pages/video_player_page.dart';
 
 import '../../features/workouts/presentation/pages/body_profile_page.dart';
+import '../../features/workouts/presentation/pages/workout_hub_page.dart';
 import '../../features/workouts/presentation/pages/goals_setup_page.dart';
 import '../../features/workouts/presentation/bloc/workout_bloc.dart';
 import '../../features/meditation/presentation/pages/meditation_category_page.dart';
@@ -50,6 +51,7 @@ class AppRouter {
   static const String onboarding = '/onboarding';
   static const String changePassword = '/change-password';
   static const String accountSettings = '/account-settings';
+  static const String workouts = '/workouts';
   static const String workoutSummary = '/workout-summary';
   static const String bodyProfile = '/body-profile';
   static const String goalsSetup = '/goals-setup';
@@ -237,6 +239,13 @@ class AppRouter {
         GoRoute(
           path: workoutCheck,
           builder: (context, state) => const WorkoutCheckPage(),
+        ),
+        GoRoute(
+          path: workouts,
+          builder: (context, state) => BlocProvider.value(
+            value: context.read<WorkoutBloc>(),
+            child: const WorkoutHubPage(),
+          ),
         ),
         GoRoute(
           path: videoPlayer,
