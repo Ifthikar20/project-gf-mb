@@ -96,18 +96,18 @@ class _MealGroupCardState extends State<MealGroupCard>
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
+                      // Try local file first (fastest), fall back to remote URL, then emoji
                       child: _hasLocalImage
                           ? Image.file(File(_primary.imagePath!),
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _hasRemoteImage
-                                      ? Image.network(_primary.imageUrl!, fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark))
-                                      : _emojiPlaceholder(isDark))
+                              errorBuilder: (_, __, ___) => _hasRemoteImage
+                                  ? Image.network(_primary.imageUrl!, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark))
+                                  : _emojiPlaceholder(isDark))
                           : _hasRemoteImage
                               ? Image.network(_primary.imageUrl!, fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark))
-                          : _emojiPlaceholder(isDark),
+                              : _emojiPlaceholder(isDark),
                     ),
                   ),
                   const SizedBox(width: 12),

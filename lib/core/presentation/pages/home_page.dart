@@ -94,8 +94,8 @@ class _MainShellState extends State<MainShell> {
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,
                         ),
-                        _buildNavItem(
-                          icon: Icons.local_fire_department_rounded,
+                        _buildImageNavItem(
+                          assetPath: 'assets/images/fire-logo-calories.png',
                           label: 'Calories',
                           index: 1,
                           activeColor: activeColor,
@@ -130,6 +130,36 @@ class _MainShellState extends State<MainShell> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildImageNavItem({
+    required String assetPath,
+    required String label,
+    required int index,
+    required Color activeColor,
+    required Color inactiveColor,
+  }) {
+    final isActive = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 56,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(assetPath, width: 24, height: 24, color: isActive ? activeColor : inactiveColor),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: (isActive ? _navLabelActive : _navLabelInactive).copyWith(color: isActive ? activeColor : inactiveColor),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

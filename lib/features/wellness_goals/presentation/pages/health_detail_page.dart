@@ -35,6 +35,8 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
   List<HeartRatePoint> _hrWeekData = [];
   bool _loaded = false;
   bool _hrShowWeek = false;
+  bool _hasRealHR = false; // true if Apple Watch HR data exists
+  List<int> _hourlySteps = List.filled(24, 0);
 
   @override
   void initState() {
@@ -55,26 +57,18 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
     final restHR = await hk.getRestingHeartRate(days: 7);
     final hrv = await hk.getHRV(days: 7);
     final flights = await hk.getFlightsClimbed(days: 1);
+    // Check for real Apple Watch HR data
     var hrData = await hk.getHeartRateData(days: 1);
-    if (hrData.isEmpty) {
-      hrData = await hk.getCachedHeartRate();
-    }
-    // Fall back to simulated data so graph always shows
-    if (hrData.isEmpty) {
-      hrData = HealthKitService.simulatedHeartRate;
+    if (hrData.isEmpty) hrData = await hk.getCachedHeartRate();
+    final hasRealHR = hrData.isNotEmpty;
+
+    var hrWeek = <HeartRatePoint>[];
+    if (hasRealHR) {
+      hrWeek = await hk.getHeartRateData(days: 7);
     }
 
-    // Weekly HR data
-    var hrWeek = await hk.getHeartRateData(days: 7);
-    if (hrWeek.isEmpty) {
-      // Generate simulated week data
-      final now = DateTime.now();
-      final rng = List.generate(70, (i) => HeartRatePoint(
-        time: now.subtract(Duration(hours: (70 - i) * 2)),
-        bpm: 65 + (i % 7) * 12.0 + (i.isEven ? 5 : -3),
-      ));
-      hrWeek = rng;
-    }
+    // Get hourly steps for step graph (when no watch)
+    final hourlySteps = await hk.getHourlySteps();
 
     if (mounted) {
       setState(() {
@@ -86,6 +80,8 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
         _flights = flights;
         _hrData = hrData;
         _hrWeekData = hrWeek;
+        _hasRealHR = hasRealHR;
+        _hourlySteps = hourlySteps;
         _loaded = true;
       });
     }
@@ -195,7 +191,7 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
                               builder: (context, ds) {
                                 final cal = ds is DietLoaded ? ds.summary.totalCalories : 0;
                                 final goal = ds is DietLoaded ? ds.summary.calorieGoal : 2000;
-                                return _tile(Icons.local_fire_department_rounded, const Color(0xFF22C55E), '$cal', 'Calories', '/ $goal goal', surface, text, subtle, border);
+                                return _tileImage('assets/images/fire-logo-calories.png', const Color(0xFF22C55E), '$cal', 'Calories', '/ $goal goal', surface, text, subtle, border);
                               },
                             ),
                             const SizedBox(width: 10),
@@ -242,7 +238,7 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
                   ),
                 ),
 
-                // ── Heart Rate Throughout the Day ──
+                // ── Daily Graph: Heart Rate (watch) or Steps (no watch) ──
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -253,90 +249,9 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: border),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 16),
-                              const SizedBox(width: 6),
-                              Text('Heart Rate', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: text)),
-                              const Spacer(),
-                              // Today / Week toggle
-                              Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: isLight ? const Color(0xFFE8E8EC) : Colors.white.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () => setState(() => _hrShowWeek = false),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: !_hrShowWeek ? (isLight ? Colors.white : Colors.white.withValues(alpha: 0.15)) : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text('Today', style: GoogleFonts.inter(fontSize: 11, fontWeight: !_hrShowWeek ? FontWeight.w600 : FontWeight.w400, color: text)),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => setState(() => _hrShowWeek = true),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: _hrShowWeek ? (isLight ? Colors.white : Colors.white.withValues(alpha: 0.15)) : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text('Week', style: GoogleFonts.inter(fontSize: 11, fontWeight: _hrShowWeek ? FontWeight.w600 : FontWeight.w400, color: text)),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_hrData.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text('${(_hrShowWeek ? _hrWeekData : _hrData).last.bpm.round()} bpm latest', style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFEF4444))),
-                          ],
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 140,
-                            child: CustomPaint(
-                              size: const Size(double.infinity, 140),
-                              painter: _HRDayGraphPainter(data: _hrShowWeek ? _hrWeekData : _hrData, isLight: isLight),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: _hrShowWeek
-                                ? [
-                                    Text('Mon', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('Tue', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('Wed', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('Thu', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('Fri', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('Sat', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('Sun', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                  ]
-                                : [
-                                    Text('12 AM', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('6 AM', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('12 PM', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('6 PM', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                    Text('Now', style: GoogleFonts.inter(fontSize: 9, color: subtle)),
-                                  ],
-                          ),
-                          if (!HealthKitService.instance.isAuthorized) ...[
-                            const SizedBox(height: 6),
-                            Text('Demo data — connect Apple Health for real readings', style: GoogleFonts.inter(fontSize: 10, color: subtle, fontStyle: FontStyle.italic)),
-                          ],
-                        ],
-                      ),
+                      child: _hasRealHR
+                          ? _buildHRGraph(text, subtle, isLight)
+                          : _buildStepGraph(text, subtle, isLight),
                     ),
                   ),
                 ),
@@ -490,6 +405,26 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
     );
   }
 
+  Widget _tileImage(String assetPath, Color color, String value, String label, String sub, Color surface, Color text, Color subtle, Color border) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: border)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.asset(assetPath, width: 20, height: 20, color: color),
+            const SizedBox(height: 8),
+            Text(value, style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: text)),
+            const SizedBox(height: 2),
+            Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: subtle)),
+            Text(sub, style: GoogleFonts.inter(fontSize: 10, color: subtle.withValues(alpha: 0.6))),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _tile(IconData icon, Color color, String value, String label, String sub, Color surface, Color text, Color subtle, Color border) {
     return Expanded(
       child: Container(
@@ -536,9 +471,144 @@ class _HealthDetailPageState extends State<HealthDetailPage> {
     );
   }
 
+  Widget _buildHRGraph(Color text, Color subtle, bool isLight) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 16),
+            const SizedBox(width: 6),
+            Text('Heart Rate', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: text)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: isLight ? const Color(0xFFE8E8EC) : Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  _toggleChip('Today', !_hrShowWeek, () => setState(() => _hrShowWeek = false), text, isLight),
+                  _toggleChip('Week', _hrShowWeek, () => setState(() => _hrShowWeek = true), text, isLight),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (_hrData.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text('${(_hrShowWeek && _hrWeekData.isNotEmpty ? _hrWeekData.last : _hrData.last).bpm.round()} bpm latest',
+              style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFEF4444))),
+        ],
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 140,
+          child: CustomPaint(
+            size: const Size(double.infinity, 140),
+            painter: _HRDayGraphPainter(data: _hrShowWeek && _hrWeekData.isNotEmpty ? _hrWeekData : _hrData, isLight: isLight),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: _hrShowWeek
+              ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => Text(d, style: GoogleFonts.inter(fontSize: 9, color: subtle))).toList()
+              : ['12 AM', '6 AM', '12 PM', '6 PM', 'Now'].map((d) => Text(d, style: GoogleFonts.inter(fontSize: 9, color: subtle))).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepGraph(Color text, Color subtle, bool isLight) {
+    final currentHour = DateTime.now().hour;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.directions_walk, color: Color(0xFF3B82F6), size: 16),
+            const SizedBox(width: 6),
+            Text('Steps Today', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: text)),
+            const Spacer(),
+            Text('${_fmtSteps(_steps)} total', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF3B82F6))),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 120,
+          child: CustomPaint(
+            size: const Size(double.infinity, 120),
+            painter: _HourlyStepPainter(data: _hourlySteps, currentHour: currentHour, isLight: isLight),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: ['12 AM', '6 AM', '12 PM', '6 PM', 'Now'].map((d) => Text(d, style: GoogleFonts.inter(fontSize: 9, color: subtle))).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _toggleChip(String label, bool active, VoidCallback onTap, Color text, bool isLight) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: active ? (isLight ? Colors.white : Colors.white.withValues(alpha: 0.15)) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: text)),
+      ),
+    );
+  }
+
   String _fmtSteps(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
   String _fmtSleep(int m) => m >= 60 ? '${m ~/ 60}h ${m % 60}m' : '${m}m';
   String _fmtDist(double m) => m >= 1000 ? '${(m / 1000).toStringAsFixed(1)}km' : '${m.round()}m';
+}
+
+/// Hourly step count bar chart for today
+class _HourlyStepPainter extends CustomPainter {
+  final List<int> data; // 24 values, one per hour
+  final int currentHour;
+  final bool isLight;
+  _HourlyStepPainter({required this.data, required this.currentHour, required this.isLight});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty) return;
+    final chartH = size.height - 4;
+    final maxVal = data.reduce(max).clamp(1, 999999);
+    final barW = size.width / 24;
+
+    for (var i = 0; i < 24; i++) {
+      final x = i * barW;
+      final val = data[i];
+      final h = val > 0 ? (val / maxVal) * (chartH - 4) : 0.0;
+      final isCurrent = i == currentHour;
+
+      Color barColor;
+      if (val == 0) {
+        barColor = isLight ? Colors.black.withValues(alpha: 0.04) : Colors.white.withValues(alpha: 0.04);
+      } else if (isCurrent) {
+        barColor = const Color(0xFF3B82F6);
+      } else {
+        barColor = const Color(0xFF3B82F6).withValues(alpha: 0.4);
+      }
+
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x + 1, chartH - h.clamp(2, chartH), barW - 2, h.clamp(2, chartH)),
+        const Radius.circular(2),
+      );
+      canvas.drawRRect(rect, Paint()..color = barColor);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HourlyStepPainter old) => true;
 }
 
 /// Heart rate graph showing readings throughout the day with time axis

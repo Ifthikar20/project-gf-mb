@@ -661,6 +661,37 @@ class HealthKitService {
   }
 
   // ──────────────────────────────────
+  // Hourly Steps (for graph)
+  // ──────────────────────────────────
+
+  /// Get step counts grouped by hour for today (for step graph)
+  Future<List<int>> getHourlySteps() async {
+    if (!_isAuthorized) return List.filled(24, 0);
+    await _ensureConfigured();
+    try {
+      final now = DateTime.now();
+      final dayStart = DateTime(now.year, now.month, now.day);
+      final hourlySteps = List.filled(24, 0);
+
+      final dataPoints = await _health.getHealthDataFromTypes(
+        types: [HealthDataType.STEPS],
+        startTime: dayStart,
+        endTime: now,
+      );
+      final cleaned = Health().removeDuplicates(dataPoints);
+
+      for (final dp in cleaned) {
+        final hour = dp.dateFrom.hour;
+        hourlySteps[hour] += (dp.value as NumericHealthValue).numericValue.toInt();
+      }
+      return hourlySteps;
+    } catch (e) {
+      debugPrint('HealthKit hourly steps error: $e');
+      return List.filled(24, 0);
+    }
+  }
+
+  // ──────────────────────────────────
   // Effort Score (composite metric)
   // ──────────────────────────────────
 

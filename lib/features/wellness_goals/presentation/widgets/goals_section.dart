@@ -3,6 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../workouts/presentation/bloc/workout_bloc.dart';
+import '../../../workouts/presentation/bloc/workout_event.dart';
+import '../../../workouts/presentation/bloc/workout_state.dart';
+import '../../../workouts/data/models/workout_models.dart';
 import '../../domain/entities/goal_entity.dart';
 import '../bloc/goals_bloc.dart';
 import '../bloc/goals_state.dart';
@@ -90,29 +94,33 @@ class GoalsSection extends StatelessWidget {
                   ),
                 ),
                 
-                // Goals content
-                if (activeGoals.isEmpty)
-                  _buildEmptyState(context, surfaceColor, textColor, textSecondary, primaryColor, isLight)
-                else
-                  SizedBox(
-                    height: 140,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: activeGoals.length,
-                      itemBuilder: (context, index) {
-                        return _buildGoalCard(
-                          context,
-                          activeGoals[index],
-                          surfaceColor,
-                          textColor,
-                          textSecondary,
-                          isLight,
-                        );
-                      },
-                    ),
-                  ),
+                // ── Backend workout goals ──
+                BlocBuilder<WorkoutBloc, WorkoutState>(
+                  builder: (context, ws) {
+                    // Trigger load if not loaded yet
+                    if (ws is WorkoutInitial) {
+                      context.read<WorkoutBloc>().add(const LoadWorkoutData());
+                    }
+                    final workoutGoals = ws is WorkoutLoaded ? ws.goals : <GoalProgress>[];
+                    if (workoutGoals.isEmpty && activeGoals.isEmpty) {
+                      return _buildEmptyState(context, surfaceColor, textColor, textSecondary, primaryColor, isLight);
+                    }
+                    return SizedBox(
+                      height: 140,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          // Workout goals from backend
+                          ...workoutGoals.map((g) => _buildWorkoutGoalCard(g, surfaceColor, textColor, textSecondary, isLight)),
+                          // Local wellness goals
+                          ...activeGoals.map((g) => _buildGoalCard(context, g, surfaceColor, textColor, textSecondary, isLight)),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ],
             );
           },
@@ -341,6 +349,73 @@ class GoalsSection extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildWorkoutGoalCard(GoalProgress goal, Color surfaceColor, Color textColor, Color textSecondary, bool isLight) {
+    final progress = goal.progressPercent / 100.0;
+    final color = goal.color;
+
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isLight ? Colors.grey.withOpacity(0.2) : Colors.white.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
+                child: Icon(goal.icon, color: color, size: 20),
+              ),
+              SizedBox(
+                width: 36, height: 36,
+                child: Stack(
+                  children: [
+                    CircularProgressIndicator(
+                      value: progress.clamp(0.0, 1.0),
+                      strokeWidth: 3,
+                      backgroundColor: Colors.grey.withOpacity(0.2),
+                      valueColor: AlwaysStoppedAnimation<Color>(goal.isComplete ? const Color(0xFF22C55E) : color),
+                    ),
+                    Center(
+                      child: Text(
+                        '${goal.progressPercent}%',
+                        style: TextStyle(color: textSecondary, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(goal.label, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 4),
+          Text(
+            '${goal.currentValue}/${goal.targetValue} ${goal.unit}',
+            style: TextStyle(color: textSecondary, fontSize: 12),
+          ),
+          if (goal.isComplete) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 12),
+                const SizedBox(width: 4),
+                Text('Complete!', style: TextStyle(color: const Color(0xFF22C55E), fontSize: 11, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

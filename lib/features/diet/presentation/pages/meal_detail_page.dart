@@ -249,12 +249,6 @@ class MealDetailPage extends StatelessWidget {
                     ],
                   ),
 
-                  // ── Wellness Score ──
-                  if (_wellnessBreakdown != null) ...[
-                    const SizedBox(height: 16),
-                    _wellnessCard(dk, cardBg, bdr, txt, sub),
-                  ],
-
                   // ── Items ──
                   if (items.length > 1) ...[
                     const SizedBox(height: 24),
@@ -279,21 +273,12 @@ class MealDetailPage extends StatelessWidget {
                     ..._warnings.map((w) => _warningTile(w, dk, bdr)),
                   ],
 
-                  // ── Burn it off ──
+                  // ── Burn it off (workout suggestions with Add button) ──
                   if (_burns.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     _sectionLabel('Burn it off', txt),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 130,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _burns.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (_, i) =>
-                            _burnTile(_burns[i], dk, cardBg, bdr, txt, sub),
-                      ),
-                    ),
+                    ..._burns.map((b) => _burnRow(b, dk, cardBg, bdr, txt, sub)),
                   ],
 
                   const SizedBox(height: 60),
@@ -807,6 +792,60 @@ class MealDetailPage extends StatelessWidget {
   }
 
   // ── Burn it off ──
+
+  Widget _burnRow(Map<String, dynamic> c, bool dk, Color cardBg, Color bdr, Color txt, Color sub) {
+    final accent = const Color(0xFF8B5CF6);
+    return Builder(
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: bdr),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(_burnIcon(c['icon'] as String? ?? ''), size: 20, color: accent),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c['activity'] as String? ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: txt)),
+                  Text(c['duration'] as String? ?? '', style: GoogleFonts.inter(fontSize: 12, color: sub)),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                    content: Text('${c['activity']} added to your goals'),
+                    backgroundColor: const Color(0xFF22C55E),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(8)),
+                child: Text('Add', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _burnTile(Map<String, dynamic> c, bool dk, Color cardBg, Color bdr,
       Color txt, Color sub) {
