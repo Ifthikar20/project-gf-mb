@@ -230,39 +230,22 @@ class _HomePageState extends State<HomePage> {
   Widget _buildStreakBadge() {
     return BlocBuilder<WorkoutBloc, WorkoutState>(
       builder: (context, ws) {
-        // Today's burned: backend weekly / 7, or step estimate
-        int burned = 0;
-        if (ws is WorkoutLoaded) {
-          final weekCal = ws.stats?.thisWeekCalories ?? 0;
-          burned = weekCal > 0 ? (weekCal ~/ 7) : 0;
-        }
-        // Step-based estimate if no workout data
-        final hk = HealthKitService.instance;
-        if (burned == 0 && hk.isEnabled) {
-          // Use cached steps synchronously via the already-loaded card value
-          // The card's _steps value isn't accessible here, so we use the estimate
-        }
-
-        return BlocBuilder<DietBloc, DietState>(
-          builder: (context, ds) {
-            // Show burned from the diet state context too
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFF97316)]),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset('assets/images/fire-logo-calories.png', width: 16, height: 16, color: Colors.white),
-                  const SizedBox(width: 4),
-                  Text('$burned', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
-                  Text(' cal', style: GoogleFonts.inter(color: Colors.white70, fontSize: 10)),
-                ],
-              ),
-            );
-          },
+        final totalBurned = ws is WorkoutLoaded ? (ws.stats?.thisWeekCalories ?? 0) : 0;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFF97316)]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/images/fire-logo-calories.png', width: 16, height: 16, color: Colors.white),
+              const SizedBox(width: 4),
+              Text('$totalBurned', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+              Text(' cal', style: GoogleFonts.inter(color: Colors.white70, fontSize: 10)),
+            ],
+          ),
         );
       },
     );

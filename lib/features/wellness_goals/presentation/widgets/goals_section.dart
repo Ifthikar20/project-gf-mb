@@ -102,6 +102,15 @@ class GoalsSection extends StatelessWidget {
                       context.read<WorkoutBloc>().add(const LoadWorkoutData());
                     }
                     final workoutGoals = ws is WorkoutLoaded ? ws.goals : <GoalProgress>[];
+
+                    // Show loading indicator while fetching
+                    if (ws is WorkoutLoading && activeGoals.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                      );
+                    }
+
                     if (workoutGoals.isEmpty && activeGoals.isEmpty) {
                       return _buildEmptyState(context, surfaceColor, textColor, textSecondary, primaryColor, isLight);
                     }

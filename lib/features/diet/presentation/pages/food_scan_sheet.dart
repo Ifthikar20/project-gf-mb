@@ -13,9 +13,7 @@ import '../../../../core/services/food_scanner_service.dart';
 import '../../../workouts/data/services/workout_service.dart';
 import '../../../workouts/presentation/bloc/workout_bloc.dart';
 import '../../../workouts/presentation/bloc/workout_event.dart';
-import '../../../wellness_goals/domain/entities/goal_entity.dart';
-import '../../../wellness_goals/presentation/bloc/goals_bloc.dart';
-import '../../../wellness_goals/presentation/bloc/goals_event.dart';
+// Goals are saved to backend only (WorkoutBloc), not local Hive
 import '../../data/models/food_scan_result.dart';
 import '../../data/models/diet_models.dart';
 import '../bloc/diet_bloc.dart';
@@ -107,7 +105,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
             ),
           ),
         );
-        if (logged == true && mounted) Navigator.pop(context);
+        // Whether logged or cancelled, close the scanner and go back to Calories
+        if (mounted) Navigator.pop(context);
       }
     } on FoodScanException catch (e) {
       if (!mounted) return;
@@ -1465,30 +1464,18 @@ class _FoodSummaryPageState extends State<_FoodSummaryPage> {
                                   final minMatch = RegExp(r'(\d+)').firstMatch(burn.duration);
                                   final minutes = minMatch != null ? int.parse(minMatch.group(1)!) : 30;
 
-                                  // Save to backend
+                                  // Save to backend (this is the important call)
                                   await WorkoutService.instance.setGoal(goalType: 'active_minutes', targetValue: minutes);
 
                                   if (!context.mounted) return;
 
-                                  // Also add as a local goal so it shows immediately in My Goals
-                                  final goal = GoalEntity(
-                                    id: 'burn_${DateTime.now().millisecondsSinceEpoch}',
-                                    title: '${burn.activity} ${burn.duration}',
-                                    description: 'Burn off ${widget.result.totalCalories * _servings} cal',
-                                    category: 'fitness',
-                                    targetValue: minutes,
-                                    currentValue: 0,
-                                    createdAt: DateTime.now(),
-                                    type: GoalType.manual,
-                                    period: GoalPeriod.weekly,
-                                    iconName: burn.icon,
-                                  );
-                                  context.read<GoalsBloc>().add(AddGoal(goal));
+                                  // Refresh workout data so goals appear on Home
                                   context.read<WorkoutBloc>().add(const RefreshWorkoutData());
 
                                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text('${burn.activity} (${burn.duration}) added to My Goals'),
+                                    content: Text('${burn.activity} (${burn.duration}) added — check My Goals on Home'),
                                     backgroundColor: const Color(0xFF22C55E),
+                                    duration: const Duration(seconds: 3),
                                     behavior: SnackBarBehavior.floating,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ));

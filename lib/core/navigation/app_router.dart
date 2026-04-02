@@ -16,6 +16,8 @@ import '../../features/videos/presentation/pages/video_player_page.dart';
 
 import '../../features/workouts/presentation/pages/body_profile_page.dart';
 import '../../features/workouts/presentation/pages/workout_hub_page.dart';
+import '../../features/profile/presentation/pages/help_center_page.dart';
+import '../../features/profile/presentation/pages/notifications_page.dart';
 import '../../features/workouts/presentation/pages/goals_setup_page.dart';
 import '../../features/workouts/presentation/bloc/workout_bloc.dart';
 import '../../features/meditation/presentation/pages/meditation_category_page.dart';
@@ -81,6 +83,8 @@ class AppRouter {
   static const String myWorkoutPlan = '/my-workout-plan';
   static const String freeConsultation = '/free-consultation';
   static const String antigravityChat = '/antigravity-chat';
+  static const String helpCenter = '/help-center';
+  static const String notifications = '/notifications';
 
   // Public routes that don't require authentication
   static const List<String> _publicRoutes = [
@@ -394,6 +398,14 @@ class AppRouter {
         GoRoute(
           path: antigravityChat,
           builder: (context, state) => const AntiGravityChatPage(),
+        ),
+        GoRoute(
+          path: helpCenter,
+          builder: (context, state) => const HelpCenterPage(),
+        ),
+        GoRoute(
+          path: notifications,
+          builder: (context, state) => const NotificationsPage(),
         ),
       ],
     );
