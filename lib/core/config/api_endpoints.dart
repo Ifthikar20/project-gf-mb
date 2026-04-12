@@ -175,6 +175,16 @@ class ApiEndpoints {
   static String get wellnessChat => '$apiBase/wellness/chat';
 
   // ============================================
+  // AI Wellness Journal
+  // ============================================
+  static String get journalBase => '$apiBase/journal';
+  static String get journalEntries => '$journalBase/entries/';
+  static String get journalToday => '$journalBase/entries/today/';
+  static String journalEntryDetail(String id) => '$journalBase/entries/$id/';
+  static String get journalMoodSummary => '$journalBase/mood-summary/';
+  static String get journalCalendar => '$journalBase/calendar/';
+
+  // ============================================
   // Utility
   // ============================================
   static String get healthCheck => '$baseUrl/health';

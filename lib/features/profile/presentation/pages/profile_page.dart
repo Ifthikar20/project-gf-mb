@@ -790,6 +790,168 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
+              // Wellness Journal Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: GestureDetector(
+                    onTap: () => context.push(AppRouter.journal),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.deepPurple.withOpacity(0.15),
+                            Colors.indigo.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.deepPurple.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.auto_awesome, color: Colors.deepPurple.shade200, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Wellness Journal',
+                                  style: isLight
+                                      ? GoogleFonts.inter(
+                                          color: textColor,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        )
+                                      : TextStyle(
+                                          color: textColor,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Mood tracking & AI wellness insights',
+                                  style: TextStyle(
+                                    color: textSecondary.withOpacity(0.7),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: textSecondary.withOpacity(0.5), size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Wellness Score & Sleep Row
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => context.push(AppRouter.wellnessScore),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF22C55E).withOpacity(0.12),
+                                  const Color(0xFF16A34A).withOpacity(0.06),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.15)),
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF22C55E).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.speed, color: Color(0xFF22C55E), size: 24),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Wellness Score',
+                                  style: isLight
+                                      ? GoogleFonts.inter(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)
+                                      : TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Daily health score',
+                                  style: TextStyle(color: textSecondary, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => context.push(AppRouter.sleepDashboard),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF8B5CF6).withOpacity(0.12),
+                                  const Color(0xFF7C3AED).withOpacity(0.06),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.15)),
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF8B5CF6).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.nightlight_round, color: Color(0xFF8B5CF6), size: 24),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Sleep Insights',
+                                  style: isLight
+                                      ? GoogleFonts.inter(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)
+                                      : TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Quality & trends',
+                                  style: TextStyle(color: textSecondary, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               // Account Section
               SliverToBoxAdapter(
                 child: Padding(

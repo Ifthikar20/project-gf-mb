@@ -38,6 +38,9 @@ import '../../features/coaching/presentation/pages/coaching_sessions_page.dart';
 import '../../features/coaching/presentation/pages/my_workout_plan_page.dart';
 import '../../features/coaching/presentation/pages/free_consultation_page.dart';
 import '../../features/antigravity_chat/presentation/pages/antigravity_chat_page.dart';
+import '../../features/journal/presentation/pages/journal_page.dart';
+import '../../features/wellness_score/presentation/pages/wellness_score_page.dart';
+import '../../features/sleep/presentation/pages/sleep_dashboard_page.dart';
 
 class AppRouter {
   static const String home = '/';
@@ -79,6 +82,9 @@ class AppRouter {
   static const String myWorkoutPlan = '/my-workout-plan';
   static const String freeConsultation = '/free-consultation';
   static const String antigravityChat = '/antigravity-chat';
+  static const String journal = '/journal';
+  static const String wellnessScore = '/wellness-score';
+  static const String sleepDashboard = '/sleep-dashboard';
 
   // Public routes that don't require authentication
   static const List<String> _publicRoutes = [
@@ -374,6 +380,18 @@ class AppRouter {
         GoRoute(
           path: antigravityChat,
           builder: (context, state) => const AntiGravityChatPage(),
+        ),
+        GoRoute(
+          path: journal,
+          builder: (context, state) => const JournalPage(),
+        ),
+        GoRoute(
+          path: wellnessScore,
+          builder: (context, state) => const WellnessScorePage(),
+        ),
+        GoRoute(
+          path: sleepDashboard,
+          builder: (context, state) => const SleepDashboardPage(),
         ),
       ],
     );
