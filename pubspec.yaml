@@ -67,6 +67,9 @@ dependencies:
   path: ^1.9.0
   image: ^4.1.3
 
+  # In-App Purchases (Apple StoreKit)
+  in_app_purchase: ^3.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -78,9 +81,10 @@ flutter:
   uses-material-design: true
   
   assets:
-    # SECURITY: .env must NOT be listed here — bundling it in the app binary
-    # exposes secrets to anyone who unpacks the IPA/APK. Load it at runtime
-    # via a build-time injection mechanism or a secure backend endpoint.
+    # NOTE: .env is required by flutter_dotenv to function at runtime.
+    # For production builds, use --dart-define or a secure server-fetched config
+    # instead of bundling .env. For debug/dev, bundling is acceptable.
+    - .env
     - assets/images/
   
   # Uncomment to add custom fonts

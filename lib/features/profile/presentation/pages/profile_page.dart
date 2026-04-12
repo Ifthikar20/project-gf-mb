@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/auth/auth_bloc.dart';
+import '../../../../core/services/healthkit_service.dart';
 
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -98,17 +99,24 @@ class ProfilePage extends StatelessWidget {
                               builder: (context, authState) {
                                 final isLoggedIn = authState is AuthAuthenticated;
                                 final user = isLoggedIn ? authState.user : null;
-                                final initials = user?.name?.isNotEmpty == true
-                                    ? user!.name![0].toUpperCase()
-                                    : (user?.email.isNotEmpty == true ? user!.email[0].toUpperCase() : 'G');
+                                // Show first + last initials (e.g. "IT" for Ifthikar Test)
+                                String initials = 'G';
+                                if (user?.name?.isNotEmpty == true) {
+                                  final parts = user!.name!.trim().split(' ');
+                                  initials = parts.length > 1
+                                      ? '${parts.first[0]}${parts.last[0]}'.toUpperCase()
+                                      : parts.first[0].toUpperCase();
+                                } else if (user?.email.isNotEmpty == true) {
+                                  initials = user!.email[0].toUpperCase();
+                                }
                                 
                                 return Row(
                                   children: [
-                                    // Avatar
+                                    // Avatar — circular, modern
                                     Container(
                                       padding: const EdgeInsets.all(3),
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(18),
+                                        shape: BoxShape.circle,
                                         border: Border.all(
                                           color: Colors.white.withValues(alpha: 0.9),
                                           width: 2,
@@ -125,7 +133,7 @@ class ProfilePage extends StatelessWidget {
                                         width: 72,
                                         height: 72,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(16),
+                                          shape: BoxShape.circle,
                                           gradient: isLoggedIn
                                               ? const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)])
                                               : null,
@@ -223,90 +231,7 @@ class ProfilePage extends StatelessWidget {
                                 );
                               },
                             ),
-                            const SizedBox(height: 28),
-                            // Goals Stats Row
-                            BlocBuilder<GoalsBloc, GoalsState>(
-                              builder: (context, goalsState) {
-                                if (goalsState is! GoalsLoaded) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: surfaceColor,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'Loading goals...',
-                                        style: TextStyle(color: textSecondary, fontSize: 14),
-                                      ),
-                                    ),
-                                  );
-                                }
-                                
-                                final activeGoals = goalsState.goals
-                                    .where((g) => !g.isCompleted)
-                                    .take(3)
-                                    .toList();
-                                
-                                if (activeGoals.isEmpty) {
-                                  return GestureDetector(
-                                    onTap: () => _showGoalPicker(context),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                                      decoration: BoxDecoration(
-                                        color: surfaceColor,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: primaryColor.withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.add_circle_outline, color: textSecondary, size: 20),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Set Your First Goal',
-                                            style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }
-                                
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: surfaceColor,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      for (int i = 0; i < activeGoals.length; i++) ...[
-                                        if (i > 0)
-                                          Container(width: 1, height: 45, color: textSecondary.withValues(alpha: 0.2)),
-                                        Expanded(
-                                          child: _buildGoalStatItem(
-                                            activeGoals[i],
-                                            isLight,
-                                            textColor,
-                                            textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                            // Goals moved to Home page
                           ],
                         ),
                       ),
@@ -315,77 +240,22 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
-              // THEME TOGGLE SECTION
+              // THEME TOGGLE — compact
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: GestureDetector(
-                    onTap: () => context.read<ThemeBloc>().add(ToggleTheme()),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isLight
-                              ? [ThemeColors.lightPrimary.withOpacity(0.2), ThemeColors.lightTextSecondary.withOpacity(0.1)]
-                              : [Colors.grey.shade800.withOpacity(0.3), Colors.grey.shade700.withOpacity(0.2)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: textSecondary.withOpacity(0.2)),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: [
+                      Icon(isLight ? Icons.light_mode : Icons.dark_mode, color: textSecondary, size: 18),
+                      const SizedBox(width: 8),
+                      Text(isLight ? 'Light' : 'Dark', style: TextStyle(color: textSecondary, fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Switch.adaptive(
+                        value: !isLight,
+                        onChanged: (_) => context.read<ThemeBloc>().add(ToggleTheme()),
+                        activeColor: primaryColor,
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: textSecondary.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              isLight ? Icons.light_mode : Icons.dark_mode,
-                              color: textColor,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isLight ? 'Light Theme' : 'Dark Theme',
-                                  style: isLight
-                                      ? GoogleFonts.inter(
-                                          color: textColor,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        )
-                                      : TextStyle(
-                                          color: textColor,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  isLight 
-                                      ? 'Tap to switch to Classic Dark' 
-                                      : 'Tap to switch to Light mode',
-                                  style: TextStyle(
-                                    color: textSecondary.withOpacity(0.7),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.swap_horiz,
-                            color: textSecondary,
-                            size: 24,
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -518,96 +388,6 @@ class ProfilePage extends StatelessWidget {
                             ),
                           );
                         },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Marketplace & Coaching Quick Access
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => context.push(AppRouter.marketplace),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF59E0B).withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.storefront_outlined, color: Color(0xFFF59E0B), size: 24),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Marketplace',
-                                  style: GoogleFonts.inter(
-                                    color: textColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Browse programs',
-                                  style: TextStyle(color: textSecondary, fontSize: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => context.push(AppRouter.coaches),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF8B5CF6).withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.video_camera_front_outlined, color: Color(0xFF8B5CF6), size: 24),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Live Coaching',
-                                  style: GoogleFonts.inter(
-                                    color: textColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '1:1 video sessions',
-                                  style: TextStyle(color: textSecondary, fontSize: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -969,7 +749,7 @@ class ProfilePage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSection(context, 'Preferences', [
-                    _MenuItem(Icons.notifications_outlined, 'Notifications', 'Push, email alerts'),
+                    _MenuItem(Icons.notifications_outlined, 'Notifications', 'Push, email alerts', route: '/notifications'),
                     _MenuItem(Icons.language_outlined, 'Language', 'English (US)'),
                     _MenuItem(Icons.download_outlined, 'Downloads', 'Offline content'),
                   ], surfaceColor, textColor, textSecondary, primaryColor, isLight),
@@ -995,6 +775,21 @@ class ProfilePage extends StatelessWidget {
                       ),
                     );
                   },
+                ),
+              ),
+
+              // Apple Health Data Toggle
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: _AppleHealthTile(
+                    isLight: isLight,
+                    surfaceColor: surfaceColor,
+                    textColor: textColor,
+                    textSecondary: textSecondary,
+                    borderColor: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder,
+                    primaryColor: primaryColor,
+                  ),
                 ),
               ),
 
@@ -1027,7 +822,7 @@ class ProfilePage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Redo Wellness Setup',
+                                  'Reset Wellness Setup',
                                   style: isLight
                                       ? GoogleFonts.inter(
                                           color: textColor,
@@ -1064,8 +859,7 @@ class ProfilePage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSection(context, 'Support', [
-                    _MenuItem(Icons.help_outline, 'Help Center', 'FAQs, tutorials'),
-                    _MenuItem(Icons.chat_bubble_outline, 'Contact Us', 'Get in touch', route: AppRouter.antigravityChat),
+                    _MenuItem(Icons.help_outline, 'Help Center', 'FAQs, tutorials', route: '/help-center'),
                     _MenuItem(Icons.bug_report_outlined, 'Report a Problem', 'Send feedback'),
                     _MenuItem(Icons.info_outline, 'About', 'Version, legal'),
                   ], surfaceColor, textColor, textSecondary, primaryColor, isLight),
@@ -1411,6 +1205,232 @@ class _FoodSharingTile extends StatefulWidget {
 
   @override
   State<_FoodSharingTile> createState() => _FoodSharingTileState();
+}
+
+/// Apple Health data collection toggle.
+/// Manages HealthKit permissions and local data storage.
+class _AppleHealthTile extends StatefulWidget {
+  final bool isLight;
+  final Color surfaceColor;
+  final Color textColor;
+  final Color textSecondary;
+  final Color borderColor;
+  final Color primaryColor;
+
+  const _AppleHealthTile({
+    required this.isLight,
+    required this.surfaceColor,
+    required this.textColor,
+    required this.textSecondary,
+    required this.borderColor,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_AppleHealthTile> createState() => _AppleHealthTileState();
+}
+
+class _AppleHealthTileState extends State<_AppleHealthTile> {
+  bool _enabled = false;
+  bool _saving = false;
+  int _steps = 0;
+  DateTime? _lastSync;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = HealthKitService.instance.isEnabled;
+    _loadCachedStats();
+  }
+
+  Future<void> _loadCachedStats() async {
+    if (!_enabled) return;
+    final service = HealthKitService.instance;
+    final steps = await service.getCachedSteps();
+    final lastSync = await service.getLastSyncTime();
+    if (mounted) {
+      setState(() {
+        _steps = steps;
+        _lastSync = lastSync;
+      });
+    }
+  }
+
+  Future<void> _toggle(bool value) async {
+    setState(() => _saving = true);
+    final success = await HealthKitService.instance.setEnabled(value);
+    if (mounted) {
+      setState(() {
+        _enabled = success ? value : _enabled;
+        _saving = false;
+      });
+      if (value && success) {
+        _loadCachedStats();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Apple Health connected! Check the Workouts tab for your data.'),
+            backgroundColor: const Color(0xFF22C55E),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      } else if (value && !success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not connect to Apple Health. Go to Settings > Health > Great Feel and enable access.\n${HealthKitService.instance.lastError ?? ''}'),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatLastSync() {
+    if (_lastSync == null) return 'Never synced';
+    final diff = DateTime.now().difference(_lastSync!);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: widget.surfaceColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: widget.borderColor),
+          ),
+          child: Column(
+            children: [
+              // Toggle row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(widget.isLight ? 8 : 10),
+                      ),
+                      child: const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Apple Health',
+                            style: TextStyle(
+                                color: widget.textColor, fontSize: 15, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Read steps, heart rate & workout data',
+                            style: TextStyle(color: widget.textSecondary.withOpacity(0.6), fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _saving
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                color: widget.primaryColor, strokeWidth: 2),
+                          )
+                        : Switch.adaptive(
+                            value: _enabled,
+                            onChanged: _toggle,
+                            activeColor: widget.primaryColor,
+                          ),
+                  ],
+                ),
+              ),
+              // Privacy info
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: widget.isLight
+                        ? const Color(0xFFEFF6FF)
+                        : Colors.white.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.shield_outlined,
+                              color: widget.textSecondary.withOpacity(0.5), size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Privacy',
+                            style: TextStyle(
+                              color: widget.textSecondary.withOpacity(0.7),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Health data is stored only on your device. It is never uploaded to our servers or shared with third parties. Disabling this will delete all locally cached health data.',
+                        style: TextStyle(
+                          color: widget.textSecondary.withOpacity(0.5),
+                          fontSize: 11,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (_enabled && _steps > 0) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.directions_walk,
+                                color: widget.primaryColor.withOpacity(0.7), size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$_steps steps today',
+                              style: TextStyle(
+                                color: widget.textColor.withOpacity(0.7),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Synced ${_formatLastSync()}',
+                              style: TextStyle(
+                                color: widget.textSecondary.withOpacity(0.4),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _FoodSharingTileState extends State<_FoodSharingTile> {

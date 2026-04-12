@@ -106,22 +106,6 @@ class WorkoutService {
     return WorkoutLogModel.fromJson(data['workout']);
   }
 
-  /// Log an Apple Health workout (single)
-  Future<void> syncAppleHealthWorkout(Map<String, dynamic> healthData) async {
-    await _api.post('/api/workouts/log/apple-health', data: healthData);
-  }
-
-  /// Batch import Apple Health workouts (max 50 per call)
-  Future<BatchImportResult> syncAppleHealthBatch(
-    List<Map<String, dynamic>> workouts,
-  ) async {
-    final response = await _api.post(
-      '/api/workouts/log/apple-health/batch',
-      data: {'workouts': workouts},
-    );
-    return BatchImportResult.fromJson(response.data);
-  }
-
   // ============================================
   // History
   // ============================================

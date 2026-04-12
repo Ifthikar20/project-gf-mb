@@ -15,6 +15,9 @@ import '../auth/auth_bloc.dart';
 import '../../features/videos/presentation/pages/video_player_page.dart';
 
 import '../../features/workouts/presentation/pages/body_profile_page.dart';
+import '../../features/workouts/presentation/pages/workout_hub_page.dart';
+import '../../features/profile/presentation/pages/help_center_page.dart';
+import '../../features/profile/presentation/pages/notifications_page.dart';
 import '../../features/workouts/presentation/pages/goals_setup_page.dart';
 import '../../features/workouts/presentation/bloc/workout_bloc.dart';
 import '../../features/meditation/presentation/pages/meditation_category_page.dart';
@@ -53,6 +56,7 @@ class AppRouter {
   static const String onboarding = '/onboarding';
   static const String changePassword = '/change-password';
   static const String accountSettings = '/account-settings';
+  static const String workouts = '/workouts';
   static const String workoutSummary = '/workout-summary';
   static const String bodyProfile = '/body-profile';
   static const String goalsSetup = '/goals-setup';
@@ -82,9 +86,8 @@ class AppRouter {
   static const String myWorkoutPlan = '/my-workout-plan';
   static const String freeConsultation = '/free-consultation';
   static const String antigravityChat = '/antigravity-chat';
-  static const String journal = '/journal';
-  static const String wellnessScore = '/wellness-score';
-  static const String sleepDashboard = '/sleep-dashboard';
+  static const String helpCenter = '/help-center';
+  static const String notifications = '/notifications';
 
   // Public routes that don't require authentication
   static const List<String> _publicRoutes = [
@@ -94,6 +97,13 @@ class AppRouter {
     forgotPassword,
     resetPassword,
     onboarding,
+  ];
+
+  // Routes that should NOT redirect on transient auth changes (e.g. 401 during playback)
+  // These pages handle auth errors locally with error UI instead of redirecting.
+  static const List<String> _mediaRoutes = [
+    videoPlayer,
+    audioPlayer,
   ];
 
   /// Creates a GoRouter with auth-aware redirect
@@ -117,6 +127,10 @@ class AppRouter {
         if (!isAuthenticated && !needsOnboarding && !isPublicRoute) {
           // Allow OAuth callbacks to pass through
           if (currentPath.contains('/auth/callback')) {
+            return null;
+          }
+          // Don't redirect away from media player pages — they handle auth errors locally
+          if (_mediaRoutes.contains(currentPath)) {
             return null;
           }
           // Redirect to landing page
@@ -234,10 +248,17 @@ class AppRouter {
           builder: (context, state) => const WorkoutCheckPage(),
         ),
         GoRoute(
+          path: workouts,
+          builder: (context, state) => BlocProvider.value(
+            value: context.read<WorkoutBloc>(),
+            child: const WorkoutHubPage(),
+          ),
+        ),
+        GoRoute(
           path: videoPlayer,
           pageBuilder: (context, state) {
             final videoId = state.uri.queryParameters['id'] ?? '';
-            if (videoId.isEmpty || int.tryParse(videoId) == null) {
+            if (videoId.isEmpty) {
               return CustomTransitionPage(
                 key: state.pageKey,
                 child: const LandingPage(),
@@ -264,7 +285,7 @@ class AppRouter {
           path: meditationCategory,
           builder: (context, state) {
             final categoryId = state.uri.queryParameters['id'] ?? '';
-            if (categoryId.isEmpty || int.tryParse(categoryId) == null) {
+            if (categoryId.isEmpty) {
               return const LandingPage();
             }
             final categoryName = state.uri.queryParameters['name'] ?? 'Meditation';
@@ -278,7 +299,7 @@ class AppRouter {
           path: audioPlayer,
           builder: (context, state) {
             final audioId = state.uri.queryParameters['id'] ?? '';
-            if (audioId.isEmpty || int.tryParse(audioId) == null) {
+            if (audioId.isEmpty) {
               return const LandingPage();
             }
             return AudioPlayerPage(audioId: audioId);
@@ -296,7 +317,7 @@ class AppRouter {
           path: speakerProfile,
           builder: (context, state) {
             final speakerId = state.uri.queryParameters['id'] ?? '';
-            if (speakerId.isEmpty || int.tryParse(speakerId) == null) {
+            if (speakerId.isEmpty) {
               return const LandingPage();
             }
             final speakerName = state.uri.queryParameters['name'] ?? 'Speaker';
@@ -323,7 +344,7 @@ class AppRouter {
           path: programEnroll,
           builder: (context, state) {
             final seriesId = state.uri.queryParameters['seriesId'] ?? '';
-            if (seriesId.isEmpty || int.tryParse(seriesId) == null) {
+            if (seriesId.isEmpty) {
               return const LandingPage();
             }
             return ProgramEnrollPage(seriesId: seriesId);
@@ -382,16 +403,12 @@ class AppRouter {
           builder: (context, state) => const AntiGravityChatPage(),
         ),
         GoRoute(
-          path: journal,
-          builder: (context, state) => const JournalPage(),
+          path: helpCenter,
+          builder: (context, state) => const HelpCenterPage(),
         ),
         GoRoute(
-          path: wellnessScore,
-          builder: (context, state) => const WellnessScorePage(),
-        ),
-        GoRoute(
-          path: sleepDashboard,
-          builder: (context, state) => const SleepDashboardPage(),
+          path: notifications,
+          builder: (context, state) => const NotificationsPage(),
         ),
       ],
     );

@@ -64,6 +64,24 @@ class DietLocalDataSource {
     return getMealsForRange(7);
   }
 
+  // ── Calorie Goal ──
+
+  /// Get the user's daily calorie goal (defaults to 2000)
+  Future<int> getCalorieGoal() async {
+    try {
+      final box = await Hive.openBox('diet_prefs');
+      return box.get('calorie_goal', defaultValue: 2000) as int;
+    } catch (_) {
+      return 2000;
+    }
+  }
+
+  /// Save the user's daily calorie goal
+  Future<void> setCalorieGoal(int goal) async {
+    final box = await Hive.openBox('diet_prefs');
+    await box.put('calorie_goal', goal);
+  }
+
   /// Get meals for the last N days (for charts — 7D/14D/30D)
   Future<Map<DateTime, List<MealLog>>> getMealsForRange(int days) async {
     final result = <DateTime, List<MealLog>>{};

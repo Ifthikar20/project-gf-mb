@@ -107,16 +107,11 @@ class WorkoutLogModel {
   final WorkoutTypeModel? workoutType;
   final int durationMinutes;
   final int caloriesBurned;
-  final String source; // 'manual' or 'apple_health'
+  final String source;
   final DateTime startedAt;
   final String? note;
   final String? mood;
   final String? createdAt;
-  // Apple Health extras
-  final int? heartRateAvg;
-  final int? heartRateMax;
-  final double? distanceMeters;
-  final int? steps;
 
   const WorkoutLogModel({
     required this.id,
@@ -129,14 +124,9 @@ class WorkoutLogModel {
     this.note,
     this.mood,
     this.createdAt,
-    this.heartRateAvg,
-    this.heartRateMax,
-    this.distanceMeters,
-    this.steps,
   });
 
   factory WorkoutLogModel.fromJson(Map<String, dynamic> json) {
-    final appleHealth = json['apple_health'] as Map<String, dynamic>?;
     return WorkoutLogModel(
       id: json['id'] ?? '',
       workoutName: json['workout_name'] ?? 'Workout',
@@ -151,15 +141,10 @@ class WorkoutLogModel {
       note: json['note'],
       mood: json['mood'],
       createdAt: json['created_at'],
-      heartRateAvg: appleHealth?['heart_rate_avg'],
-      heartRateMax: appleHealth?['heart_rate_max'],
-      distanceMeters: (appleHealth?['distance_meters'] as num?)?.toDouble(),
-      steps: appleHealth?['steps'],
     );
   }
 
   bool get isManual => source == 'manual';
-  bool get isAppleHealth => source == 'apple_health';
   bool get hasMood => mood != null && mood!.isNotEmpty;
 
   /// Mood label for display
@@ -340,27 +325,6 @@ class WorkoutStats {
         .map((d) => d.calories)
         .reduce((a, b) => a > b ? a : b);
     return max == 0 ? 1 : max;
-  }
-}
-
-/// Result of Apple Health batch import
-class BatchImportResult {
-  final int imported;
-  final int skipped;
-  final int totalSubmitted;
-
-  const BatchImportResult({
-    required this.imported,
-    required this.skipped,
-    required this.totalSubmitted,
-  });
-
-  factory BatchImportResult.fromJson(Map<String, dynamic> json) {
-    return BatchImportResult(
-      imported: json['imported'] ?? 0,
-      skipped: json['skipped'] ?? 0,
-      totalSubmitted: json['total_submitted'] ?? 0,
-    );
   }
 }
 

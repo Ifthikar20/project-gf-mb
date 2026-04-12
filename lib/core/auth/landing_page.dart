@@ -46,13 +46,22 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   Future<void> _initializeVideo() async {
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(ApiEndpoints.landingVideo));
+    final videoUrl = ApiEndpoints.landingVideo;
+
+    // Guard: if R2_BASE_URL isn't configured the URL will be empty or start
+    // with a slash — skip video init entirely and show the static fallback.
+    if (videoUrl.isEmpty || !videoUrl.startsWith('http')) {
+      debugPrint('Landing video URL not configured — showing static background');
+      return;
+    }
+
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
     try {
       await _videoController.initialize();
       _videoController.setLooping(true);
       _videoController.setVolume(0); // Muted background video
       _videoController.play();
-      setState(() => _isVideoInitialized = true);
+      if (mounted) setState(() => _isVideoInitialized = true);
     } catch (e) {
       debugPrint('Video initialization error: $e');
     }
@@ -62,7 +71,7 @@ class _LandingPageState extends State<LandingPage> {
   void dispose() {
     _termsRecognizer.dispose();
     _privacyRecognizer.dispose();
-    _videoController.dispose();
+    if (_isVideoInitialized) _videoController.dispose();
     super.dispose();
   }
 

@@ -188,7 +188,7 @@ class DailyNutritionSummary {
 
   int get caloriesRemaining => (calorieGoal - totalCalories).clamp(0, calorieGoal);
 
-  static DailyNutritionSummary fromMeals(List<MealLog> meals) {
+  static DailyNutritionSummary fromMeals(List<MealLog> meals, {int? calorieGoal}) {
     int cal = 0, pro = 0, carb = 0, fat = 0;
     for (final m in meals) {
       cal += m.calories;
@@ -202,6 +202,7 @@ class DailyNutritionSummary {
       totalCarbs: carb,
       totalFat: fat,
       mealCount: meals.length,
+      calorieGoal: calorieGoal ?? 2000,
     );
   }
 }

@@ -10,6 +10,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:image/image.dart' as img;
 import '../../../../core/services/food_scanner_service.dart';
+import '../../../workouts/data/services/workout_service.dart';
+import '../../../workouts/presentation/bloc/workout_bloc.dart';
+import '../../../workouts/presentation/bloc/workout_event.dart';
+// Goals are saved to backend only (WorkoutBloc), not local Hive
 import '../../data/models/food_scan_result.dart';
 import '../../data/models/diet_models.dart';
 import '../bloc/diet_bloc.dart';
@@ -39,7 +43,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
   @override
   void initState() {
     super.initState();
-    // Auto-open camera on load
+    // Auto-open camera when scanner loads
     WidgetsBinding.instance.addPostFrameCallback((_) => _capturePhoto());
   }
 
@@ -58,7 +62,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
       });
       _analyzeImage();
     } else if (mounted && _capturedImage == null) {
-      Navigator.pop(context);
+      // User cancelled camera — stay on scanner screen (don't pop)
     }
   }
 
@@ -85,10 +89,24 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
       final result = await FoodScannerService.instance.analyzeImage(bytes);
       
       if (mounted) {
-        setState(() {
-          _result = result;
-          _scanning = false;
-        });
+        setState(() => _scanning = false);
+        // Navigate to summary page
+        final logged = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BlocProvider.value(
+              value: context.read<DietBloc>(),
+              child: _FoodSummaryPage(
+                result: result,
+                imageFile: _capturedImage!,
+                guessMealType: _guessMealType,
+                saveImage: _saveImageToDocuments,
+              ),
+            ),
+          ),
+        );
+        // Whether logged or cancelled, close the scanner and go back to Calories
+        if (mounted) Navigator.pop(context);
       }
     } on FoodScanException catch (e) {
       if (!mounted) return;
@@ -135,6 +153,23 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
       _servings = 1;
     });
     _capturePhoto();
+  }
+
+  /// Pick an image from the photo gallery for scanning
+  Future<void> _pickFromGallery() async {
+    final XFile? file = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (file != null && mounted) {
+      setState(() {
+        _capturedImage = File(file.path);
+        _error = null;
+      });
+      _analyzeImage();
+    }
   }
 
   MealType _guessMealType() {
@@ -283,8 +318,6 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final hasResult = _result != null && !_scanning;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -299,27 +332,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               child: ColoredBox(color: Color(0xFF111111)),
             ),
 
-          // ── Gradient overlay when showing result ──
-          if (hasResult)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.3, 0.5],
-                    colors: [
-                      Colors.transparent,
-                      Colors.transparent,
-                      Colors.white.withValues(alpha: 0.97),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          // ── Corner brackets overlay (only when NOT scanning) ──
-          if (!hasResult && _capturedImage != null && !_scanning)
+          // ── Corner brackets overlay ──
+          if (_capturedImage != null)
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
@@ -328,7 +342,7 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               ),
             ),
 
-          // ── Top bar: X — AI Scanner ──
+          // ── Top bar ──
           _buildTopBar(),
 
           // ── Scanning indicator ──
@@ -337,15 +351,9 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
           // ── Error state ──
           if (_error != null && !_scanning) _buildErrorOverlay(),
 
-          // ── Results panel (slides up from bottom) ──
-          if (hasResult) _buildResultsPanel(),
-
-          // ── Retake button (after error or when viewing captured image) ──
-          if (_capturedImage != null &&
-              !_scanning &&
-              !hasResult &&
-              _error == null)
-            _buildRetakeButton(),
+          // ── Retake / Gallery buttons ──
+          if (_capturedImage != null && !_scanning && _error == null)
+            _buildRetakeBar(),
         ],
       ),
     );
@@ -367,7 +375,6 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Close button
             GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -377,43 +384,24 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                   color: Colors.black.withValues(alpha: 0.4),
                   shape: BoxShape.circle,
                 ),
-                child:
-                    const Icon(Icons.close, color: Colors.white, size: 20),
+                child: const Icon(Icons.close, color: Colors.white, size: 20),
               ),
             ),
-            // Title
             Text(
-              'Calorie Scanner',
-              style: GoogleFonts.inter(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+              'Scan Food',
+              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
             ),
-            // Barcode scan button
+            // Barcode button
             GestureDetector(
               onTap: _switchToBarcode,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.circle,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.qr_code_scanner_rounded,
-                        color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
-                    Text('Barcode',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 18),
               ),
             ),
           ],
@@ -422,13 +410,80 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     );
   }
 
-  // ─── Scanning overlay (animated text, no spinner) ───
+  // ─── Retake / Gallery bar (after capture, before results) ───
+  Widget _buildRetakeBar() {
+    return Positioned(
+      bottom: MediaQuery.of(context).padding.bottom + 24,
+      left: 0,
+      right: 0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          GestureDetector(
+            onTap: _retakePhoto,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text('Retake', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: _pickFromGallery,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.photo_library_outlined, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text('Gallery', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Scanning overlay — food image visible behind with animated scan line ───
   Widget _buildScanningOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.55),
-        child: const Center(
-          child: _ScanningTextAnimation(),
+        color: Colors.black.withValues(alpha: 0.3),
+        child: const Stack(
+          children: [
+            // Animated scan line
+            _ScanLineAnimation(),
+            // Corner brackets during scan
+            Positioned.fill(
+              child: IgnorePointer(
+                child: _AnimatedCornerBrackets(),
+              ),
+            ),
+            // Text at bottom center
+            Positioned(
+              bottom: 140,
+              left: 0,
+              right: 0,
+              child: Center(child: _ScanningTextAnimation()),
+            ),
+          ],
         ),
       ),
     );
@@ -499,67 +554,37 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     );
   }
 
-  // ─── Retake button ───
-  Widget _buildRetakeButton() {
-    return Positioned(
-      bottom: 50,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: GestureDetector(
-          onTap: _retakePhoto,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.camera_alt_rounded,
-                    color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Retake',
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // (Retake is now handled by the bottom toolbar scan button)
 
-  // ─── Results Panel (matching the mockup) ───
+  // ─── Results Panel — draggable sheet so image stays visible ───
   Widget _buildResultsPanel() {
     if (_result == null) return const SizedBox.shrink();
     final item = _result!.items.first;
     final mealLabel = _mealTypeLabel(_guessMealType());
 
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-            20, 24, 20, MediaQuery.of(context).padding.bottom + 16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4)),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.45,
+      maxChildSize: 0.92,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))],
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom + 16),
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
             // Meal type label
             Text(
               mealLabel,
@@ -776,6 +801,14 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               _buildDetailBreakdown(item),
             ],
 
+            // ── Burn It Off (workout suggestions) ──
+            if (item.hasCalorieBurn) ...[
+              const SizedBox(height: 16),
+              Text('Burn It Off', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
+              const SizedBox(height: 8),
+              ...item.calorieBurn.map((burn) => _burnCard(burn)),
+            ],
+
             const SizedBox(height: 16),
 
             // Done button
@@ -785,24 +818,21 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
                   child: Text(
-                    'Done',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+                    'Log Meal',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1095,6 +1125,71 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     );
   }
 
+  Widget _burnCard(CalorieBurn burn) {
+    IconData icon;
+    switch (burn.icon) {
+      case 'walking': icon = Icons.directions_walk; break;
+      case 'running': icon = Icons.directions_run; break;
+      case 'cycling': icon = Icons.directions_bike; break;
+      case 'swimming': icon = Icons.pool; break;
+      default: icon = Icons.fitness_center;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: const Color(0xFF8B5CF6), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(burn.activity, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                Text(burn.duration, style: GoogleFonts.inter(fontSize: 12, color: Colors.black54)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              // Add to workout goals
+              HapticFeedback.lightImpact();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${burn.activity} (${burn.duration}) added to your goals'),
+                  backgroundColor: const Color(0xFF22C55E),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('Add', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -1122,35 +1217,396 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
 }
 
 // ─────────────────────────────────────────────
+// Food Summary Page — clean full-page result
+// ─────────────────────────────────────────────
+class _FoodSummaryPage extends StatefulWidget {
+  final FoodScanResult result;
+  final File imageFile;
+  final MealType Function() guessMealType;
+  final Future<String?> Function() saveImage;
+
+  const _FoodSummaryPage({
+    required this.result,
+    required this.imageFile,
+    required this.guessMealType,
+    required this.saveImage,
+  });
+
+  @override
+  State<_FoodSummaryPage> createState() => _FoodSummaryPageState();
+}
+
+class _FoodSummaryPageState extends State<_FoodSummaryPage> {
+  int _servings = 1;
+
+  void _logMeal() async {
+    final mealType = widget.guessMealType();
+    final imagePath = await widget.saveImage();
+    final scanId = const Uuid().v4();
+    final now = DateTime.now();
+    final r = widget.result;
+    final wellness = r.mealWellness;
+    final wellnessBreakdown = wellness != null
+        ? jsonEncode({
+            'label': wellness.label,
+            'per_item': wellness.perItem.map((i) => {'name': i.name, 'score': i.score}).toList(),
+            'positive': wellness.positiveFactors.map((f) => {'label': f.label, 'points': f.points, 'reason': f.reason}).toList(),
+            'negative': wellness.negativeFactors.map((f) => {'label': f.label, 'points': f.points, 'reason': f.reason}).toList(),
+          })
+        : null;
+
+    final meals = r.items.map((item) => MealLog(
+          name: item.name,
+          calories: item.calories * _servings,
+          proteinGrams: (item.proteinG * _servings).round(),
+          carbsGrams: (item.carbsG * _servings).round(),
+          fatGrams: (item.fatG * _servings).round(),
+          sugarGrams: (item.sugarG * _servings).round(),
+          fiberGrams: (item.fiberG * _servings).round(),
+          sodiumMg: (item.sodiumMg * _servings),
+          caffeineMg: (item.caffeineMg * _servings),
+          itemType: item.type,
+          warningsJson: item.warnings.isNotEmpty ? jsonEncode(item.warnings.map((w) => {'type': w.type, 'severity': w.severity, 'label': w.label, 'detail': w.detail}).toList()) : null,
+          benefitsJson: item.benefits.isNotEmpty ? jsonEncode(item.benefits.map((b) => {'icon': b.icon, 'title': b.title, 'detail': b.detail}).toList()) : null,
+          calorieBurnJson: item.calorieBurn.isNotEmpty ? jsonEncode(item.calorieBurn.map((c) => {'activity': c.activity, 'duration': c.duration, 'icon': c.icon, 'steps': c.steps, 'detail': c.detail}).toList()) : null,
+          wellnessScore: wellness?.overallScore ?? 0,
+          wellnessBreakdownJson: wellnessBreakdown,
+          mealType: mealType,
+          timestamp: now,
+          imagePath: imagePath,
+          imageUrl: r.imageUrl,
+          scanId: scanId,
+          mealName: r.mealName,
+          notes: 'Scanned via AI (${(item.confidence * 100).round()}% confidence)${_servings > 1 ? ' × $_servings servings' : ''}',
+        )).toList();
+
+    if (!mounted) return;
+    context.read<DietBloc>().add(LogMealBatch(meals: meals));
+    HapticFeedback.mediumImpact();
+    Navigator.pop(context, true); // Return true = logged
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.result.items.first;
+    final totalCal = widget.result.totalCalories * _servings;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // ── Food image (top 40%) ──
+          SliverToBoxAdapter(
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.38,
+                  width: double.infinity,
+                  child: Image.file(widget.imageFile, fit: BoxFit.cover),
+                ),
+                // Gradient fade to white
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  height: 80,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.white],
+                      ),
+                    ),
+                  ),
+                ),
+                // Back button
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  left: 16,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context, false),
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), shape: BoxShape.circle),
+                      child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Content ──
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Food name + servings
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.result.mealName ?? item.name,
+                              style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.black),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${widget.result.items.length} item${widget.result.items.length > 1 ? 's' : ''} detected',
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black45),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Serving control
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(10)),
+                        child: Row(
+                          children: [
+                            _sBtn(Icons.remove, () { if (_servings > 1) setState(() => _servings--); }),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Text('$_servings', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+                            ),
+                            _sBtn(Icons.add, () => setState(() => _servings++)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Big calorie number ──
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Text('$totalCal', style: GoogleFonts.inter(fontSize: 44, fontWeight: FontWeight.w800, color: const Color(0xFFEF4444))),
+                        Text('calories', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFFEF4444).withValues(alpha: 0.7))),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Macros row ──
+                  Row(
+                    children: [
+                      _macro('Protein', '${(item.proteinG * _servings).round()}g', const Color(0xFF3B82F6)),
+                      const SizedBox(width: 8),
+                      _macro('Carbs', '${(item.carbsG * _servings).round()}g', const Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      _macro('Fat', '${(item.fatG * _servings).round()}g', const Color(0xFFEC4899)),
+                    ],
+                  ),
+
+                  // ── Burn It Off ──
+                  if (item.hasCalorieBurn) ...[
+                    const SizedBox(height: 24),
+                    Text('Burn It Off', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black)),
+                    const SizedBox(height: 4),
+                    Text('Add a workout to your goals', style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+                    const SizedBox(height: 10),
+                    ...item.calorieBurn.map((burn) {
+                      IconData icon;
+                      switch (burn.icon) {
+                        case 'walking': icon = Icons.directions_walk; break;
+                        case 'running': icon = Icons.directions_run; break;
+                        case 'cycling': icon = Icons.directions_bike; break;
+                        case 'swimming': icon = Icons.pool; break;
+                        default: icon = Icons.fitness_center;
+                      }
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44, height: 44,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(icon, color: const Color(0xFF8B5CF6), size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(burn.activity, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
+                                  Text(burn.duration, style: GoogleFonts.inter(fontSize: 13, color: Colors.black54)),
+                                  if (burn.steps != null)
+                                    Text('~${burn.steps} steps', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38)),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                HapticFeedback.lightImpact();
+                                try {
+                                  final minMatch = RegExp(r'(\d+)').firstMatch(burn.duration);
+                                  final minutes = minMatch != null ? int.parse(minMatch.group(1)!) : 30;
+
+                                  // Save to backend (this is the important call)
+                                  await WorkoutService.instance.setGoal(goalType: 'active_minutes', targetValue: minutes);
+
+                                  if (!context.mounted) return;
+
+                                  // Refresh workout data so goals appear on Home
+                                  context.read<WorkoutBloc>().add(const RefreshWorkoutData());
+
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text('${burn.activity} (${burn.duration}) added — check My Goals on Home'),
+                                    backgroundColor: const Color(0xFF22C55E),
+                                    duration: const Duration(seconds: 3),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ));
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text('Could not add goal: $e'),
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ));
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(color: const Color(0xFF8B5CF6), borderRadius: BorderRadius.circular(10)),
+                                child: Text('Add', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+
+                  // ── Warnings ──
+                  if (item.hasWarnings) ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 6, runSpacing: 6,
+                      children: item.warnings.map((w) {
+                        final isHigh = w.severity == 'high';
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isHigh ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(w.label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: isHigh ? const Color(0xFFDC2626) : const Color(0xFFD97706))),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // ── Log Meal button ──
+                  GestureDetector(
+                    onTap: _logMeal,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text('Log $totalCal cal', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: () { HapticFeedback.lightImpact(); onTap(); },
+      child: Container(
+        width: 26, height: 26,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: const Color(0xFFE5E7EB))),
+        child: Icon(icon, size: 14, color: Colors.black87),
+      ),
+    );
+  }
+
+  Widget _macro(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: GoogleFonts.inter(fontSize: 11, color: color.withValues(alpha: 0.7))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
 // Corner Brackets Overlay — sharp, modern
 // ─────────────────────────────────────────────
 class _CornerBracketsPainter extends CustomPainter {
   final bool scanning;
-  _CornerBracketsPainter({this.scanning = false});
+  final double glowOpacity;
+  _CornerBracketsPainter({this.scanning = false, this.glowOpacity = 1.0});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height * 0.42);
-    final radius = size.width * 0.38;
-    final bracketLen = 30.0;
-    final cornerRadius = 12.0;
+    final rectSize = size.width * 0.72;
+    final bracketLen = 35.0;
+    final cornerRadius = 14.0;
 
-    // Semi-transparent dark overlay
-    final overlayPaint = Paint()..color = Colors.black.withValues(alpha: 0.35);
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), overlayPaint);
+    // Bracket rectangle (not circle — matches reference UI)
+    final rect = Rect.fromCenter(center: center, width: rectSize, height: rectSize);
 
-    // Clear the circle
-    final circlePaint = Paint()..blendMode = BlendMode.clear;
-    canvas.drawCircle(center, radius, circlePaint);
+    // White bracket corners (with glow when scanning)
+    final bracketColor = scanning
+        ? Color.fromRGBO(139, 92, 246, glowOpacity) // Purple glow
+        : Colors.white.withOpacity(0.8);
 
-    // White bracket corners
     final bracketPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 3.0
+      ..color = bracketColor
+      ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-
-    final rect = Rect.fromCircle(center: center, radius: radius);
 
     // Top-left corner
     _drawCorner(canvas, bracketPaint, rect.left, rect.top, bracketLen,
@@ -1207,12 +1663,123 @@ class _CornerBracketsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CornerBracketsPainter old) =>
-      scanning != old.scanning;
+      scanning != old.scanning || glowOpacity != old.glowOpacity;
 }
 
 // ─────────────────────────────────────────────
 // Animated scanning text ─ cycles through messages
 // ─────────────────────────────────────────────
+/// Animated scanning line that sweeps vertically over the food image
+class _ScanLineAnimation extends StatefulWidget {
+  const _ScanLineAnimation();
+
+  @override
+  State<_ScanLineAnimation> createState() => _ScanLineAnimationState();
+}
+
+class _ScanLineAnimationState extends State<_ScanLineAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final screenH = MediaQuery.of(context).size.height;
+        final top = _controller.value * screenH * 0.6 + screenH * 0.15;
+        return Positioned(
+          top: top,
+          left: 40,
+          right: 40,
+          child: Container(
+            height: 2,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  const Color(0xFF8B5CF6).withOpacity(0.8),
+                  const Color(0xFF6366F1),
+                  const Color(0xFF8B5CF6).withOpacity(0.8),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.5),
+                  blurRadius: 12,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Animated corner brackets that pulse during scanning
+class _AnimatedCornerBrackets extends StatefulWidget {
+  const _AnimatedCornerBrackets();
+
+  @override
+  State<_AnimatedCornerBrackets> createState() => _AnimatedCornerBracketsState();
+}
+
+class _AnimatedCornerBracketsState extends State<_AnimatedCornerBrackets>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final opacity = 0.4 + _controller.value * 0.6;
+        return CustomPaint(
+          painter: _CornerBracketsPainter(
+            scanning: true,
+            glowOpacity: opacity,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Scanning text with cycling messages
 class _ScanningTextAnimation extends StatefulWidget {
   const _ScanningTextAnimation();
 
@@ -1253,64 +1820,64 @@ class _ScanningTextAnimationState extends State<_ScanningTextAnimation> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Pulsing icon
-        TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.85, end: 1.0),
-          duration: const Duration(milliseconds: 1200),
-          builder: (context, value, child) {
-            return Transform.scale(
-              scale: value,
-              child: child,
-            );
-          },
-          onEnd: () {
-            if (mounted) setState(() {});
-          },
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
-              border: Border.all(
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
-                width: 1.5,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Pulsing icon
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.85, end: 1.0),
+            duration: const Duration(milliseconds: 1200),
+            builder: (context, value, child) {
+              return Transform.scale(scale: value, child: child);
+            },
+            onEnd: () {
+              if (mounted) setState(() {});
+            },
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF8B5CF6).withOpacity(0.2),
+              ),
+              child: const Icon(
+                Icons.restaurant_menu_rounded,
+                color: Color(0xFF8B5CF6),
+                size: 24,
               ),
             ),
-            child: const Icon(
-              Icons.restaurant_menu_rounded,
-              color: Color(0xFF8B5CF6),
-              size: 28,
+          ),
+          const SizedBox(height: 12),
+          // Main message
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: Text(
+              _messages[_index],
+              key: ValueKey(_index),
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 20),
-        // Main message
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          child: Text(
-            _messages[_index],
-            key: ValueKey(_index),
+          const SizedBox(height: 6),
+          // Subtitle with dots
+          Text(
+            'Scanning${'.' * _dotCount}',
             style: GoogleFonts.inter(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+              fontSize: 12,
+              color: Colors.white54,
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        // Subtitle with dots
-        Text(
-          'Scanning${'.' * _dotCount}',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            color: Colors.white54,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

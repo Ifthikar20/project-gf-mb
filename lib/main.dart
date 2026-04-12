@@ -25,6 +25,8 @@ import 'features/wellness_goals/data/models/wellness_checkin_model.dart';
 import 'features/wellness_goals/data/models/fitness_profile_model.dart';
 import 'features/library/presentation/bloc/library_bloc.dart';
 import 'core/services/goal_tracking_service.dart';
+import 'core/services/healthkit_service.dart';
+import 'features/subscription/data/services/apple_iap_service.dart';
 import 'features/workouts/presentation/bloc/workout_bloc.dart';
 import 'features/diet/presentation/bloc/diet_bloc.dart';
 import 'features/diet/data/models/diet_models.dart';
@@ -108,11 +110,24 @@ void main() async {
   GoalTrackingService.instance.trackDailyUsage();
   debugPrint(' Goal tracking service initialized');
 
-  // Set system UI overlay style
+  // Initialize HealthKit service (loads saved preferences)
+  await HealthKitService.instance.init();
+
+  // Initialize Apple In-App Purchases
+  await AppleIAPService.instance.init();
+  if (HealthKitService.instance.isEnabled) {
+    // Refresh cached health data on app startup
+    HealthKitService.instance.refreshAndCache();
+  }
+
+  // Set system UI overlay style — force dark native chrome so the iOS
+  // window is never white before Flutter's first frame renders.
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF0A0A0A),
+      systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
 

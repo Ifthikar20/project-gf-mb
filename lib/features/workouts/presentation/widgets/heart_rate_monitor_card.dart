@@ -2,10 +2,11 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/services/healthkit_service.dart';
 import 'calm_down_sheet.dart';
 
 /// Live heart rate monitor card.
-/// Uses simulated data — replace with real wearable data later.
+/// Uses real HealthKit data when available, falls back to simulation.
 class HeartRateMonitorCard extends StatefulWidget {
   const HeartRateMonitorCard({super.key});
 
@@ -16,12 +17,12 @@ class HeartRateMonitorCard extends StatefulWidget {
 class _HeartRateMonitorCardState extends State<HeartRateMonitorCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
-  late Timer _hrTimer;
-  int _currentBPM = 72;
+  Timer? _refreshTimer;
+  int _currentBPM = 0;
   bool _calmDownShown = false;
+  bool _isRealData = false;
   final _random = Random();
 
-  // Simulates heart rate changes
   static const _hrThreshold = 150;
 
   @override
@@ -32,15 +33,38 @@ class _HeartRateMonitorCardState extends State<HeartRateMonitorCard>
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
-    // Simulate HR changes every 3 seconds
-    _hrTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted) return;
-      setState(() {
-        // Random walk: ±15 BPM, clamped to 55-180
-        _currentBPM = (_currentBPM + _random.nextInt(31) - 15).clamp(55, 180);
-      });
-      _checkThreshold();
+    _loadHeartRate();
+
+    // Refresh every 30 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _loadHeartRate();
     });
+  }
+
+  Future<void> _loadHeartRate() async {
+    final service = HealthKitService.instance;
+
+    if (service.isEnabled && service.isAuthorized) {
+      // Try real data from cache
+      final bpm = await service.getLatestHeartRate();
+      if (bpm > 0 && mounted) {
+        setState(() {
+          _currentBPM = bpm;
+          _isRealData = true;
+        });
+        _checkThreshold();
+        return;
+      }
+    }
+
+    // Fallback to simulation
+    if (mounted && !_isRealData) {
+      setState(() {
+        if (_currentBPM == 0) _currentBPM = 72;
+        _currentBPM = (_currentBPM + _random.nextInt(31) - 15).clamp(55, 180);
+        _isRealData = false;
+      });
+    }
   }
 
   void _checkThreshold() {
@@ -71,7 +95,7 @@ class _HeartRateMonitorCardState extends State<HeartRateMonitorCard>
   @override
   void dispose() {
     _pulseController.dispose();
-    _hrTimer.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -79,7 +103,6 @@ class _HeartRateMonitorCardState extends State<HeartRateMonitorCard>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF5F5F5);
-
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -128,7 +151,7 @@ class _HeartRateMonitorCardState extends State<HeartRateMonitorCard>
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      '$_currentBPM',
+                      _currentBPM > 0 ? '$_currentBPM' : '--',
                       style: GoogleFonts.inter(
                         color: _bpmColor,
                         fontSize: 32,
@@ -147,12 +170,34 @@ class _HeartRateMonitorCardState extends State<HeartRateMonitorCard>
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  _zone,
-                  style: GoogleFonts.inter(
-                    color: isDark ? Colors.white54 : Colors.black54,
-                    fontSize: 13,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      _zone,
+                      style: GoogleFonts.inter(
+                        color: isDark ? Colors.white54 : Colors.black54,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (_isRealData) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22C55E).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Live',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF22C55E),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

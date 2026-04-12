@@ -271,7 +271,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.local_fire_department, color: const Color(0xFFFF6B6B), size: 20),
+              Image.asset('assets/images/fire-logo-calories.png', width: 20, height: 20, color: const Color(0xFFFF6B6B)),
               const SizedBox(width: 6),
               Text(
                 'This Week',
