@@ -41,6 +41,9 @@ import '../../features/coaching/presentation/pages/coaching_sessions_page.dart';
 import '../../features/coaching/presentation/pages/my_workout_plan_page.dart';
 import '../../features/coaching/presentation/pages/free_consultation_page.dart';
 import '../../features/antigravity_chat/presentation/pages/antigravity_chat_page.dart';
+import '../../features/journal/presentation/pages/journal_page.dart';
+import '../../features/wellness_score/presentation/pages/wellness_score_page.dart';
+import '../../features/sleep/presentation/pages/sleep_dashboard_page.dart';
 
 class AppRouter {
   static const String home = '/';

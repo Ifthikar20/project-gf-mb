@@ -38,6 +38,9 @@ import 'features/explore/presentation/bloc/class_schedule_bloc.dart';
 import 'features/subscription/presentation/bloc/subscription_bloc.dart';
 import 'features/marketplace/presentation/bloc/marketplace_bloc.dart';
 import 'features/coaching/presentation/bloc/coaching_bloc.dart';
+import 'features/journal/presentation/bloc/journal_bloc.dart';
+import 'features/wellness_score/presentation/bloc/wellness_score_bloc.dart';
+import 'features/sleep/presentation/bloc/sleep_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -221,6 +224,15 @@ class WellnessApp extends StatelessWidget {
           ),
           BlocProvider(
             create: (context) => CoachingBloc(),
+          ),
+          BlocProvider(
+            create: (context) => JournalBloc(),
+          ),
+          BlocProvider(
+            create: (context) => WellnessScoreBloc(),
+          ),
+          BlocProvider(
+            create: (context) => SleepBloc(),
           ),
         ],
         // Use Builder to access AuthBloc and create auth-aware router.
