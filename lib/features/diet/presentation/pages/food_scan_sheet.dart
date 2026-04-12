@@ -10,6 +10,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:image/image.dart' as img;
 import '../../../../core/services/food_scanner_service.dart';
+import '../../../workouts/data/services/workout_service.dart';
+import '../../../workouts/presentation/bloc/workout_bloc.dart';
+import '../../../workouts/presentation/bloc/workout_event.dart';
+// Goals are saved to backend only (WorkoutBloc), not local Hive
 import '../../data/models/food_scan_result.dart';
 import '../../data/models/diet_models.dart';
 import '../bloc/diet_bloc.dart';
@@ -85,10 +89,24 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
       final result = await FoodScannerService.instance.analyzeImage(bytes);
       
       if (mounted) {
-        setState(() {
-          _result = result;
-          _scanning = false;
-        });
+        setState(() => _scanning = false);
+        // Navigate to summary page
+        final logged = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BlocProvider.value(
+              value: context.read<DietBloc>(),
+              child: _FoodSummaryPage(
+                result: result,
+                imageFile: _capturedImage!,
+                guessMealType: _guessMealType,
+                saveImage: _saveImageToDocuments,
+              ),
+            ),
+          ),
+        );
+        // Whether logged or cancelled, close the scanner and go back to Calories
+        if (mounted) Navigator.pop(context);
       }
     } on FoodScanException catch (e) {
       if (!mounted) return;
@@ -300,8 +318,6 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final hasResult = _result != null && !_scanning;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -316,27 +332,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               child: ColoredBox(color: Color(0xFF111111)),
             ),
 
-          // ── Gradient overlay when showing result ──
-          if (hasResult)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.3, 0.5],
-                    colors: [
-                      Colors.transparent,
-                      Colors.transparent,
-                      Colors.white.withValues(alpha: 0.97),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
           // ── Corner brackets overlay ──
-          if (!hasResult && _capturedImage != null)
+          if (_capturedImage != null)
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
@@ -354,11 +351,8 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
           // ── Error state ──
           if (_error != null && !_scanning) _buildErrorOverlay(),
 
-          // ── Results panel (slides up from bottom) ──
-          if (hasResult) _buildResultsPanel(),
-
-          // ── Retake / Gallery / Barcode buttons (after capture, before result) ──
-          if (_capturedImage != null && !_scanning && !hasResult && _error == null)
+          // ── Retake / Gallery buttons ──
+          if (_capturedImage != null && !_scanning && _error == null)
             _buildRetakeBar(),
         ],
       ),
@@ -562,30 +556,35 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
 
   // (Retake is now handled by the bottom toolbar scan button)
 
-  // ─── Results Panel (matching the mockup) ───
+  // ─── Results Panel — draggable sheet so image stays visible ───
   Widget _buildResultsPanel() {
     if (_result == null) return const SizedBox.shrink();
     final item = _result!.items.first;
     final mealLabel = _mealTypeLabel(_guessMealType());
 
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-            20, 24, 20, MediaQuery.of(context).padding.bottom + 16),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4)),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.45,
+      maxChildSize: 0.92,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))],
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).padding.bottom + 16),
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
             // Meal type label
             Text(
               mealLabel,
@@ -802,6 +801,14 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
               _buildDetailBreakdown(item),
             ],
 
+            // ── Burn It Off (workout suggestions) ──
+            if (item.hasCalorieBurn) ...[
+              const SizedBox(height: 16),
+              Text('Burn It Off', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black)),
+              const SizedBox(height: 8),
+              ...item.calorieBurn.map((burn) => _burnCard(burn)),
+            ],
+
             const SizedBox(height: 16),
 
             // Done button
@@ -811,24 +818,21 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
                   child: Text(
-                    'Done',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+                    'Log Meal',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1121,6 +1125,71 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
     );
   }
 
+  Widget _burnCard(CalorieBurn burn) {
+    IconData icon;
+    switch (burn.icon) {
+      case 'walking': icon = Icons.directions_walk; break;
+      case 'running': icon = Icons.directions_run; break;
+      case 'cycling': icon = Icons.directions_bike; break;
+      case 'swimming': icon = Icons.pool; break;
+      default: icon = Icons.fitness_center;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: const Color(0xFF8B5CF6), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(burn.activity, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                Text(burn.duration, style: GoogleFonts.inter(fontSize: 12, color: Colors.black54)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              // Add to workout goals
+              HapticFeedback.lightImpact();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${burn.activity} (${burn.duration}) added to your goals'),
+                  backgroundColor: const Color(0xFF22C55E),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('Add', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -1142,6 +1211,369 @@ class _FoodScanSheetState extends State<FoodScanSheet> {
                 color: Colors.black87,
               )),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Food Summary Page — clean full-page result
+// ─────────────────────────────────────────────
+class _FoodSummaryPage extends StatefulWidget {
+  final FoodScanResult result;
+  final File imageFile;
+  final MealType Function() guessMealType;
+  final Future<String?> Function() saveImage;
+
+  const _FoodSummaryPage({
+    required this.result,
+    required this.imageFile,
+    required this.guessMealType,
+    required this.saveImage,
+  });
+
+  @override
+  State<_FoodSummaryPage> createState() => _FoodSummaryPageState();
+}
+
+class _FoodSummaryPageState extends State<_FoodSummaryPage> {
+  int _servings = 1;
+
+  void _logMeal() async {
+    final mealType = widget.guessMealType();
+    final imagePath = await widget.saveImage();
+    final scanId = const Uuid().v4();
+    final now = DateTime.now();
+    final r = widget.result;
+    final wellness = r.mealWellness;
+    final wellnessBreakdown = wellness != null
+        ? jsonEncode({
+            'label': wellness.label,
+            'per_item': wellness.perItem.map((i) => {'name': i.name, 'score': i.score}).toList(),
+            'positive': wellness.positiveFactors.map((f) => {'label': f.label, 'points': f.points, 'reason': f.reason}).toList(),
+            'negative': wellness.negativeFactors.map((f) => {'label': f.label, 'points': f.points, 'reason': f.reason}).toList(),
+          })
+        : null;
+
+    final meals = r.items.map((item) => MealLog(
+          name: item.name,
+          calories: item.calories * _servings,
+          proteinGrams: (item.proteinG * _servings).round(),
+          carbsGrams: (item.carbsG * _servings).round(),
+          fatGrams: (item.fatG * _servings).round(),
+          sugarGrams: (item.sugarG * _servings).round(),
+          fiberGrams: (item.fiberG * _servings).round(),
+          sodiumMg: (item.sodiumMg * _servings),
+          caffeineMg: (item.caffeineMg * _servings),
+          itemType: item.type,
+          warningsJson: item.warnings.isNotEmpty ? jsonEncode(item.warnings.map((w) => {'type': w.type, 'severity': w.severity, 'label': w.label, 'detail': w.detail}).toList()) : null,
+          benefitsJson: item.benefits.isNotEmpty ? jsonEncode(item.benefits.map((b) => {'icon': b.icon, 'title': b.title, 'detail': b.detail}).toList()) : null,
+          calorieBurnJson: item.calorieBurn.isNotEmpty ? jsonEncode(item.calorieBurn.map((c) => {'activity': c.activity, 'duration': c.duration, 'icon': c.icon, 'steps': c.steps, 'detail': c.detail}).toList()) : null,
+          wellnessScore: wellness?.overallScore ?? 0,
+          wellnessBreakdownJson: wellnessBreakdown,
+          mealType: mealType,
+          timestamp: now,
+          imagePath: imagePath,
+          imageUrl: r.imageUrl,
+          scanId: scanId,
+          mealName: r.mealName,
+          notes: 'Scanned via AI (${(item.confidence * 100).round()}% confidence)${_servings > 1 ? ' × $_servings servings' : ''}',
+        )).toList();
+
+    if (!mounted) return;
+    context.read<DietBloc>().add(LogMealBatch(meals: meals));
+    HapticFeedback.mediumImpact();
+    Navigator.pop(context, true); // Return true = logged
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.result.items.first;
+    final totalCal = widget.result.totalCalories * _servings;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // ── Food image (top 40%) ──
+          SliverToBoxAdapter(
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.38,
+                  width: double.infinity,
+                  child: Image.file(widget.imageFile, fit: BoxFit.cover),
+                ),
+                // Gradient fade to white
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  height: 80,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.white],
+                      ),
+                    ),
+                  ),
+                ),
+                // Back button
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  left: 16,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context, false),
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), shape: BoxShape.circle),
+                      child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Content ──
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Food name + servings
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.result.mealName ?? item.name,
+                              style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.black),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${widget.result.items.length} item${widget.result.items.length > 1 ? 's' : ''} detected',
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black45),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Serving control
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(10)),
+                        child: Row(
+                          children: [
+                            _sBtn(Icons.remove, () { if (_servings > 1) setState(() => _servings--); }),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Text('$_servings', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+                            ),
+                            _sBtn(Icons.add, () => setState(() => _servings++)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Big calorie number ──
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Text('$totalCal', style: GoogleFonts.inter(fontSize: 44, fontWeight: FontWeight.w800, color: const Color(0xFFEF4444))),
+                        Text('calories', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFFEF4444).withValues(alpha: 0.7))),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ── Macros row ──
+                  Row(
+                    children: [
+                      _macro('Protein', '${(item.proteinG * _servings).round()}g', const Color(0xFF3B82F6)),
+                      const SizedBox(width: 8),
+                      _macro('Carbs', '${(item.carbsG * _servings).round()}g', const Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      _macro('Fat', '${(item.fatG * _servings).round()}g', const Color(0xFFEC4899)),
+                    ],
+                  ),
+
+                  // ── Burn It Off ──
+                  if (item.hasCalorieBurn) ...[
+                    const SizedBox(height: 24),
+                    Text('Burn It Off', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black)),
+                    const SizedBox(height: 4),
+                    Text('Add a workout to your goals', style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+                    const SizedBox(height: 10),
+                    ...item.calorieBurn.map((burn) {
+                      IconData icon;
+                      switch (burn.icon) {
+                        case 'walking': icon = Icons.directions_walk; break;
+                        case 'running': icon = Icons.directions_run; break;
+                        case 'cycling': icon = Icons.directions_bike; break;
+                        case 'swimming': icon = Icons.pool; break;
+                        default: icon = Icons.fitness_center;
+                      }
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44, height: 44,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(icon, color: const Color(0xFF8B5CF6), size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(burn.activity, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
+                                  Text(burn.duration, style: GoogleFonts.inter(fontSize: 13, color: Colors.black54)),
+                                  if (burn.steps != null)
+                                    Text('~${burn.steps} steps', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38)),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                HapticFeedback.lightImpact();
+                                try {
+                                  final minMatch = RegExp(r'(\d+)').firstMatch(burn.duration);
+                                  final minutes = minMatch != null ? int.parse(minMatch.group(1)!) : 30;
+
+                                  // Save to backend (this is the important call)
+                                  await WorkoutService.instance.setGoal(goalType: 'active_minutes', targetValue: minutes);
+
+                                  if (!context.mounted) return;
+
+                                  // Refresh workout data so goals appear on Home
+                                  context.read<WorkoutBloc>().add(const RefreshWorkoutData());
+
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text('${burn.activity} (${burn.duration}) added — check My Goals on Home'),
+                                    backgroundColor: const Color(0xFF22C55E),
+                                    duration: const Duration(seconds: 3),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ));
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text('Could not add goal: $e'),
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ));
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(color: const Color(0xFF8B5CF6), borderRadius: BorderRadius.circular(10)),
+                                child: Text('Add', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+
+                  // ── Warnings ──
+                  if (item.hasWarnings) ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 6, runSpacing: 6,
+                      children: item.warnings.map((w) {
+                        final isHigh = w.severity == 'high';
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isHigh ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(w.label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: isHigh ? const Color(0xFFDC2626) : const Color(0xFFD97706))),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // ── Log Meal button ──
+                  GestureDetector(
+                    onTap: _logMeal,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text('Log $totalCal cal', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: () { HapticFeedback.lightImpact(); onTap(); },
+      child: Container(
+        width: 26, height: 26,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: const Color(0xFFE5E7EB))),
+        child: Icon(icon, size: 14, color: Colors.black87),
+      ),
+    );
+  }
+
+  Widget _macro(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: GoogleFonts.inter(fontSize: 11, color: color.withValues(alpha: 0.7))),
+          ],
+        ),
       ),
     );
   }

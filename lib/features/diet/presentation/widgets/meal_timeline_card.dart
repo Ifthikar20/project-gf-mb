@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/models/diet_models.dart';
 import '../pages/meal_detail_page.dart';
 
@@ -96,18 +97,7 @@ class _MealGroupCardState extends State<MealGroupCard>
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: _hasLocalImage
-                          ? Image.file(File(_primary.imagePath!),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _hasRemoteImage
-                                      ? Image.network(_primary.imageUrl!, fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark))
-                                      : _emojiPlaceholder(isDark))
-                          : _hasRemoteImage
-                              ? Image.network(_primary.imageUrl!, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => _emojiPlaceholder(isDark))
-                          : _emojiPlaceholder(isDark),
+                      child: _buildFoodImage(isDark),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -205,6 +195,46 @@ class _MealGroupCardState extends State<MealGroupCard>
         ),
       ),
     );
+  }
+
+  Widget _buildFoodImage(bool isDark) {
+    // 1. Try local file
+    if (_hasLocalImage) {
+      return Image.file(
+        File(_primary.imagePath!),
+        width: 52, height: 52,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _networkOrPlaceholder(isDark),
+      );
+    }
+    // 2. Try remote URL
+    return _networkOrPlaceholder(isDark);
+  }
+
+  Widget _networkOrPlaceholder(bool isDark) {
+    if (_hasRemoteImage) {
+      return CachedNetworkImage(
+        imageUrl: _primary.imageUrl!,
+        width: 52, height: 52,
+        fit: BoxFit.cover,
+        memCacheHeight: 104,
+        memCacheWidth: 104,
+        placeholder: (_, __) => Container(
+          color: _mealColor(_primary.mealType).withOpacity(0.15),
+          child: Center(
+            child: SizedBox(
+              width: 16, height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: _mealColor(_primary.mealType),
+              ),
+            ),
+          ),
+        ),
+        errorWidget: (_, __, ___) => _emojiPlaceholder(isDark),
+      );
+    }
+    return _emojiPlaceholder(isDark);
   }
 
   Color _mealColor(MealType type) {

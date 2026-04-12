@@ -12,7 +12,6 @@ import 'body_profile_page.dart';
 import 'goals_setup_page.dart';
 import '../widgets/workout_stats_graphs.dart';
 import '../widgets/heart_rate_monitor_card.dart';
-import '../widgets/health_overview_card.dart';
 
 /// Workout Hub — main tab page showing weekly stats, daily chart, and recent workouts
 class WorkoutHubPage extends StatefulWidget {
@@ -176,14 +175,6 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
           ),
         ),
 
-        // ── Health Overview (Apple Health data) ──
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: HealthOverviewCard(),
-          ),
-        ),
-
         // Weekly Summary Card
         SliverToBoxAdapter(
           child: Padding(
@@ -280,7 +271,7 @@ class _WorkoutHubPageState extends State<WorkoutHubPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.local_fire_department, color: const Color(0xFFFF6B6B), size: 20),
+              Image.asset('assets/images/fire-logo-calories.png', width: 20, height: 20, color: const Color(0xFFFF6B6B)),
               const SizedBox(width: 6),
               Text(
                 'This Week',

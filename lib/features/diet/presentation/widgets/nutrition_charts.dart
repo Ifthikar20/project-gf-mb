@@ -10,6 +10,7 @@ class NutritionCharts extends StatefulWidget {
   final Map<DateTime, DailyNutritionSummary> rangeSummaries;
   final int chartDays;
   final ValueChanged<int> onRangeChanged;
+  final List<MealLog> meals;
 
   const NutritionCharts({
     super.key,
@@ -17,6 +18,7 @@ class NutritionCharts extends StatefulWidget {
     required this.rangeSummaries,
     required this.chartDays,
     required this.onRangeChanged,
+    this.meals = const [],
   });
 
   @override
@@ -72,27 +74,29 @@ class _NutritionChartsState extends State<NutritionCharts>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header: Chart type + time range toggles ──
+          // ── Header: Chart type toggle (compact, icons only) ──
           Row(
             children: [
-              // Chart type toggle
-              _buildToggle(
-                labels: ['Macros', 'Bar', 'Line'],
-                icons: [Icons.pie_chart_rounded, Icons.bar_chart_rounded, Icons.show_chart_rounded],
-                selected: _chartType,
-                onChanged: (i) {
-                  setState(() => _chartType = i);
-                  _animCtrl.forward(from: 0);
-                },
-                isDark: isDark,
+              Expanded(
+                child: _buildToggle(
+                  labels: ['Overall', 'Bar', 'Line', 'Breakdown'],
+                  icons: [Icons.pie_chart_rounded, Icons.bar_chart_rounded, Icons.show_chart_rounded, Icons.list_alt_rounded],
+                  selected: _chartType,
+                  onChanged: (i) {
+                    setState(() => _chartType = i);
+                    _animCtrl.forward(from: 0);
+                  },
+                  isDark: isDark,
+                ),
               ),
-              const Spacer(),
-              // Time range toggle (for bar or line chart)
-              if (_chartType == 1 || _chartType == 2)
-                _buildRangeToggle(isDark),
             ],
           ),
-          const SizedBox(height: 20),
+          // Time range toggle (only for bar or line)
+          if (_chartType == 1 || _chartType == 2) ...[
+            const SizedBox(height: 8),
+            _buildRangeToggle(isDark),
+          ],
+          const SizedBox(height: 16),
 
           // ── Chart Area ──
           AnimatedBuilder(
@@ -102,8 +106,10 @@ class _NutritionChartsState extends State<NutritionCharts>
                 return _buildPieChart(text, subtle, isDark);
               } else if (_chartType == 1) {
                 return _buildBarChart(text, subtle, isDark);
-              } else {
+              } else if (_chartType == 2) {
                 return _buildLineChart(text, subtle, isDark);
+              } else {
+                return _buildBreakdown(text, subtle, isDark);
               }
             },
           ),
@@ -238,42 +244,28 @@ class _NutritionChartsState extends State<NutritionCharts>
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: List.generate(labels.length, (i) {
           final isActive = i == selected;
-          return GestureDetector(
-            onTap: () => onChanged(i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? (isDark ? const Color(0xFF333333) : Colors.white)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: isActive ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ] : null,
-              ),
-              child: Row(
-                children: [
-                  Icon(icons[i], size: 14,
-                    color: isActive
-                      ? (isDark ? Colors.white : Colors.black)
-                      : (isDark ? Colors.white38 : Colors.black38)),
-                  const SizedBox(width: 4),
-                  Text(labels[i], style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                    color: isActive
-                      ? (isDark ? Colors.white : Colors.black)
-                      : (isDark ? Colors.white38 : Colors.black38),
-                  )),
-                ],
+          final activeColor = isDark ? Colors.white : Colors.black;
+          final inactiveColor = isDark ? Colors.white38 : Colors.black38;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? (isDark ? const Color(0xFF333333) : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: isActive ? [
+                    BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 1)),
+                  ] : null,
+                ),
+                child: isActive
+                    ? Text(labels[i], style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: activeColor))
+                    : Icon(icons[i], size: 16, color: inactiveColor),
               ),
             ),
           );
@@ -382,6 +374,71 @@ class _NutritionChartsState extends State<NutritionCharts>
           ],
         ),
       ],
+    );
+  }
+
+  // ─── Breakdown View (all nutrients) ───
+  Widget _buildBreakdown(Color text, Color subtle, bool isDark) {
+    final meals = widget.meals;
+    if (meals.isEmpty) {
+      return SizedBox(
+        height: 120,
+        child: Center(child: Text('Log a meal to see breakdown', style: GoogleFonts.inter(fontSize: 13, color: subtle))),
+      );
+    }
+
+    int protein = 0, carbs = 0, fat = 0, sugar = 0, fiber = 0, sodium = 0, caffeine = 0;
+    for (final m in meals) {
+      protein += m.proteinGrams;
+      carbs += m.carbsGrams;
+      fat += m.fatGrams;
+      sugar += m.sugarGrams;
+      fiber += m.fiberGrams;
+      sodium += m.sodiumMg;
+      caffeine += m.caffeineMg;
+    }
+
+    final progress = _anim.value;
+    return Column(
+      children: [
+        _bRow('Protein', '${protein}g', '/ 150g', protein / 150 * progress, const Color(0xFF3B82F6), text, subtle),
+        _bRow('Carbs', '${carbs}g', '/ 250g', carbs / 250 * progress, const Color(0xFFF59E0B), text, subtle),
+        _bRow('Fat', '${fat}g', '/ 65g', fat / 65 * progress, const Color(0xFFEC4899), text, subtle),
+        Divider(color: subtle.withOpacity(0.15), height: 16),
+        _bRow('Fiber', '${fiber}g', '/ 30g', fiber / 30 * progress, const Color(0xFF22C55E), text, subtle),
+        _bRow('Sugar', '${sugar}g', '/ 50g', sugar / 50 * progress, const Color(0xFFF97316), text, subtle),
+        _bRow('Sodium', '${sodium}mg', '/ 2300mg', sodium / 2300 * progress, const Color(0xFF6366F1), text, subtle),
+        if (caffeine > 0)
+          _bRow('Caffeine', '${caffeine}mg', '/ 400mg', caffeine / 400 * progress, const Color(0xFFA78BFA), text, subtle),
+      ],
+    );
+  }
+
+  Widget _bRow(String label, String value, String target, double ratio, Color color, Color text, Color subtle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(width: 4, height: 16, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 8),
+          SizedBox(width: 60, child: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: text))),
+          Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: text)),
+          const SizedBox(width: 4),
+          Text(target, style: GoogleFonts.inter(fontSize: 10, color: subtle)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: ratio.clamp(0.0, 1.0),
+                backgroundColor: color.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation(color),
+                minHeight: 5,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,234 +1,158 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../workouts/presentation/bloc/workout_bloc.dart';
-import '../../../workouts/presentation/bloc/workout_state.dart';
-import '../../../workouts/data/models/workout_models.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/services/recently_viewed_service.dart';
+import '../../../../core/navigation/app_router.dart';
 
-/// "Recent Activity" section showing latest workouts, styled like Cal AI's
-/// "Recently uploaded" food section.
-class RecentActivitySection extends StatelessWidget {
+/// Shows recently watched videos/audios on the Home page.
+/// Only visible when the user has played content — hidden otherwise.
+class RecentActivitySection extends StatefulWidget {
   const RecentActivitySection({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return BlocBuilder<WorkoutBloc, WorkoutState>(
-      builder: (context, state) {
-        List<WorkoutLogModel> recents = [];
-        if (state is WorkoutLoaded) {
-          recents = state.recentWorkouts.take(5).toList();
-        }
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Text(
-                'Recent activity',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              if (recents.isEmpty)
-                _buildEmptyState(isDark)
-              else
-                ...recents.map(
-                  (workout) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _RecentActivityTile(
-                      workout: workout,
-                      isDark: isDark,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState(bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.fitness_center_rounded,
-            color: isDark ? Colors.white24 : Colors.black12,
-            size: 36,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'No activity yet',
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white54 : Colors.black38,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Log your first workout to see it here',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: isDark ? Colors.white30 : Colors.black26,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  State<RecentActivitySection> createState() => _RecentActivitySectionState();
 }
 
-class _RecentActivityTile extends StatelessWidget {
-  final WorkoutLogModel workout;
-  final bool isDark;
+class _RecentActivitySectionState extends State<RecentActivitySection> {
+  List<RecentlyViewedItem> _items = [];
 
-  const _RecentActivityTile({
-    required this.workout,
-    required this.isDark,
-  });
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    RecentlyViewedService.instance.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    RecentlyViewedService.instance.removeListener(_load);
+    super.dispose();
+  }
+
+  void _load() {
+    if (mounted) {
+      setState(() {
+        _items = RecentlyViewedService.instance.items.take(3).toList();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final categoryColor =
-        workout.workoutType?.categoryColor ?? const Color(0xFF8B5CF6);
-    final icon = workout.workoutType?.icon ?? Icons.fitness_center;
+    // Hide entirely if no content has been played
+    if (_items.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final text = isDark ? Colors.white : Colors.black;
+    final subtle = isDark ? Colors.white38 : Colors.black38;
+    final surface = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final border = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE8E8EC);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon thumbnail
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: categoryColor.withOpacity(isDark ? 0.2 : 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: categoryColor, size: 24),
+          Row(
+            children: [
+              Text('Recently Played', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: text)),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => context.push(AppRouter.watchHistory),
+                child: Text('See all', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: subtle)),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        workout.workoutName,
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      _formatTime(workout.startedAt),
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: isDark ? Colors.white38 : Colors.black38,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.local_fire_department_rounded,
-                      size: 14,
-                      color: const Color(0xFFFF6B6B),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${workout.caloriesBurned} Calories',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.white70 : Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(
-                      Icons.schedule_rounded,
-                      size: 13,
-                      color: isDark ? Colors.white30 : Colors.black26,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${workout.durationMinutes}m',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: isDark ? Colors.white38 : Colors.black38,
-                      ),
-                    ),
-                    if (workout.hasMood) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        workout.moodLabel,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 12),
+          ..._items.map((item) => _tile(item, surface, text, subtle, border)),
         ],
       ),
     );
   }
 
-  String _formatTime(DateTime dt) {
-    final hour = dt.hour > 12
-        ? dt.hour - 12
-        : (dt.hour == 0 ? 12 : dt.hour);
-    final amPm = dt.hour >= 12 ? 'pm' : 'am';
-    return '$hour:${dt.minute.toString().padLeft(2, '0')}$amPm';
+  Widget _tile(RecentlyViewedItem item, Color surface, Color text, Color subtle, Color border) {
+    final isVideo = item.contentType == 'video';
+    final color = isVideo ? const Color(0xFF8B5CF6) : const Color(0xFF3B82F6);
+    final icon = isVideo ? Icons.play_circle_filled : Icons.headphones_rounded;
+    final timeAgo = _timeAgo(item.viewedAt);
+
+    return GestureDetector(
+      onTap: () {
+        if (isVideo) {
+          context.push('${AppRouter.videoPlayer}?id=${item.contentId}');
+        } else {
+          context.push('${AppRouter.audioPlayer}?id=${item.contentId}');
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          children: [
+            // Thumbnail or icon
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: item.thumbnailUrl != null && item.thumbnailUrl!.isNotEmpty
+                  ? Image.network(
+                      item.thumbnailUrl!,
+                      width: 48, height: 48,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _iconBox(icon, color),
+                    )
+                  : _iconBox(icon, color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: text),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                        child: Text(isVideo ? 'Video' : 'Audio', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(timeAgo, style: GoogleFonts.inter(fontSize: 11, color: subtle)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: subtle, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _iconBox(IconData icon, Color color) {
+    return Container(
+      width: 48, height: 48,
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+      child: Icon(icon, color: color, size: 24),
+    );
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.month}/${dt.day}';
   }
 }

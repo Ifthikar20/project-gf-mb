@@ -247,34 +247,14 @@ class _CaloriesPageState extends State<CaloriesPage> {
                               fontWeight: FontWeight.w800,
                               color: text,
                             )),
-                        Row(
-                          children: [
-                            // Camera button
-                            GestureDetector(
-                              onTap: _openScanner,
-                              child: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(Icons.camera_alt_rounded,
-                                    color: Colors.white, size: 22),
-                              ),
-                            ),
-                          ],
+                        GestureDetector(
+                          onTap: _openScanner,
+                          child: Image.asset(
+                            'assets/images/camera-logo.png',
+                            width: 36,
+                            height: 36,
+                            color: text,
+                          ),
                         ),
                       ],
                     ),
@@ -296,6 +276,7 @@ class _CaloriesPageState extends State<CaloriesPage> {
                         todaySummary: state.summary,
                         rangeSummaries: state.rangeSummaries,
                         chartDays: state.chartDays,
+                        meals: state.meals,
                         onRangeChanged: (days) {
                           context.read<DietBloc>().add(LoadMealsForRange(days: days));
                         },
@@ -481,6 +462,120 @@ class _CaloriesPageState extends State<CaloriesPage> {
   }
 }
 
+/// Nutrition breakdown showing all micronutrients from today's meals
+class _NutritionBreakdown extends StatelessWidget {
+  final List<MealLog> meals;
+  final bool isLight;
+
+  const _NutritionBreakdown({required this.meals, required this.isLight});
+
+  @override
+  Widget build(BuildContext context) {
+    // Sum all nutrients from today's meals
+    int protein = 0, carbs = 0, fat = 0, sugar = 0, fiber = 0, sodium = 0, caffeine = 0;
+    for (final m in meals) {
+      protein += m.proteinGrams;
+      carbs += m.carbsGrams;
+      fat += m.fatGrams;
+      sugar += m.sugarGrams;
+      fiber += m.fiberGrams;
+      sodium += m.sodiumMg;
+      caffeine += m.caffeineMg;
+    }
+
+    final bg = isLight ? Colors.white : const Color(0xFF1A1A1A);
+    final text = isLight ? Colors.black : Colors.white;
+    final subtle = isLight ? Colors.black45 : Colors.white38;
+    final border = isLight ? const Color(0xFFE8E8EC) : const Color(0xFF2A2A2A);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Nutrition Breakdown', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: text)),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16), border: Border.all(color: border)),
+          child: Column(
+            children: [
+              // Macros row
+              Row(
+                children: [
+                  _nutrient('Protein', '${protein}g', protein / 150, const Color(0xFF3B82F6), text, subtle),
+                  const SizedBox(width: 10),
+                  _nutrient('Carbs', '${carbs}g', carbs / 250, const Color(0xFFF59E0B), text, subtle),
+                  const SizedBox(width: 10),
+                  _nutrient('Fat', '${fat}g', fat / 65, const Color(0xFFEC4899), text, subtle),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Divider(color: subtle.withOpacity(0.15), height: 1),
+              const SizedBox(height: 12),
+              // Micros
+              _microRow(Icons.grass_rounded, 'Fiber', '${fiber}g', '/ 30g', fiber / 30, const Color(0xFF22C55E), text, subtle),
+              _microRow(Icons.cake_rounded, 'Sugar', '${sugar}g', '/ 50g', sugar / 50, const Color(0xFFF97316), text, subtle),
+              _microRow(Icons.water_drop_outlined, 'Sodium', '${sodium}mg', '/ 2300mg', sodium / 2300, const Color(0xFF6366F1), text, subtle),
+              if (caffeine > 0)
+                _microRow(Icons.bolt_rounded, 'Caffeine', '${caffeine}mg', '/ 400mg', caffeine / 400, const Color(0xFFA78BFA), text, subtle),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _nutrient(String label, String value, double ratio, Color color, Color text, Color subtle) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+          const SizedBox(height: 4),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, color: subtle)),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0.0, 1.0),
+              backgroundColor: color.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation(color),
+              minHeight: 4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _microRow(IconData icon, String label, String value, String target, double ratio, Color color, Color text, Color subtle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          SizedBox(width: 65, child: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: text))),
+          Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: text)),
+          const SizedBox(width: 4),
+          Text(target, style: GoogleFonts.inter(fontSize: 11, color: subtle)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: ratio.clamp(0.0, 1.0),
+                backgroundColor: color.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation(color),
+                minHeight: 4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Compact calorie goal bar — Cal.ai style
 class _CalorieGoalCard extends StatelessWidget {
   final DailyNutritionSummary summary;
@@ -521,7 +616,7 @@ class _CalorieGoalCard extends StatelessWidget {
             // Top row: label + remaining
             Row(
               children: [
-                Icon(Icons.local_fire_department, color: accentColor, size: 16),
+                Image.asset('assets/images/fire-logo-calories.png', width: 16, height: 16, color: accentColor),
                 const SizedBox(width: 6),
                 Text('$consumed', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: text)),
                 Text(' / $goal cal', style: GoogleFonts.inter(fontSize: 13, color: subtle)),

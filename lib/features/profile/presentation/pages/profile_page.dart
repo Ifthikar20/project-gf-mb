@@ -99,17 +99,24 @@ class ProfilePage extends StatelessWidget {
                               builder: (context, authState) {
                                 final isLoggedIn = authState is AuthAuthenticated;
                                 final user = isLoggedIn ? authState.user : null;
-                                final initials = user?.name?.isNotEmpty == true
-                                    ? user!.name![0].toUpperCase()
-                                    : (user?.email.isNotEmpty == true ? user!.email[0].toUpperCase() : 'G');
+                                // Show first + last initials (e.g. "IT" for Ifthikar Test)
+                                String initials = 'G';
+                                if (user?.name?.isNotEmpty == true) {
+                                  final parts = user!.name!.trim().split(' ');
+                                  initials = parts.length > 1
+                                      ? '${parts.first[0]}${parts.last[0]}'.toUpperCase()
+                                      : parts.first[0].toUpperCase();
+                                } else if (user?.email.isNotEmpty == true) {
+                                  initials = user!.email[0].toUpperCase();
+                                }
                                 
                                 return Row(
                                   children: [
-                                    // Avatar
+                                    // Avatar — circular, modern
                                     Container(
                                       padding: const EdgeInsets.all(3),
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(18),
+                                        shape: BoxShape.circle,
                                         border: Border.all(
                                           color: Colors.white.withValues(alpha: 0.9),
                                           width: 2,
@@ -126,7 +133,7 @@ class ProfilePage extends StatelessWidget {
                                         width: 72,
                                         height: 72,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(16),
+                                          shape: BoxShape.circle,
                                           gradient: isLoggedIn
                                               ? const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA78BFA)])
                                               : null,
@@ -224,90 +231,7 @@ class ProfilePage extends StatelessWidget {
                                 );
                               },
                             ),
-                            const SizedBox(height: 28),
-                            // Goals Stats Row
-                            BlocBuilder<GoalsBloc, GoalsState>(
-                              builder: (context, goalsState) {
-                                if (goalsState is! GoalsLoaded) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: surfaceColor,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'Loading goals...',
-                                        style: TextStyle(color: textSecondary, fontSize: 14),
-                                      ),
-                                    ),
-                                  );
-                                }
-                                
-                                final activeGoals = goalsState.goals
-                                    .where((g) => !g.isCompleted)
-                                    .take(3)
-                                    .toList();
-                                
-                                if (activeGoals.isEmpty) {
-                                  return GestureDetector(
-                                    onTap: () => _showGoalPicker(context),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                                      decoration: BoxDecoration(
-                                        color: surfaceColor,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: primaryColor.withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.add_circle_outline, color: textSecondary, size: 20),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Set Your First Goal',
-                                            style: TextStyle(
-                                              color: textColor,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }
-                                
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: surfaceColor,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      for (int i = 0; i < activeGoals.length; i++) ...[
-                                        if (i > 0)
-                                          Container(width: 1, height: 45, color: textSecondary.withValues(alpha: 0.2)),
-                                        Expanded(
-                                          child: _buildGoalStatItem(
-                                            activeGoals[i],
-                                            isLight,
-                                            textColor,
-                                            textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                            // Goals moved to Home page
                           ],
                         ),
                       ),
@@ -316,77 +240,22 @@ class ProfilePage extends StatelessWidget {
                 ),
               ),
 
-              // THEME TOGGLE SECTION
+              // THEME TOGGLE — compact
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                  child: GestureDetector(
-                    onTap: () => context.read<ThemeBloc>().add(ToggleTheme()),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isLight
-                              ? [ThemeColors.lightPrimary.withOpacity(0.2), ThemeColors.lightTextSecondary.withOpacity(0.1)]
-                              : [Colors.grey.shade800.withOpacity(0.3), Colors.grey.shade700.withOpacity(0.2)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: textSecondary.withOpacity(0.2)),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: [
+                      Icon(isLight ? Icons.light_mode : Icons.dark_mode, color: textSecondary, size: 18),
+                      const SizedBox(width: 8),
+                      Text(isLight ? 'Light' : 'Dark', style: TextStyle(color: textSecondary, fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Switch.adaptive(
+                        value: !isLight,
+                        onChanged: (_) => context.read<ThemeBloc>().add(ToggleTheme()),
+                        activeColor: primaryColor,
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: textSecondary.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              isLight ? Icons.light_mode : Icons.dark_mode,
-                              color: textColor,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isLight ? 'Light Theme' : 'Dark Theme',
-                                  style: isLight
-                                      ? GoogleFonts.inter(
-                                          color: textColor,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        )
-                                      : TextStyle(
-                                          color: textColor,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  isLight 
-                                      ? 'Tap to switch to Classic Dark' 
-                                      : 'Tap to switch to Light mode',
-                                  style: TextStyle(
-                                    color: textSecondary.withOpacity(0.7),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.swap_horiz,
-                            color: textSecondary,
-                            size: 24,
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -519,96 +388,6 @@ class ProfilePage extends StatelessWidget {
                             ),
                           );
                         },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Marketplace & Coaching Quick Access
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => context.push(AppRouter.marketplace),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF59E0B).withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.storefront_outlined, color: Color(0xFFF59E0B), size: 24),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Marketplace',
-                                  style: GoogleFonts.inter(
-                                    color: textColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Browse programs',
-                                  style: TextStyle(color: textSecondary, fontSize: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => context.push(AppRouter.coaches),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
-                            ),
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF8B5CF6).withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.video_camera_front_outlined, color: Color(0xFF8B5CF6), size: 24),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Live Coaching',
-                                  style: GoogleFonts.inter(
-                                    color: textColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '1:1 video sessions',
-                                  style: TextStyle(color: textSecondary, fontSize: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -808,7 +587,7 @@ class ProfilePage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSection(context, 'Preferences', [
-                    _MenuItem(Icons.notifications_outlined, 'Notifications', 'Push, email alerts'),
+                    _MenuItem(Icons.notifications_outlined, 'Notifications', 'Push, email alerts', route: '/notifications'),
                     _MenuItem(Icons.language_outlined, 'Language', 'English (US)'),
                     _MenuItem(Icons.download_outlined, 'Downloads', 'Offline content'),
                   ], surfaceColor, textColor, textSecondary, primaryColor, isLight),
@@ -881,7 +660,7 @@ class ProfilePage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Redo Wellness Setup',
+                                  'Reset Wellness Setup',
                                   style: isLight
                                       ? GoogleFonts.inter(
                                           color: textColor,
@@ -918,8 +697,7 @@ class ProfilePage extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildSection(context, 'Support', [
-                    _MenuItem(Icons.help_outline, 'Help Center', 'FAQs, tutorials'),
-                    _MenuItem(Icons.chat_bubble_outline, 'Contact Us', 'Get in touch', route: AppRouter.antigravityChat),
+                    _MenuItem(Icons.help_outline, 'Help Center', 'FAQs, tutorials', route: '/help-center'),
                     _MenuItem(Icons.bug_report_outlined, 'Report a Problem', 'Send feedback'),
                     _MenuItem(Icons.info_outline, 'About', 'Version, legal'),
                   ], surfaceColor, textColor, textSecondary, primaryColor, isLight),

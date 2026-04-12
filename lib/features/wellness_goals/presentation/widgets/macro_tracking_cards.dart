@@ -69,22 +69,6 @@ class MacroTrackingCards extends StatelessWidget {
                     ringColor: const Color(0xFF22C55E),
                   ),
                   _MetricData(
-                    value: activeMinutes,
-                    target: activeMinutesTarget,
-                    label: 'Mindfulness minutes',
-                    icon: Icons.timer_rounded,
-                    color: const Color(0xFFFF6B6B),
-                    ringColor: const Color(0xFFFF6B6B),
-                  ),
-                  _MetricData(
-                    value: workoutsCount,
-                    target: workoutsTarget,
-                    label: 'Workouts done',
-                    icon: Icons.fitness_center_rounded,
-                    color: const Color(0xFFF59E0B),
-                    ringColor: const Color(0xFFF59E0B),
-                  ),
-                  _MetricData(
                     value: activeGoals,
                     target: totalGoals,
                     label: 'Goals complete',
@@ -103,7 +87,7 @@ class MacroTrackingCards extends StatelessWidget {
                     itemCount: cards.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (_, i) => SizedBox(
-                      width: (MediaQuery.of(context).size.width - 62) / 3,
+                      width: (MediaQuery.of(context).size.width - 52) / 2,
                       child: _MacroCard(data: cards[i], isDark: isDark),
                     ),
                   ),

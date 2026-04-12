@@ -26,6 +26,7 @@ import 'features/wellness_goals/data/models/fitness_profile_model.dart';
 import 'features/library/presentation/bloc/library_bloc.dart';
 import 'core/services/goal_tracking_service.dart';
 import 'core/services/healthkit_service.dart';
+import 'features/subscription/data/services/apple_iap_service.dart';
 import 'features/workouts/presentation/bloc/workout_bloc.dart';
 import 'features/diet/presentation/bloc/diet_bloc.dart';
 import 'features/diet/data/models/diet_models.dart';
@@ -108,6 +109,9 @@ void main() async {
 
   // Initialize HealthKit service (loads saved preferences)
   await HealthKitService.instance.init();
+
+  // Initialize Apple In-App Purchases
+  await AppleIAPService.instance.init();
   if (HealthKitService.instance.isEnabled) {
     // Refresh cached health data on app startup
     HealthKitService.instance.refreshAndCache();

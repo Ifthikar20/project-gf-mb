@@ -9,9 +9,13 @@ import '../../../videos/presentation/bloc/videos_state.dart';
 import '../../../meditation/presentation/bloc/meditation_bloc.dart';
 import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
+import '../../../../core/services/healthkit_service.dart';
 import '../../../workouts/presentation/bloc/workout_bloc.dart';
 import '../../../workouts/presentation/bloc/workout_event.dart';
 import '../../../workouts/presentation/bloc/workout_state.dart';
+import '../../../diet/presentation/bloc/diet_bloc.dart';
+import '../../../diet/presentation/bloc/diet_event.dart';
+import '../../../diet/presentation/bloc/diet_state.dart';
 import '../widgets/goals_section.dart';
 import '../widgets/weekly_day_selector.dart';
 import '../widgets/wellness_stats_card.dart';
@@ -42,6 +46,12 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // Default to today's day-of-week index (Sunday = 0)
     _selectedDayIndex = DateTime.now().weekday % 7;
+
+    // Load diet data so Home card shows eaten calories
+    final dietState = context.read<DietBloc>().state;
+    if (dietState is DietInitial) {
+      context.read<DietBloc>().add(LoadTodayMeals());
+    }
 
     // Load data if not already loaded
     final workoutState = context.read<WorkoutBloc>().state;
@@ -171,37 +181,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // ── Primary Wellness Stats Card ──
+              // ── Primary Wellness Stats Card (includes calories + goals) ──
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.only(top: 20),
                   child: WellnessStatsCard(),
                 ),
               ),
-
-              // ── Macro Tracking Cards ──
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 16),
-                  child: MacroTrackingCards(),
-                ),
-              ),
-
-              // ── Dot indicator (visual)  ──
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildDot(true),
-                      const SizedBox(width: 6),
-                      _buildDot(false),
-                    ],
-                  ),
-                ),
-              ),
-
 
               // -- Content Recommendations (Videos & Audio) --
               const SliverToBoxAdapter(
@@ -242,33 +228,26 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildStreakBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEF4444), Color(0xFFF97316)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.local_fire_department_rounded,
-            color: Colors.white,
-            size: 16,
+    return BlocBuilder<WorkoutBloc, WorkoutState>(
+      builder: (context, ws) {
+        final totalBurned = ws is WorkoutLoaded ? (ws.stats?.thisWeekCalories ?? 0) : 0;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFF97316)]),
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(width: 4),
-          Text(
-            '15',
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/images/fire-logo-calories.png', width: 16, height: 16, color: Colors.white),
+              const SizedBox(width: 4),
+              Text('$totalBurned', style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+              Text(' cal', style: GoogleFonts.inter(color: Colors.white70, fontSize: 10)),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/theme_bloc.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../bloc/workout_bloc.dart';
 import '../bloc/workout_event.dart';
 import '../../data/models/workout_models.dart';
-import '../widgets/workout_stats_graphs.dart';
 
 /// Post-workout summary screen
 /// Shows calories burned, duration, type, mood selector, note, and weekly progress
@@ -67,8 +68,18 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
 
   @override
   Widget build(BuildContext context) {
+    return BlocBuilder<ThemeBloc, ThemeState>(
+      builder: (context, themeState) {
+        final mode = themeState.mode;
+        final isLight = themeState.isLight;
+        final bg = ThemeColors.background(mode);
+        final surface = ThemeColors.surface(mode);
+        final text = ThemeColors.textPrimary(mode);
+        final subtle = ThemeColors.textSecondary(mode);
+        final border = isLight ? const Color(0xFFE8E8EC) : const Color(0xFF2A2A2A);
+
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: bg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -83,20 +94,16 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.15),
+                    color: const Color(0xFF22C55E).withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_circle, color: Colors.green, size: 40),
+                  child: const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 40),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 'Workout Complete!',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: GoogleFonts.inter(color: text, fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
 
@@ -105,24 +112,18 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: _card,
+                  color: surface,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: border),
                 ),
                 child: Column(
                   children: [
                     // Calories
                     Text(
-                      ' ${widget.workout.caloriesBurned}',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFFFF6B6B),
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      '${widget.workout.caloriesBurned}',
+                      style: GoogleFonts.inter(color: const Color(0xFFFF6B6B), fontSize: 44, fontWeight: FontWeight.w700),
                     ),
-                    Text(
-                      'calories burned',
-                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 14),
-                    ),
+                    Text('calories burned', style: GoogleFonts.inter(color: subtle, fontSize: 14)),
                     const SizedBox(height: 20),
 
                     // Duration + Type
@@ -150,10 +151,7 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
               const SizedBox(height: 24),
 
               // Mood selector
-              Text(
-                'How are you feeling?',
-                style: GoogleFonts.inter(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
-              ),
+              Text('How are you feeling?', style: GoogleFonts.inter(color: subtle, fontSize: 14, fontWeight: FontWeight.w500)),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -167,22 +165,13 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                       decoration: BoxDecoration(
                         color: isSelected ? _purple.withValues(alpha: 0.2) : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected ? _purple : Colors.white10,
-                        ),
+                        border: Border.all(color: isSelected ? _purple : border),
                       ),
                       child: Column(
                         children: [
                           Text(mood['emoji']!, style: const TextStyle(fontSize: 24)),
                           const SizedBox(height: 2),
-                          Text(
-                            mood['label']!,
-                            style: GoogleFonts.inter(
-                              color: isSelected ? _purple : Colors.white38,
-                              fontSize: 9,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                          ),
+                          Text(mood['label']!, style: GoogleFonts.inter(color: isSelected ? _purple : subtle, fontSize: 9, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
                         ],
                       ),
                     ),
@@ -195,16 +184,15 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
               TextField(
                 controller: _noteController,
                 maxLines: 2,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: text, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Add a note (optional)',
-                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 14),
+                  hintStyle: TextStyle(color: subtle, fontSize: 14),
                   filled: true,
-                  fillColor: _card,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
+                  fillColor: surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _purple, width: 2)),
                   contentPadding: const EdgeInsets.all(14),
                 ),
               ),
@@ -215,17 +203,11 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _card,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: border)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Weekly Progress',
-                        style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
+                      Text('Weekly Progress', style: GoogleFonts.inter(color: text, fontSize: 14, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
                       ...widget.goals.map((goal) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -235,18 +217,8 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  '${goal.label}: ${goal.currentValue} / ${goal.targetValue}',
-                                  style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
-                                ),
-                                Text(
-                                  '${goal.progressPercent}%',
-                                  style: GoogleFonts.inter(
-                                    color: goal.isComplete ? Colors.green : goal.color,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                                Text('${goal.label}: ${goal.currentValue} / ${goal.targetValue}', style: GoogleFonts.inter(color: subtle, fontSize: 12)),
+                                Text('${goal.progressPercent}%', style: GoogleFonts.inter(color: goal.isComplete ? const Color(0xFF22C55E) : goal.color, fontSize: 12, fontWeight: FontWeight.w600)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -255,9 +227,7 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                               child: LinearProgressIndicator(
                                 value: (goal.progressPercent / 100).clamp(0.0, 1.0),
                                 backgroundColor: goal.color.withValues(alpha: 0.15),
-                                valueColor: AlwaysStoppedAnimation(
-                                  goal.isComplete ? Colors.green : goal.color,
-                                ),
+                                valueColor: AlwaysStoppedAnimation(goal.isComplete ? const Color(0xFF22C55E) : goal.color),
                                 minHeight: 6,
                               ),
                             ),
@@ -269,12 +239,6 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                 ),
                 const SizedBox(height: 24),
               ],
-
-              // Workout performance graphs
-              const Padding(
-                padding: EdgeInsets.only(bottom: 24),
-                child: WorkoutStatsGraphs(),
-              ),
 
               // Done button
               SizedBox(
@@ -288,10 +252,7 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                     elevation: 0,
                   ),
-                  child: Text(
-                    'Done',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                  child: Text('Done', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -300,20 +261,24 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage>
         ),
       ),
     );
+      },
+    );
   }
 
   Widget _buildStatChip(String value, String label, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.black.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Text(value, style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(value, style: GoogleFonts.inter(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black, fontSize: 14, fontWeight: FontWeight.w600)),
           const SizedBox(height: 2),
-          Text(label, style: GoogleFonts.inter(color: Colors.white38, fontSize: 10)),
+          Text(label, style: GoogleFonts.inter(color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.black38, fontSize: 10)),
         ],
       ),
     );
