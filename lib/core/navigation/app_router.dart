@@ -40,6 +40,7 @@ import '../../features/coaching/presentation/pages/coach_detail_page.dart';
 import '../../features/coaching/presentation/pages/coaching_sessions_page.dart';
 import '../../features/coaching/presentation/pages/my_workout_plan_page.dart';
 import '../../features/coaching/presentation/pages/free_consultation_page.dart';
+import '../../features/journal/presentation/pages/journal_page.dart';
 import '../../features/antigravity_chat/presentation/pages/antigravity_chat_page.dart';
 
 class AppRouter {
@@ -85,6 +86,7 @@ class AppRouter {
   static const String antigravityChat = '/antigravity-chat';
   static const String helpCenter = '/help-center';
   static const String notifications = '/notifications';
+  static const String journal = '/journal';
 
   // Public routes that don't require authentication
   static const List<String> _publicRoutes = [
@@ -406,6 +408,10 @@ class AppRouter {
         GoRoute(
           path: notifications,
           builder: (context, state) => const NotificationsPage(),
+        ),
+        GoRoute(
+          path: journal,
+          builder: (context, state) => const JournalPage(),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -160,6 +161,14 @@ class _HomePageState extends State<HomePage> {
                 child: SuggestionBadge(),
               ),
 
+              // ── Journal Entry Point ──
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _JournalEntryPoint(isLight: isLight),
+                ),
+              ),
+
               // ── Weekly Day Selector ──
               SliverToBoxAdapter(
                 child: Padding(
@@ -262,6 +271,87 @@ class _HomePageState extends State<HomePage> {
         color: active
             ? (isDark ? Colors.white : Colors.black)
             : (isDark ? Colors.white24 : Colors.black12),
+      ),
+    );
+  }
+}
+
+/// Compact journal entry point card for the home dashboard.
+class _JournalEntryPoint extends StatelessWidget {
+  final bool isLight;
+  const _JournalEntryPoint({required this.isLight});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/journal'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isLight
+                ? [const Color(0xFF81C784), const Color(0xFF66BB6A)]
+                : [
+                    const Color(0xFF81C784).withOpacity(0.15),
+                    const Color(0xFF66BB6A).withOpacity(0.08),
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isLight
+                ? const Color(0xFF81C784).withOpacity(0.3)
+                : const Color(0xFF81C784).withOpacity(0.12),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(isLight ? 0.3 : 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.auto_stories_rounded,
+                color: isLight ? Colors.white : const Color(0xFF81C784),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Wellness Journal',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: isLight ? Colors.white : Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Log your mood & get AI insights',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: isLight
+                          ? Colors.white.withOpacity(0.85)
+                          : Colors.white60,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isLight ? Colors.white : Colors.white54,
+              size: 22,
+            ),
+          ],
+        ),
       ),
     );
   }

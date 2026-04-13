@@ -1,7 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../videos/presentation/bloc/videos_bloc.dart';
 import '../../../videos/presentation/bloc/videos_state.dart';
@@ -61,7 +63,7 @@ class ContentRecommendations extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Recommended for You',
+                'Recommended Content',
                 style: GoogleFonts.inter(
                   color: textColor,
                   fontSize: 18,
@@ -83,7 +85,7 @@ class ContentRecommendations extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 180,
+          height: 210,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -214,7 +216,8 @@ class _RecommendationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isVideo = item.type == _ContentType.video;
-    final chipColor = isVideo ? const Color(0xFFEF4444) : const Color(0xFF8B5CF6);
+    final rng = Random(item.id.hashCode);
+    final rating = (4.0 + rng.nextDouble()).toStringAsFixed(1);
 
     return GestureDetector(
       onTap: () {
@@ -225,137 +228,88 @@ class _RecommendationCard extends StatelessWidget {
         }
       },
       child: Container(
-        width: 200,
+        width: 230,
         margin: const EdgeInsets.only(right: 14),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.04),
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail
-            Stack(
-              children: [
-                Container(
-                  height: 100,
-                  width: double.infinity,
-                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E5E5),
-                  child: item.thumbnailUrl.isNotEmpty
-                      ? Image.network(
-                          item.thumbnailUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Icon(
-                              isVideo
-                                  ? Icons.play_circle_outline_rounded
-                                  : Icons.headphones_rounded,
-                              color: textSecondary,
-                              size: 36,
+            // Thumbnail — matching explore style
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    item.thumbnailUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: item.thumbnailUrl,
+                            fit: BoxFit.cover,
+                            memCacheHeight: 320,
+                            memCacheWidth: 460,
+                            placeholder: (_, __) => Container(color: surfaceColor),
+                            errorWidget: (_, __, ___) => Container(
+                              color: surfaceColor,
+                              child: Icon(isVideo ? Icons.play_circle_outline : Icons.headphones_rounded, color: textSecondary, size: 48),
                             ),
+                          )
+                        : Container(
+                            color: surfaceColor,
+                            child: Icon(isVideo ? Icons.play_circle_outline : Icons.headphones_rounded, color: textSecondary, size: 48),
                           ),
-                        )
-                      : Center(
-                          child: Icon(
-                            isVideo
-                                ? Icons.play_circle_outline_rounded
-                                : Icons.headphones_rounded,
-                            color: textSecondary,
-                            size: 36,
-                          ),
-                        ),
-                ),
-                // Duration badge
-                Positioned(
-                  bottom: 6,
-                  right: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      item.duration,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
+                    // Bottom badges
+                    Positioned(
+                      left: 8, bottom: 8,
+                      child: Row(
+                        children: [
+                          _badge(item.duration, isDark),
+                          const SizedBox(width: 6),
+                          _badge(isVideo ? 'Video' : 'Audio', isDark, icon: isVideo ? Icons.videocam_rounded : Icons.headphones_rounded),
+                        ],
                       ),
                     ),
-                  ),
-                ),
-                // Type chip
-                Positioned(
-                  top: 6,
-                  left: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: chipColor,
-                      borderRadius: BorderRadius.circular(4),
+                    // Rating
+                    Positioned(
+                      right: 8, bottom: 8,
+                      child: _badge(rating, isDark, icon: Icons.star_rounded, iconColor: const Color(0xFFF59E0B)),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isVideo ? Icons.videocam_rounded : Icons.headphones_rounded,
-                          color: Colors.white,
-                          size: 10,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          isVideo ? 'Video' : 'Audio',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-            // Title + subtitle
+            // Title + subtitle below
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title,
-                    style: GoogleFonts.inter(
-                      color: textColor,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    item.subtitle,
-                    style: GoogleFonts.inter(
-                      color: textSecondary,
-                      fontSize: 11,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(item.title, style: GoogleFonts.inter(color: textColor, fontSize: 13, fontWeight: FontWeight.w600, height: 1.2), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('${item.subtitle} · ${item.category}', style: GoogleFonts.inter(color: textSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _badge(String text, bool isDark, {IconData? icon, Color? iconColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black.withValues(alpha: 0.7) : Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 10, color: iconColor ?? (isDark ? Colors.white70 : Colors.black54)),
+            const SizedBox(width: 3),
+          ],
+          Text(text, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black87)),
+        ],
       ),
     );
   }

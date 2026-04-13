@@ -13,7 +13,7 @@ import '../../../../core/services/food_scanner_service.dart';
 import '../../../workouts/data/services/workout_service.dart';
 import '../../../workouts/presentation/bloc/workout_bloc.dart';
 import '../../../workouts/presentation/bloc/workout_event.dart';
-// Goals are saved to backend only (WorkoutBloc), not local Hive
+import '../../../wellness_goals/data/models/burn_goal_model.dart';
 import '../../data/models/food_scan_result.dart';
 import '../../data/models/diet_models.dart';
 import '../bloc/diet_bloc.dart';
@@ -1463,17 +1463,32 @@ class _FoodSummaryPageState extends State<_FoodSummaryPage> {
                                 try {
                                   final minMatch = RegExp(r'(\d+)').firstMatch(burn.duration);
                                   final minutes = minMatch != null ? int.parse(minMatch.group(1)!) : 30;
+                                  final totalCal = widget.result.totalCalories * _servings;
+                                  final mealName = widget.result.mealName ?? widget.result.items.first.name;
 
-                                  // Save to backend (this is the important call)
-                                  await WorkoutService.instance.setGoal(goalType: 'active_minutes', targetValue: minutes);
+                                  // Create local burn goal (stacks, doesn't replace)
+                                  final burnGoal = BurnGoal(
+                                    id: 'burn_${DateTime.now().millisecondsSinceEpoch}',
+                                    activity: burn.activity,
+                                    icon: burn.icon,
+                                    targetCalories: totalCal,
+                                    targetMinutes: minutes,
+                                    targetSteps: burn.steps,
+                                    mealName: mealName,
+                                    mealCalories: totalCal,
+                                    createdAt: DateTime.now(),
+                                  );
+                                  await BurnGoalStorage.instance.addGoal(burnGoal);
+
+                                  // Also save to backend weekly goal (best effort)
+                                  try {
+                                    await WorkoutService.instance.setGoal(goalType: 'active_minutes', targetValue: minutes);
+                                    if (context.mounted) context.read<WorkoutBloc>().add(const RefreshWorkoutData());
+                                  } catch (_) {}
 
                                   if (!context.mounted) return;
-
-                                  // Refresh workout data so goals appear on Home
-                                  context.read<WorkoutBloc>().add(const RefreshWorkoutData());
-
                                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text('${burn.activity} (${burn.duration}) added — check My Goals on Home'),
+                                    content: Text('${burn.activity} (${burn.duration}) to burn off $mealName — added to goals'),
                                     backgroundColor: const Color(0xFF22C55E),
                                     duration: const Duration(seconds: 3),
                                     behavior: SnackBarBehavior.floating,
