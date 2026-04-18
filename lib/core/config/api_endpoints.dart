@@ -145,6 +145,25 @@ class ApiEndpoints {
   static String get marketplacePurchases => '$marketplaceBase/purchases/';
 
   // ============================================
+  // Coach-Led Programs & Enrollment
+  // ============================================
+  static String get programsBase => '$apiBase/programs';
+  static String get programsBrowse => '$programsBase/';
+  static String programDetail(String id) => '$programsBase/$id/';
+  static String programSchedulePreview(String id) => '$programsBase/$id/schedule/';
+  static String programContent(String id) => '$programsBase/$id/content/';
+  static String programEnroll(String id) => '$programsBase/$id/enroll/';
+
+  // Enrollments (authenticated user)
+  static String get enrollmentsBase => '$apiBase/my-enrollments';
+  static String get myEnrollments => '$enrollmentsBase/';
+  static String enrollmentDetail(String id) => '$enrollmentsBase/$id/';
+  static String enrollmentSchedule(String id) => '$enrollmentsBase/$id/schedule/';
+  static String enrollmentContent(String id) => '$enrollmentsBase/$id/content/';
+  static String enrollmentCompleteDay(String enrollmentId, String dayId) =>
+      '$enrollmentsBase/$enrollmentId/days/$dayId/complete/';
+
+  // ============================================
   // Live Coaching (Cal.com + LiveKit)
   // ============================================
   static String get coachingBase => '$apiBase/coaching';
@@ -166,6 +185,15 @@ class ApiEndpoints {
 
   // Food Sharing Toggle (Premium)
   static String get foodSharing => '$coachingBase/food-sharing/';
+
+  // Coach Programs (structured training programs by coaches)
+  static String get coachPrograms => '$coachingBase/programs/';
+  static String coachProgramDetail(String id) => '$coachingBase/programs/$id/';
+  static String coachProgramEnroll(String id) => '$coachingBase/programs/$id/enroll/';
+  static String coachProgramCalendar(String id) => '$coachingBase/programs/$id/calendar/';
+  static String coachProgramDayComplete(String programId, String dayId) =>
+      '$coachingBase/programs/$programId/calendar/$dayId/complete/';
+  static String get coachProgramEnrollments => '$coachingBase/enrollments/';
   
   // ============================================
   // AntiGravity Wellness Chat

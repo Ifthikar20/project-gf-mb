@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/navigation/app_router.dart';
 import '../../../../core/services/coaching_service.dart';
+import '../../data/models/coach_program_models.dart';
 import '../bloc/coaching_bloc.dart';
+import '../bloc/coach_program_bloc.dart';
 
 class CoachDetailPage extends StatefulWidget {
   final String coachId;
@@ -23,6 +27,10 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     context
         .read<CoachingBloc>()
         .add(LoadCoachDetail(coachId: widget.coachId));
+    // Also load programs by this coach
+    context
+        .read<CoachProgramBloc>()
+        .add(LoadCoachPrograms(coachId: widget.coachId));
   }
 
   @override
@@ -216,6 +224,61 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                               .toList(),
                         ),
                       ],
+
+                      // ── Programs by this Coach ──
+                      const SizedBox(height: 24),
+                      BlocBuilder<CoachProgramBloc, CoachProgramState>(
+                        builder: (context, programState) {
+                          if (programState is CoachProgramsLoaded &&
+                              programState.programs.isNotEmpty) {
+                            return Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Programs',
+                                      style: GoogleFonts.inter(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => context.push(
+                                          AppRouter.coachPrograms),
+                                      child: Text(
+                                        'See All',
+                                        style: GoogleFonts.inter(
+                                          color: textSecondary,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                ...programState.programs
+                                    .take(3)
+                                    .map((prog) => _buildCoachProgramRow(
+                                          program: prog,
+                                          isLight: isLight,
+                                          surfaceColor: surfaceColor,
+                                          textColor: textColor,
+                                          textSecondary: textSecondary,
+                                          borderColor: borderColor,
+                                          primaryColor: primaryColor,
+                                        )),
+                              ],
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
                     ],
                   ),
                 );
@@ -311,5 +374,89 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  Widget _buildCoachProgramRow({
+    required CoachProgram program,
+    required bool isLight,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
+    return GestureDetector(
+      onTap: () => context.push(
+          '${AppRouter.coachProgramDetail}?id=${program.id}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            // Thumbnail
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: program.coverImageUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: program.coverImageUrl!,
+                        fit: BoxFit.cover,
+                        memCacheHeight: 112,
+                        memCacheWidth: 112,
+                        placeholder: (_, __) =>
+                            Container(color: borderColor),
+                        errorWidget: (_, __, ___) => Container(
+                          color: borderColor,
+                          child: Icon(Icons.fitness_center_rounded,
+                              color: textSecondary, size: 20),
+                        ),
+                      )
+                    : Container(
+                        color: borderColor,
+                        child: Icon(Icons.fitness_center_rounded,
+                            color: textSecondary, size: 20),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    program.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${program.durationLabel}  •  ${program.contentCount} sessions',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right_rounded,
+                color: textSecondary, size: 20),
+          ],
+        ),
+      ),
+    );
   }
 }

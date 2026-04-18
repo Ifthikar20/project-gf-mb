@@ -16,6 +16,8 @@ import '../../../meditation/presentation/bloc/meditation_event.dart';
 import '../../../meditation/presentation/bloc/meditation_state.dart';
 import '../../../coaching/presentation/bloc/coaching_bloc.dart';
 import '../../../../core/services/coaching_service.dart';
+import '../../../coaching/presentation/bloc/coach_program_bloc.dart';
+import '../../../coaching/data/models/coach_program_models.dart';
 import '../../../marketplace/presentation/bloc/marketplace_bloc.dart';
 import '../../../../core/services/marketplace_service.dart';
 
@@ -44,6 +46,7 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
     }
     // Load coaches and marketplace programs for explore sections
     context.read<CoachingBloc>().add(const LoadCoaches());
+    context.read<CoachProgramBloc>().add(const LoadCoachPrograms());
     context.read<MarketplaceBloc>().add(const LoadPrograms());
   }
 
@@ -216,6 +219,28 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
                 child: SizedBox(
                   height: 200,
                   child: _buildCoachesRow(
+                    isLight: isLight,
+                    surfaceColor: surfaceColor,
+                    textColor: textColor,
+                    textSecondary: textSecondary,
+                    borderColor: borderColor,
+                    primaryColor: primaryColor,
+                  ),
+                ),
+              ),
+
+              // ── Coach Programs ──
+              _buildSectionTitleWithAction(
+                'Coach Programs',
+                'See All',
+                textColor,
+                textSecondary,
+                () => context.push(AppRouter.coachPrograms),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 200,
+                  child: _buildCoachProgramsRow(
                     isLight: isLight,
                     surfaceColor: surfaceColor,
                     textColor: textColor,
@@ -719,6 +744,186 @@ class _ExploreForYouPageState extends State<ExploreForYouPage> {
           ),
         );
       },
+    );
+  }
+
+  // ─────────────────────────────────
+  // Coach Programs row
+  // ─────────────────────────────────
+  Widget _buildCoachProgramsRow({
+    required bool isLight,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
+    return BlocBuilder<CoachProgramBloc, CoachProgramState>(
+      builder: (context, state) {
+        if (state is CoachProgramsLoaded && state.programs.isNotEmpty) {
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: state.programs.length,
+            itemBuilder: (context, index) {
+              final program = state.programs[index];
+              return _buildCoachProgramCard(
+                program: program,
+                isLight: isLight,
+                surfaceColor: surfaceColor,
+                textColor: textColor,
+                textSecondary: textSecondary,
+                borderColor: borderColor,
+                primaryColor: primaryColor,
+              );
+            },
+          );
+        }
+        if (state is CoachProgramLoading) {
+          return Center(
+            child: CircularProgressIndicator(
+                color: primaryColor, strokeWidth: 2),
+          );
+        }
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.school_outlined,
+                    color: textSecondary, size: 36),
+                const SizedBox(height: 8),
+                Text(
+                  'Structured training programs from expert coaches',
+                  style: GoogleFonts.inter(
+                      color: textSecondary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCoachProgramCard({
+    required CoachProgram program,
+    required bool isLight,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+    required Color primaryColor,
+  }) {
+    return GestureDetector(
+      onTap: () => context.push(
+          '${AppRouter.coachProgramDetail}?id=${program.id}'),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 14),
+        decoration: BoxDecoration(
+          color: isLight ? Colors.white : const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isLight ? 0.04 : 0.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Thumbnail
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (program.coverImageUrl != null)
+                      CachedNetworkImage(
+                        imageUrl: program.coverImageUrl!,
+                        fit: BoxFit.cover,
+                        memCacheHeight: 240,
+                        memCacheWidth: 400,
+                        placeholder: (_, __) =>
+                            Container(color: surfaceColor),
+                        errorWidget: (_, __, ___) => Container(
+                          color: surfaceColor,
+                          child: Icon(Icons.fitness_center_rounded,
+                              color: textSecondary, size: 32),
+                        ),
+                      )
+                    else
+                      Container(
+                        color: surfaceColor,
+                        child: Icon(Icons.fitness_center_rounded,
+                            color: textSecondary, size: 32),
+                      ),
+                    // Duration badge
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.55),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          program.durationLabel,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Info
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    program.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'With ${program.coach.name}  •  ${program.level}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

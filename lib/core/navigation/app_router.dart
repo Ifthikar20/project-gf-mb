@@ -40,6 +40,9 @@ import '../../features/coaching/presentation/pages/coach_detail_page.dart';
 import '../../features/coaching/presentation/pages/coaching_sessions_page.dart';
 import '../../features/coaching/presentation/pages/my_workout_plan_page.dart';
 import '../../features/coaching/presentation/pages/free_consultation_page.dart';
+import '../../features/coaching/presentation/pages/coach_programs_page.dart';
+import '../../features/coaching/presentation/pages/coach_program_detail_page.dart';
+import '../../features/coaching/presentation/pages/my_programs_page.dart';
 import '../../features/journal/presentation/pages/journal_page.dart';
 import '../../features/antigravity_chat/presentation/pages/antigravity_chat_page.dart';
 
@@ -83,6 +86,9 @@ class AppRouter {
   static const String coachingSessions = '/coaching-sessions';
   static const String myWorkoutPlan = '/my-workout-plan';
   static const String freeConsultation = '/free-consultation';
+  static const String coachPrograms = '/coach-programs';
+  static const String coachProgramDetail = '/coach-program-detail';
+  static const String myPrograms = '/my-programs';
   static const String antigravityChat = '/antigravity-chat';
   static const String helpCenter = '/help-center';
   static const String notifications = '/notifications';
@@ -396,6 +402,22 @@ class AppRouter {
         GoRoute(
           path: freeConsultation,
           builder: (context, state) => const FreeConsultationPage(),
+        ),
+        GoRoute(
+          path: coachPrograms,
+          builder: (context, state) => const CoachProgramsPage(),
+        ),
+        GoRoute(
+          path: coachProgramDetail,
+          builder: (context, state) {
+            final id = state.uri.queryParameters['id'] ?? '';
+            if (id.isEmpty) return const LandingPage();
+            return CoachProgramDetailPage(programId: id);
+          },
+        ),
+        GoRoute(
+          path: myPrograms,
+          builder: (context, state) => const MyProgramsPage(),
         ),
         GoRoute(
           path: antigravityChat,
