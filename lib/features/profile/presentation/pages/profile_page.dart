@@ -15,6 +15,7 @@ import '../../../wellness_goals/domain/entities/goal_entity.dart';
 import '../../../wellness_goals/presentation/widgets/goal_picker_sheet.dart';
 import '../../../subscription/presentation/bloc/subscription_bloc.dart';
 import '../../../../core/services/workout_plan_service.dart';
+import '../../../coaching/presentation/bloc/coach_chat_bloc.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -434,6 +435,69 @@ class ProfilePage extends StatelessWidget {
                                     Text(
                                       'Your personalised plan from your coach',
                                       style: TextStyle(color: textSecondary.withOpacity(0.7), fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right, color: textSecondary.withOpacity(0.5), size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // My Coach
+              SliverToBoxAdapter(
+                child: BlocBuilder<CoachChatBloc, CoachChatState>(
+                  builder: (context, chatState) {
+                    String? coachName;
+                    if (chatState is CoachChatLoaded) {
+                      coachName = chatState.chat.coach.name;
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Navigate to coach tab (index 3)
+                          // Since we're in profile (index 4), we go back to coach
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: isLight ? ThemeColors.lightBorder : ThemeColors.darkBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6366F1).withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.sports_rounded, color: Color(0xFF6366F1), size: 24),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'My Coach',
+                                      style: GoogleFonts.inter(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      coachName ?? 'No coach assigned',
+                                      style: TextStyle(
+                                        color: coachName != null ? primaryColor : textSecondary.withOpacity(0.7),
+                                        fontSize: 12,
+                                        fontWeight: coachName != null ? FontWeight.w500 : FontWeight.w400,
+                                      ),
                                     ),
                                   ],
                                 ),

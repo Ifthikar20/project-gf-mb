@@ -39,7 +39,7 @@ class EnvironmentConfig {
   // ============================================
   
   /// Get API base URL
-  String get apiBaseUrl => _get('API_BASE_URL', 'https://api-dev.betterandbliss.app');
+  String get apiBaseUrl => _get('API_BASE_URL', 'https://api.betterandbliss.com');
   
   /// Get CDN base URL
   String get cdnBaseUrl => _get('CDN_BASE_URL', 'https://cdn-dev.betterandbliss.app');

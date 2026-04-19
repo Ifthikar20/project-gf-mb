@@ -112,7 +112,7 @@ class AppConfig {
   factory AppConfig._development() {
     return AppConfig._(
       environment: Environment.development,
-      apiBaseUrl: 'https://api-dev.betterandbliss.app',
+      apiBaseUrl: 'https://api.betterandbliss.com',
       cdnBaseUrl: 'https://cdn-dev.betterandbliss.app',
       r2BaseUrl: EnvironmentConfig.instance.r2BaseUrl,
       apiTimeout: const Duration(seconds: 30),

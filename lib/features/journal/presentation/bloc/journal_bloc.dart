@@ -45,7 +45,7 @@ class JournalBloc extends Bloc<JournalEvent, JournalState> {
         todayEntry: results[0] as dynamic,
         summary: results[1] as MoodSummary,
         calendar: results[2] as CalendarData,
-        entries: results[3] as List<dynamic>,
+        entries: (results[3] as List).cast(),
       ));
     } catch (e) {
       debugPrint('📓 JournalBloc._fetchAll error: $e');

@@ -70,6 +70,10 @@ dependencies:
   # In-App Purchases (Apple StoreKit)
   in_app_purchase: ^3.2.0
 
+dependency_overrides:
+  # Pin storekit to version compatible with Xcode 15.4 (winBackOffers needs Xcode 16)
+  in_app_purchase_storekit: 0.3.17+1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

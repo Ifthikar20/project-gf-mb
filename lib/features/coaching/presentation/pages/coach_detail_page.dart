@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/theme_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/navigation/app_router.dart';
@@ -11,6 +10,7 @@ import '../../../../core/services/coaching_service.dart';
 import '../../data/models/coach_program_models.dart';
 import '../bloc/coaching_bloc.dart';
 import '../bloc/coach_program_bloc.dart';
+import '../bloc/coach_chat_bloc.dart';
 
 class CoachDetailPage extends StatefulWidget {
   final String coachId;
@@ -27,7 +27,6 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
     context
         .read<CoachingBloc>()
         .add(LoadCoachDetail(coachId: widget.coachId));
-    // Also load programs by this coach
     context
         .read<CoachProgramBloc>()
         .add(LoadCoachPrograms(coachId: widget.coachId));
@@ -48,335 +47,499 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
 
         return Scaffold(
           backgroundColor: bgColor,
-          appBar: AppBar(
-            backgroundColor: bgColor,
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: textColor, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              'Coach Profile',
-              style: GoogleFonts.inter(
-                color: textColor,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            centerTitle: true,
-          ),
-          body: BlocConsumer<CoachingBloc, CoachingState>(
-            listener: (context, state) {
-              if (state is CoachingBookingUrlReady) {
-                _openBooking(state.bookingUrl);
-              }
-              if (state is CoachingError) {
+          body: BlocListener<CoachChatBloc, CoachChatState>(
+            listener: (context, chatState) {
+              if (chatState is CoachAdded) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(state.message),
+                    content: Text(
+                        '${chatState.chat.coach.name} is now your coach!'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: const Color(0xFF22C55E),
+                  ),
+                );
+                Navigator.pop(context);
+              }
+              if (chatState is CoachChatError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(chatState.message),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
               }
             },
-            builder: (context, state) {
-              if (state is CoachingLoading) {
-                return Center(
-                  child: CircularProgressIndicator(
-                      color: primaryColor, strokeWidth: 2),
-                );
-              }
-              if (state is CoachDetailLoaded) {
-                final coach = state.coach;
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Profile header
-                      Center(
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 48,
-                              backgroundColor: primaryColor.withOpacity(0.15),
-                              backgroundImage: coach.expert.avatarUrl != null
-                                  ? CachedNetworkImageProvider(
-                                      coach.expert.avatarUrl!)
-                                  : null,
-                              child: coach.expert.avatarUrl == null
-                                  ? Text(
-                                      coach.expert.name[0],
-                                      style: GoogleFonts.inter(
-                                        color: primaryColor,
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              coach.expert.name,
-                              style: GoogleFonts.inter(
-                                color: textColor,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            if (coach.expert.title != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                coach.expert.title!,
-                                style: GoogleFonts.inter(
-                                  color: textSecondary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Price card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.payments_outlined,
-                                color: textSecondary, size: 20),
-                            const SizedBox(width: 12),
-                            Text(
-                              '\$${coach.hourlyRate}/hr',
-                              style: GoogleFonts.inter(
-                                color: textColor,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // About
-                      Text(
-                        'About',
-                        style: GoogleFonts.inter(
-                          color: textColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        coach.bio,
-                        style: GoogleFonts.inter(
-                          color: textColor.withOpacity(0.8),
-                          fontSize: 14,
-                          height: 1.6,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Specialties
-                      if (coach.specialties.isNotEmpty) ...[
-                        Text(
-                          'Specialties',
-                          style: GoogleFonts.inter(
-                            color: textColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: coach.specialties
-                              .map(
-                                (s) => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: primaryColor.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                        color: primaryColor.withOpacity(0.2)),
-                                  ),
-                                  child: Text(
-                                    s,
-                                    style: GoogleFonts.inter(
-                                      color: primaryColor,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ],
-
-                      // ── Programs by this Coach ──
-                      const SizedBox(height: 24),
-                      BlocBuilder<CoachProgramBloc, CoachProgramState>(
-                        builder: (context, programState) {
-                          if (programState is CoachProgramsLoaded &&
-                              programState.programs.isNotEmpty) {
-                            return Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Programs',
-                                      style: GoogleFonts.inter(
-                                        color: textColor,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => context.push(
-                                          AppRouter.coachPrograms),
-                                      child: Text(
-                                        'See All',
-                                        style: GoogleFonts.inter(
-                                          color: textSecondary,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                ...programState.programs
-                                    .take(3)
-                                    .map((prog) => _buildCoachProgramRow(
-                                          program: prog,
-                                          isLight: isLight,
-                                          surfaceColor: surfaceColor,
-                                          textColor: textColor,
-                                          textSecondary: textSecondary,
-                                          borderColor: borderColor,
-                                          primaryColor: primaryColor,
-                                        )),
-                              ],
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-          // Bottom book button
-          bottomNavigationBar: BlocBuilder<CoachingBloc, CoachingState>(
-            builder: (context, state) {
-              if (state is CoachDetailLoaded) {
-                final coach = state.coach;
-                if (!coach.hasCalcom || !coach.isAcceptingClients) {
-                  return Container(
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      16,
-                      20,
-                      MediaQuery.of(context).padding.bottom + 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      border: Border(
-                        top: BorderSide(color: borderColor, width: 0.5),
-                      ),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Scheduling coming soon',
-                          style: GoogleFonts.inter(
-                            color: textSecondary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
+            child: BlocConsumer<CoachingBloc, CoachingState>(
+              listener: (context, state) {
+                if (state is CoachingError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
-                return Container(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    16,
-                    20,
-                    MediaQuery.of(context).padding.bottom + 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    border: Border(
-                      top: BorderSide(color: borderColor, width: 0.5),
-                    ),
-                  ),
-                  child: GestureDetector(
-                    onTap: () => context
-                        .read<CoachingBloc>()
-                        .add(GetBookingUrl(coachId: widget.coachId)),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(12),
+              },
+              builder: (context, state) {
+                if (state is CoachingLoading) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                        color: primaryColor, strokeWidth: 2),
+                  );
+                }
+                if (state is CoachDetailLoaded) {
+                  return Stack(
+                    children: [
+                      _buildProfile(
+                        coach: state.coach,
+                        isLight: isLight,
+                        bgColor: bgColor,
+                        surfaceColor: surfaceColor,
+                        textColor: textColor,
+                        textSecondary: textSecondary,
+                        primaryColor: primaryColor,
+                        borderColor: borderColor,
                       ),
-                      child: Center(
-                        child: Text(
-                          'Book a Session',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      // ── Airbnb-style bottom bar ──
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _buildBottomBar(
+                          coach: state.coach,
+                          isLight: isLight,
+                          bgColor: bgColor,
+                          textColor: textColor,
+                          textSecondary: textSecondary,
+                          borderColor: borderColor,
                         ),
                       ),
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ),
         );
       },
     );
   }
 
-  Future<void> _openBooking(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  Widget _buildBottomBar({
+    required Coach coach,
+    required bool isLight,
+    required Color bgColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color borderColor,
+  }) {
+    return BlocBuilder<CoachChatBloc, CoachChatState>(
+      builder: (context, chatState) {
+        final isAdding = chatState is AddingCoach;
+        final hasThisCoach = chatState is CoachChatLoaded;
+
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            20, 16, 20,
+            MediaQuery.of(context).padding.bottom + 16,
+          ),
+          decoration: BoxDecoration(
+            color: bgColor,
+            border: Border(
+              top: BorderSide(color: borderColor, width: 0.5),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Subscription info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Included with subscription',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      '1-on-1 personal coaching',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // CTA button
+              GestureDetector(
+                onTap: hasThisCoach || isAdding
+                    ? null
+                    : () => context
+                        .read<CoachChatBloc>()
+                        .add(AddCoachEvent(widget.coachId)),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: hasThisCoach
+                        ? null
+                        : const LinearGradient(
+                            colors: [
+                              Color(0xFFE51D53),
+                              Color(0xFFD70466),
+                            ],
+                          ),
+                    color: hasThisCoach
+                        ? (isLight
+                            ? const Color(0xFFE8F5E9)
+                            : const Color(0xFF1B3A1E))
+                        : null,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: isAdding
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          hasThisCoach
+                              ? '✓ Your Coach'
+                              : 'Add as My Coach',
+                          style: GoogleFonts.inter(
+                            color: hasThisCoach
+                                ? const Color(0xFF22C55E)
+                                : Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  Widget _buildCoachProgramRow({
+  Widget _buildProfile({
+    required Coach coach,
+    required bool isLight,
+    required Color bgColor,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color textSecondary,
+    required Color primaryColor,
+    required Color borderColor,
+  }) {
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        // ── Airbnb-style header with back button ──
+        SliverToBoxAdapter(
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 20, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back_ios_rounded,
+                        color: textColor, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // ── Avatar + Name (Airbnb host-style) ──
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Large avatar
+                Center(
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: primaryColor.withOpacity(0.1),
+                    ),
+                    child: coach.expert.avatarUrl != null
+                        ? ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: coach.expert.avatarUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => Center(
+                                child: Text(
+                                  coach.expert.name[0],
+                                  style: GoogleFonts.inter(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w700,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) => Center(
+                                child: Text(
+                                  coach.expert.name[0],
+                                  style: GoogleFonts.inter(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w700,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              coach.expert.name[0],
+                              style: GoogleFonts.inter(
+                                fontSize: 36,
+                                fontWeight: FontWeight.w700,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Name
+                Center(
+                  child: Text(
+                    coach.expert.name,
+                    style: GoogleFonts.inter(
+                      color: textColor,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+
+                // Title
+                if (coach.expert.title != null) ...[
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      coach.expert.title!,
+                      style: GoogleFonts.inter(
+                        color: textSecondary,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+
+                // ── Stats row (Airbnb review-style) ──
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 16, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStat(
+                        value: '✓',
+                        label: 'included',
+                        textColor: textColor,
+                        textSecondary: textSecondary,
+                      ),
+                      Container(
+                        width: 1,
+                        height: 36,
+                        color: borderColor,
+                      ),
+                      _buildStat(
+                        value: '${coach.specialties.length}',
+                        label: 'specialties',
+                        textColor: textColor,
+                        textSecondary: textSecondary,
+                      ),
+                      Container(
+                        width: 1,
+                        height: 36,
+                        color: borderColor,
+                      ),
+                      _buildStat(
+                        value: '⭐',
+                        label: 'top rated',
+                        textColor: textColor,
+                        textSecondary: textSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // ── Divider ──
+                Container(height: 1, color: borderColor),
+                const SizedBox(height: 28),
+
+                // ── About section ──
+                Text(
+                  'About ${coach.expert.name.split(' ').first}',
+                  style: GoogleFonts.inter(
+                    color: textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  coach.bio,
+                  style: GoogleFonts.inter(
+                    color: textColor.withOpacity(0.8),
+                    fontSize: 15,
+                    height: 1.6,
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // ── Divider ──
+                Container(height: 1, color: borderColor),
+                const SizedBox(height: 28),
+
+                // ── What they offer (specialties) ──
+                if (coach.specialties.isNotEmpty) ...[
+                  Text(
+                    'What ${coach.expert.name.split(' ').first} offers',
+                    style: GoogleFonts.inter(
+                      color: textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...coach.specialties.map((s) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_rounded,
+                                color: primaryColor, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                s,
+                                style: GoogleFonts.inter(
+                                  color: textColor,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+
+                  const SizedBox(height: 16),
+                  Container(height: 1, color: borderColor),
+                  const SizedBox(height: 28),
+                ],
+
+                // ── Programs ──
+                BlocBuilder<CoachProgramBloc, CoachProgramState>(
+                  builder: (context, programState) {
+                    if (programState is CoachProgramsLoaded &&
+                        programState.programs.isNotEmpty) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Programs',
+                            style: GoogleFonts.inter(
+                              color: textColor,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ...programState.programs
+                              .take(3)
+                              .map((prog) => _buildProgramCard(
+                                    program: prog,
+                                    isLight: isLight,
+                                    surfaceColor: surfaceColor,
+                                    textColor: textColor,
+                                    textSecondary: textSecondary,
+                                    borderColor: borderColor,
+                                    primaryColor: primaryColor,
+                                  )),
+                          const SizedBox(height: 16),
+                          Container(height: 1, color: borderColor),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+
+                // Bottom spacing for the button
+                const SizedBox(height: 120),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStat({
+    required String value,
+    required String label,
+    required Color textColor,
+    required Color textSecondary,
+  }) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: textColor,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgramCard({
     required CoachProgram program,
     required bool isLight,
     required Color surfaceColor,
@@ -389,18 +552,17 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
       onTap: () => context.push(
           '${AppRouter.coachProgramDetail}?id=${program.id}'),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: surfaceColor,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: borderColor),
         ),
         child: Row(
           children: [
-            // Thumbnail
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: SizedBox(
                 width: 56,
                 height: 56,
@@ -425,7 +587,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                       ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,7 +595,7 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                   Text(
                     program.title,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: textColor,
                     ),
@@ -444,16 +606,15 @@ class _CoachDetailPageState extends State<CoachDetailPage> {
                   Text(
                     '${program.durationLabel}  •  ${program.contentCount} sessions',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: 13,
                       color: textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
             Icon(Icons.chevron_right_rounded,
-                color: textSecondary, size: 20),
+                color: textSecondary, size: 22),
           ],
         ),
       ),

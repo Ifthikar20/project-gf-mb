@@ -194,6 +194,18 @@ class ApiEndpoints {
   static String coachProgramDayComplete(String programId, String dayId) =>
       '$coachingBase/programs/$programId/calendar/$dayId/complete/';
   static String get coachProgramEnrollments => '$coachingBase/enrollments/';
+
+  // Coach Chat (1:1 messaging with assigned coach)
+  static String get coachChats => '$coachingBase/chats/';
+  static String chatMessages(String chatId) => '$coachingBase/chats/$chatId/messages/';
+  static String chatWorkouts(String chatId) => '$coachingBase/chats/$chatId/workouts/';
+  static String startWorkout(String chatId, String workoutId) =>
+      '$coachingBase/chats/$chatId/workouts/$workoutId/start/';
+  static String confirmWorkout(String chatId, String workoutId) =>
+      '$coachingBase/chats/$chatId/workouts/$workoutId/confirm/';
+  static String skipWorkout(String chatId, String workoutId) =>
+      '$coachingBase/chats/$chatId/workouts/$workoutId/skip/';
+
   
   // ============================================
   // AntiGravity Wellness Chat

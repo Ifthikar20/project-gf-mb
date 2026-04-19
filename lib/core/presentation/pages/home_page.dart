@@ -6,7 +6,7 @@ import '../../../features/wellness_goals/presentation/pages/wellness_goals_page.
     as home;
 import '../../../features/diet/presentation/pages/calories_page.dart';
 import '../../../features/explore/presentation/pages/explore_for_you_page.dart';
-import '../../../features/explore/presentation/pages/explore_page.dart';
+import '../../../features/coaching/presentation/pages/my_coach_page.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 import '../../theme/theme_bloc.dart';
 import '../../theme/app_theme.dart';
@@ -37,7 +37,7 @@ class _MainShellState extends State<MainShell> {
       case 2:
         return const ExploreForYouPage();
       case 3:
-        return const ExplorePage();
+        return const MyCoachPage();
       case 4:
         return const ProfilePage();
       default:
@@ -109,8 +109,8 @@ class _MainShellState extends State<MainShell> {
                           inactiveColor: inactiveColor,
                         ),
                         _buildNavItem(
-                          icon: Icons.event_note_rounded,
-                          label: 'Classes',
+                          icon: Icons.sports_rounded,
+                          label: 'Coach',
                           index: 3,
                           activeColor: activeColor,
                           inactiveColor: inactiveColor,

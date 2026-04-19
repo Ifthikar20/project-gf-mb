@@ -39,6 +39,7 @@ import 'features/subscription/presentation/bloc/subscription_bloc.dart';
 import 'features/marketplace/presentation/bloc/marketplace_bloc.dart';
 import 'features/coaching/presentation/bloc/coaching_bloc.dart';
 import 'features/coaching/presentation/bloc/coach_program_bloc.dart';
+import 'features/coaching/presentation/bloc/coach_chat_bloc.dart';
 import 'features/journal/presentation/bloc/journal_bloc.dart';
 
 void main() async {
@@ -226,6 +227,9 @@ class WellnessApp extends StatelessWidget {
           ),
           BlocProvider(
             create: (context) => CoachProgramBloc(),
+          ),
+          BlocProvider(
+            create: (context) => CoachChatBloc(),
           ),
           BlocProvider(
             create: (context) => JournalBloc(),
